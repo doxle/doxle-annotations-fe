@@ -1,0 +1,7 @@
+@import "tailwindcss";
+@source "./src/**/*.{rs,html,css}";
+
+@theme {
+  --color-gray-light: rgb(247, 247, 247);
+  --font-sans: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+}

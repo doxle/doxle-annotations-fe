@@ -1,0 +1,70 @@
+use dioxus::prelude::*;
+
+mod components;
+
+// Font assets
+const HELVETICA_REGULAR: Asset = asset!("/assets/fonts/HelveticaNeue.woff2");
+const HELVETICA_BOLD: Asset = asset!("/assets/fonts/HelveticaNeue-Bold.woff2");
+const HELVETICA_LIGHT: Asset = asset!("/assets/fonts/HelveticaNeue-Light.woff2");
+const HELVETICA_THIN: Asset = asset!("/assets/fonts/HelveticaNeue-Thin.woff2");
+const HELVETICA_ULTRALIGHT: Asset = asset!("/assets/fonts/HelveticaNeue-UltraLight.woff2");
+const HELVETICA_MEDIUM: Asset = asset!("/assets/fonts/HelveticaNeue-Medium.woff2");
+
+// CSS assets and content
+const TAILWIND_CSS: Asset = asset!("/public/tailwind.css");
+const MAIN_CSS_CONTENT: &str = r#"
+    * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+    }
+    body {
+        font-family: 'HelveticaNeue', Helvetica, Arial, sans-serif;
+    }
+"#;
+
+const FONTS_CSS_TEMPLATE: &str = include_str!("font.css");
+
+fn main() {
+    dioxus::launch(App);
+}
+
+#[component]
+fn App() -> Element {
+    rsx! {
+        // Head meta for proper mobile viewport and safe areas
+                document::Meta { name: "viewport", content: "width=device-width, initial-scale=1, viewport-fit=cover" }
+                document::Meta { name: "apple-mobile-web-app-capable", content: "yes" }
+                document::Meta { name: "apple-mobile-web-app-status-bar-style", content: "black-translucent" }
+
+                // Base styles
+                document::Link { rel: "stylesheet", href: TAILWIND_CSS }
+                document::Style { {MAIN_CSS_CONTENT} }
+
+
+                // Fonts from template with asset URLs
+                document::Style {
+                    {
+                        FONTS_CSS_TEMPLATE
+                            .replace("{HELVETICA_REGULAR}", &HELVETICA_REGULAR.to_string())
+                            .replace("{HELVETICA_BOLD}", &HELVETICA_BOLD.to_string())
+                            .replace("{HELVETICA_LIGHT}", &HELVETICA_LIGHT.to_string())
+                            .replace("{HELVETICA_THIN}", &HELVETICA_THIN.to_string())
+                            .replace("{HELVETICA_ULTRALIGHT}", &HELVETICA_ULTRALIGHT.to_string())
+                            .replace("{HELVETICA_MEDIUM}", &HELVETICA_MEDIUM.to_string())
+                    }
+                }
+        Router::<Route> {}
+    }
+}
+
+#[derive(Routable, Clone, PartialEq)]
+enum Route {
+    #[route("/")]
+    HomePage {},
+    #[route("/login")]
+    LoginPage {},
+}
+
+use components::home::HomePage;
+use components::login::LoginPage;

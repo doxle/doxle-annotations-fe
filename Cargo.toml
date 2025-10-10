@@ -1,0 +1,27 @@
+[workspace]
+resolver = "2"
+members = [
+    "app-web",
+    "canvas-web",
+]
+
+[workspace.dependencies]
+# Shared doxle crates from git
+doxle-core = { git = "https://github.com/doxle/doxle-core", branch = "main" }
+doxle-database = { git = "https://github.com/doxle/doxle-core", branch = "main" }
+doxle-auth = { git = "https://github.com/doxle/doxle-core", branch = "main" }
+doxle-ui-components = { git = "https://github.com/doxle/doxle-core", branch = "main" }
+
+# Shared versions
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+uuid = { version = "1.11", features = ["v4", "js"] }
+chrono = "0.4"
+
+# Dioxus 0.7 RC
+dioxus = { version = "0.7.0-rc.0", features = ["router"] }
+dioxus-web = "0.7.0-rc.0"
+
+# Error handling
+anyhow = "1"
+thiserror = "1"

@@ -1,0 +1,32 @@
+[package]
+name = "app-web"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "app-web"
+path = "src/main.rs"
+
+[dependencies]
+# Internal crates
+doxle-core = { path = "../core" }
+ui-components = { path = "../ui-components" }
+canvas-web = { path = "../canvas-web" }
+annotation-tools = { path = "../annotation-tools" }
+
+# Workspace dependencies
+serde = { workspace = true }
+serde_json = { workspace = true }
+
+# Dioxus
+dioxus = { workspace = true }
+dioxus-web = { workspace = true }
+
+# HTTP client (for API calls)
+reqwest = { version = "0.12", features = ["json"] }
+
+# Logging
+tracing = "0.1"
+tracing-wasm = "0.2"
+web-sys = { version = "0.3", features = ["Window", "Document", "Element", "HtmlHeadElement"] }
+wasm-bindgen = "0.2"
