@@ -9,10 +9,11 @@ path = "src/main.rs"
 
 [dependencies]
 # Internal crates
-doxle-core = { path = "../core" }
-ui-components = { path = "../ui-components" }
 canvas-web = { path = "../canvas-web" }
-annotation-tools = { path = "../annotation-tools" }
+
+# Shared crates from doxle-core
+doxle-core = { workspace = true }
+doxle-ui-components = { workspace = true }
 
 # Workspace dependencies
 serde = { workspace = true }
