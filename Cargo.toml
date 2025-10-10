@@ -1,27 +1,25 @@
-[workspace]
-resolver = "2"
-members = [
-    "app-web",
-    "canvas-web",
-]
+[package]
+name = "app-web"
+version = "0.1.0"
+edition = "2021"
 
-[workspace.dependencies]
-# Shared doxle crates from git
-doxle-core = { git = "https://github.com/doxle/doxle-core", branch = "main" }
-doxle-database = { git = "https://github.com/doxle/doxle-core", branch = "main" }
-doxle-auth = { git = "https://github.com/doxle/doxle-core", branch = "main" }
-doxle-ui-components = { git = "https://github.com/doxle/doxle-core", branch = "main" }
+[[bin]]
+name = "app-web"
+path = "src/main.rs"
 
-# Shared versions
-serde = { version = "1", features = ["derive"] }
-serde_json = "1"
-uuid = { version = "1.11", features = ["v4", "js"] }
-chrono = "0.4"
+[dependencies]
+# Dioxus 0.7.0-rc
+dioxus = { version = "0.7.0-rc", features = ["web", "router"] }
 
-# Dioxus 0.7 RC
-dioxus = { version = "0.7.0-rc.0", features = ["router"] }
-dioxus-web = "0.7.0-rc.0"
+# Serialization
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
 
-# Error handling
-anyhow = "1"
-thiserror = "1"
+# HTTP client (for API calls)
+reqwest = { version = "0.12", features = ["json"] }
+
+# Logging
+tracing = "0.1"
+tracing-wasm = "0.2"
+web-sys = { version = "0.3", features = ["Window", "Document", "Element", "HtmlHeadElement"] }
+wasm-bindgen = "0.2"

@@ -60,6 +60,7 @@ fn App() -> Element {
 
 #[derive(Routable, Clone, PartialEq)]
 enum Route {
+    #[layout(NavBar)]
     #[route("/")]
     HomePage {},
     #[route("/login")]
@@ -68,3 +69,12 @@ enum Route {
 
 use components::home::HomePage;
 use components::login::LoginPage;
+use components::navbar::Navbar;
+
+#[component]
+fn NavBar() -> Element {
+    rsx! {
+        Navbar {}
+        Outlet::<Route> {}
+    }
+}

@@ -1,0 +1,35 @@
+@media (max-width: 768px) {
+    .nav-buttons {
+        display: none !important;
+    }
+    .mobile-menu-btn {
+        display: flex !important;
+    }
+}
+
+@media (min-width: 769px) {
+    .mobile-menu-btn {
+        display: none !important;
+    }
+    .mobile-menu {
+        display: none !important;
+    }
+}
+
+.say-hello-btn:hover {
+    opacity: 0.9;
+}
+
+.nav-btn:hover {
+    opacity: 0.7;
+}
+
+.mobile-menu-item:hover {
+    background: rgb(247, 247, 247) !important;
+    padding: 6px;
+}
+
+.mobile-menu-item.say-hello:hover {
+    background: #4f5bf8 !important;
+    opacity: 0.9;
+}

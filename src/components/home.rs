@@ -9,8 +9,16 @@ pub fn HomePage() -> Element {
     let mut button_hover = use_signal(|| false);
 
     // Button style with hover effect
-    let button_opacity = if button_hover() { 0.7 } else { 1.0 };
-    let button_style = format!("width: min(215px, 100%); height: 70px; display: flex; align-items: center; justify-content: space-between; padding: 0 20px; background-color: rgba(0, 0, 0, {}); color: white; border-radius: 0px; border: none; transition: background-color 0.05s; font-size: 18px; font-weight: 300 !important; font-family: HelveticaNeue, Helvetica, Arial, sans-serif; text-decoration: none; cursor: pointer;", button_opacity);
+    let button_opacity = if button_hover() { 0.8 } else { 1.0 };
+    let button_style = format!(
+        "width: min(215px, 100%); height: 70px; display: flex;
+        align-items: center; justify-content: space-between; padding: 0 20px;
+        background-color: rgba(0, 0, 0, {}); color: white; border-radius: 0px;
+        border: none; transition: background-color 0.05s; font-size: 18px;
+        font-weight: 300 !important; font-family: HelveticaNeue, Helvetica, Arial, sans-serif;
+        text-decoration: none; cursor: pointer;",
+        button_opacity
+    );
 
     // Inject dot animation JS on mount (include_str) so the browser executes it
     use_effect(move || {
@@ -43,23 +51,29 @@ pub fn HomePage() -> Element {
             }}"
         }
         div {
-            style: "position: relative; display: flex; align-items: center; justify-content: center; width: 100%; min-height: 100vh; font-family: HelveticaNeue, Helvetica, Arial, sans-serif; background-color: rgb(247, 247, 247); overflow: hidden;",
+            style: "position: relative; display: flex; align-items: center; justify-content: center;
+            width: 100%; min-height: 100vh; font-family: HelveticaNeue, Helvetica, Arial, sans-serif;
+            background-color: rgb(247, 247, 247); overflow: hidden;",
 
             // Dots layer
             div {
                 id: "dots-container",
-                style: "position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; contain: layout paint style; transform: translateZ(0);",
+                style: "position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+                pointer-events: none; contain: layout paint style; transform: translateZ(0);",
             }
 
             // Content layer
             div {
-                style: "position: relative; z-index: 10; text-align: left; max-width: 800px; margin: 0 auto; padding: 0 20px;",
+                style: "position: relative; z-index: 10; text-align: left; max-width: 800px;
+                margin: 0 auto; padding: 0 20px;",
                 h1 {
-                    style: "font-size: clamp(40px, 8vw, 90px); font-weight: 400; line-height: 1; color:rgb(79,91,248); margin: 0;",
+                    style: "font-size: clamp(60px, 8vw, 90px); font-weight: 400; line-height: 1;
+                    color:rgb(79,91,248); margin: 0;",
                     "BUILT WITH AI"
                 }
                 h2 {
-                    style: "font-size: clamp(40px, 8vw, 90px); font-weight: 400; line-height: 1; color:rgb(79,91,248); margin: 0;",
+                    style: "font-size: clamp(60px, 8vw, 90px); font-weight: 400; line-height: 1;
+                    color:rgb(79,91,248); margin: 0;",
                     "SO YOU "
                     span {
                         style: "font-weight: 400; text-decoration: none;",
@@ -67,11 +81,13 @@ pub fn HomePage() -> Element {
                     }
                 }
                 h2 {
-                    style: "font-size: clamp(40px, 8vw, 90px); font-weight: 400; line-height: 1; color: rgb(79,91,248); margin: 0 0 24px 0;",
+                    style: "font-size: clamp(60px, 8vw, 90px); font-weight: 400; line-height: 1;
+                    color: rgb(79,91,248); margin: 0 0 24px 0;",
                     "WITH AI"
                 }
                 p{
-                    style:"display:block; max-width: 600px; font-weight:300; line-height:20px; font-size: clamp(14px, 2.5vw, 18px); margin: 0px 0 32px 0; color: black; text-align: left;",
+                    style:"display:block; max-width: 600px; font-weight:300; line-height:20px;
+                    font-size: clamp(16px, 2.5vw, 18px); margin: 0px 0 32px 0; color: black; text-align: left;",
                     "We're teaching the computer to read plans so you don't have to have to babysit the paperwork. It's still learning like any good apprentice --and every plan you upload teaches it something new. Give it a crack, see what it can do, and help us build the future of building."
                 }
                 button {
