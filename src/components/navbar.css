@@ -20,8 +20,24 @@
     opacity: 0.9;
 }
 
-.nav-btn:hover {
-    opacity: 0.7;
+.nav-btn:hover:not(.active) {
+    text-decoration: underline;
+    text-decoration-color: #4F5BF8;
+    text-underline-offset: 4px;
+}
+
+.nav-btn.active {
+    text-decoration: underline;
+    text-decoration-color: #4F5BF8;
+    text-underline-offset: 4px;
+}
+
+.logo-img {
+    transition: filter 0.2s;
+}
+
+.logo-img:hover {
+    filter: invert(42%) sepia(100%) saturate(5000%) hue-rotate(225deg) brightness(110%) contrast(100%);
 }
 
 .mobile-menu-item:hover {

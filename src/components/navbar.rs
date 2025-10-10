@@ -1,3 +1,4 @@
+use crate::Route;
 use dioxus::prelude::*;
 const LOGO: Asset = asset!("/assets/dog-light.svg");
 const NAVBAR_CSS: &str = include_str!("navbar.css");
@@ -5,6 +6,11 @@ const NAVBAR_CSS: &str = include_str!("navbar.css");
 #[component]
 pub fn Navbar() -> Element {
     let mut menu_open = use_signal(|| false);
+    let nav = navigator();
+    let route = use_route::<Route>();
+    let is_ourstory = matches!(route, Route::OurStoryPage {});
+    let is_join = matches!(route, Route::JoinPage {});
+    let is_signin = matches!(route, Route::SigninPage {});
 
     rsx! {
         document::Style { {NAVBAR_CSS} }
@@ -14,8 +20,10 @@ pub fn Navbar() -> Element {
 
             // Left side - Logo
             div {
-                style: "display: flex; align-items: center;",
+                style: "display: flex; align-items: center; cursor: pointer;",
+                onclick: move |_| { nav.push(Route::HomePage {}); },
                 img {
+                    class: "logo-img",
                     src: LOGO,
                     alt: "Doxle Logo",
                     style: "height: 30px;"
@@ -32,26 +40,30 @@ pub fn Navbar() -> Element {
                     style: "display: flex; gap: 30px; align-items: center;",
 
                     button {
-                        class: "nav-btn",
+                        class: if is_ourstory { "nav-btn active" } else { "nav-btn" },
                         style: "background: none; font-weight:300 !important; font-size:16px; border: none; font-family: Helvetica, Arial, sans-serif; cursor: pointer; color: #333; transition: opacity 0.2s;",
+                        onclick: move |_| { nav.push(Route::OurStoryPage {}); },
                         "Our Story"
                     }
 
                     button {
-                        class: "nav-btn",
+                        class: if is_join { "nav-btn active" } else { "nav-btn" },
                         style: "background: none; font-weight:300 !important; font-size:16px; border: none; font-family: Helvetica, Arial, sans-serif; cursor: pointer; color: #333; transition: opacity 0.2s;",
-                        "Partners"
+                        onclick: move |_| { nav.push(Route::JoinPage {}); },
+                        "Join"
                     }
 
                     button {
-                        class: "nav-btn",
+                        class: if is_signin { "nav-btn active" } else { "nav-btn" },
                         style: "background: none; font-weight:300 !important; font-size:16px; border: none; font-family: Helvetica, Arial, sans-serif; cursor: pointer; color: #333; transition: opacity 0.2s;",
+                        onclick: move |_| { nav.push(Route::SigninPage {}); },
                         "Sign In"
                     }
 
                     button {
                         class: "say-hello-btn",
                         style: "background: #4F5BF8; font-weight:300 !important; width:140px; height:60px; font-size:16px; border: none; font-family: Helvetica, Arial, sans-serif; cursor: pointer; color: white; padding: 10px 24px; border-radius: 0px; transition: opacity 0.2s;",
+                        onclick: move |_| { nav.push(Route::SayHelloPage {}); },
                         "Say Hello"
                     }
                 }
@@ -85,24 +97,28 @@ pub fn Navbar() -> Element {
                     button {
                         class: "mobile-menu-item",
                         style: "background: none; border: none; font-family: Helvetica, Arial, sans-serif; font-weight: 300; font-size: 18px; cursor: pointer; color: #333; text-align: left; padding: 16px 10px;",
+                        onclick: move |_| { menu_open.set(false); nav.push(Route::OurStoryPage {}); },
                         "Our Story"
                     }
 
                     button {
                         class: "mobile-menu-item",
                         style: "background: none; border: none; font-family: Helvetica, Arial, sans-serif; font-weight: 300; font-size: 18px; cursor: pointer; color: #333; text-align: left; padding: 16px 10px;",
-                        "Partners"
+                        onclick: move |_| { menu_open.set(false); nav.push(Route::JoinPage {}); },
+                        "Join"
                     }
 
                     button {
                         class: "mobile-menu-item",
                         style: "background: none; border: none; font-family: Helvetica, Arial, sans-serif; font-weight: 300; font-size: 18px; cursor: pointer; color: #333; text-align: left; padding: 16px 10px;",
+                        onclick: move |_| { menu_open.set(false); nav.push(Route::SigninPage {}); },
                         "Sign In"
                     }
 
                     button {
                         class: "mobile-menu-item say-hello",
                         style: "background: #4F5BF8; border: none; font-family: Helvetica, Arial, sans-serif; font-weight: 300; font-size: 18px; cursor: pointer; color: white; padding: 12px 24px; border-radius: 0px; width: 100%;",
+                        onclick: move |_| { menu_open.set(false); nav.push(Route::SayHelloPage {}); },
                         "Say Hello"
                     }
                 }

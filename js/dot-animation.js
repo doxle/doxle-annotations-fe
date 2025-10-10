@@ -5,18 +5,31 @@
   }
 
   function init() {
-    const existing = document.getElementById('dots-container');
-    if (existing) {
-      initWithContainer(existing);
-      return;
-    }
-    // If not yet in DOM (SPA route), observe until it appears
-    const obs = new MutationObserver((_, observer) => {
+    let active = null;
+
+    function check() {
       const el = document.getElementById('dots-container');
-      if (el) {
-        observer.disconnect();
+      if (el && active !== el) {
+        if (typeof window.__dotsCleanup === 'function') {
+          window.__dotsCleanup();
+        }
+        active = el;
         initWithContainer(el);
+        return;
       }
+
+      if (!el && active) {
+        if (typeof window.__dotsCleanup === 'function') {
+          window.__dotsCleanup();
+        }
+        active = null;
+      }
+    }
+
+    check();
+
+    const obs = new MutationObserver(() => {
+      check();
     });
     obs.observe(document.documentElement, { childList: true, subtree: true });
   }

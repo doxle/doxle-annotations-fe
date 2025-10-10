@@ -63,13 +63,25 @@ enum Route {
     #[layout(NavBar)]
     #[route("/")]
     HomePage {},
-    #[route("/login")]
-    LoginPage {},
+    #[route("/ourstory")]
+    OurStoryPage {},
+    #[route("/signin")]
+    SigninPage {},
+    #[route("/join")]
+    JoinPage {},
+    #[route("/upload")]
+    UploadPage {},
+    #[route("/sayhello")]
+    SayHelloPage {},
 }
 
 use components::home::HomePage;
-use components::login::LoginPage;
+use components::join::JoinPage;
 use components::navbar::Navbar;
+use components::ourstory::OurStoryPage;
+use components::sayhello::SayHelloPage;
+use components::signin::SigninPage;
+use components::upload::UploadPage;
 
 #[component]
 fn NavBar() -> Element {

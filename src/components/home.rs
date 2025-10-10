@@ -67,12 +67,12 @@ pub fn HomePage() -> Element {
                 style: "position: relative; z-index: 10; text-align: left; max-width: 800px;
                 margin: 0 auto; padding: 0 20px;",
                 h1 {
-                    style: "font-size: clamp(60px, 8vw, 90px); font-weight: 400; line-height: 1;
+                    style: "font-size: clamp(65px, 8vw, 90px); font-weight: 400; line-height: 1;
                     color:rgb(79,91,248); margin: 0;",
                     "BUILT WITH AI"
                 }
                 h2 {
-                    style: "font-size: clamp(60px, 8vw, 90px); font-weight: 400; line-height: 1;
+                    style: "font-size: clamp(65px, 8vw, 90px); font-weight: 400; line-height: 1;
                     color:rgb(79,91,248); margin: 0;",
                     "SO YOU "
                     span {
@@ -81,17 +81,17 @@ pub fn HomePage() -> Element {
                     }
                 }
                 h2 {
-                    style: "font-size: clamp(60px, 8vw, 90px); font-weight: 400; line-height: 1;
+                    style: "font-size: clamp(65px, 8vw, 90px); font-weight: 400; line-height: 1;
                     color: rgb(79,91,248); margin: 0 0 24px 0;",
                     "WITH AI"
                 }
                 p{
                     style:"display:block; max-width: 600px; font-weight:300; line-height:20px;
-                    font-size: clamp(16px, 2.5vw, 18px); margin: 0px 0 32px 0; color: black; text-align: left;",
+                    font-size: clamp(18px, 2.5vw, 18px); margin: 0px 0 32px 0; color: black; text-align: left;",
                     "We're teaching the computer to read plans so you don't have to have to babysit the paperwork. It's still learning like any good apprentice --and every plan you upload teaches it something new. Give it a crack, see what it can do, and help us build the future of building."
                 }
                 button {
-                    onclick: move |_| { navigator().push(Route::LoginPage {}); },
+                    onclick: move |_| { navigator().push(Route::SigninPage {}); },
                     onmouseenter: move |_| button_hover.set(true),
                     onmouseleave: move |_| button_hover.set(false),
                     style: "{button_style}",
