@@ -34,3 +34,15 @@
 form:has(.signin-email-input:focus) .signin-password-input {
     border-top-color: transparent !important;
 }
+
+/* Mobile responsive styles */
+@media (max-width: 768px) {
+    div[style*="max-width: 40%"] {
+        max-width: 100% !important;
+        padding: 40px 24px !important;
+    }
+    
+    div[style*="min-height: 100vh"] {
+        padding: 20px 16px !important;
+    }
+}

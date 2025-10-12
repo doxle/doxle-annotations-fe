@@ -1,7 +1,9 @@
 pub mod home;
 pub mod join;
+pub mod loading;
 pub mod navbar;
 pub mod ourstory;
+pub mod projects;
 pub mod sayhello;
 pub mod signin;
 pub mod upload;

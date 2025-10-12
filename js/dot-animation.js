@@ -5,34 +5,24 @@
   }
 
   function init() {
-    let active = null;
-
-    function check() {
-      const el = document.getElementById('dots-container');
-      if (el && active !== el) {
-        if (typeof window.__dotsCleanup === 'function') {
-          window.__dotsCleanup();
-        }
-        active = el;
-        initWithContainer(el);
-        return;
-      }
-
-      if (!el && active) {
-        if (typeof window.__dotsCleanup === 'function') {
-          window.__dotsCleanup();
-        }
-        active = null;
-      }
+    const existing = document.getElementById('dots-container');
+    if (existing) {
+      initWithContainer(existing);
+      return;
     }
-
-    check();
-
-    const obs = new MutationObserver(() => {
-      check();
+    // If not yet in DOM (SPA route), observe until it appears
+    const obs = new MutationObserver((_, observer) => {
+      const el = document.getElementById('dots-container');
+      if (el) {
+        observer.disconnect();
+        initWithContainer(el);
+      }
     });
     obs.observe(document.documentElement, { childList: true, subtree: true });
   }
+
+
+
 
   // Choose grid to target ~N dots based on viewport and device characteristics
   function chooseGrid(container) {

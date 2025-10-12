@@ -1,6 +1,7 @@
 use dioxus::prelude::*;
 
 mod components;
+mod api;
 
 // Font assets
 const HELVETICA_REGULAR: Asset = asset!("/assets/fonts/HelveticaNeue.woff2");
@@ -26,12 +27,22 @@ const MAIN_CSS_CONTENT: &str = r#"
 const FONTS_CSS_TEMPLATE: &str = include_str!("font.css");
 
 fn main() {
+    // Initialize tracing and filter out noisy warnings
+    tracing_wasm::set_as_global_default_with_config(
+        tracing_wasm::WASMLayerConfigBuilder::new()
+            .set_max_level(tracing::Level::INFO)
+            .build(),
+    );
+    
     dioxus::launch(App);
 }
 
 #[component]
 fn App() -> Element {
     rsx! {
+        // Filter console warnings
+                document::Script { src: asset!("/public/filter-console.js") }
+        
         // Head meta for proper mobile viewport and safe areas
                 document::Meta { name: "viewport", content: "width=device-width, initial-scale=1, viewport-fit=cover" }
                 document::Meta { name: "apple-mobile-web-app-capable", content: "yes" }
@@ -73,12 +84,17 @@ enum Route {
     UploadPage {},
     #[route("/sayhello")]
     SayHelloPage {},
+    #[end_layout]
+    // Authenticated pages without navbar
+    #[route("/projects")]
+    ProjectsPage {},
 }
 
 use components::home::HomePage;
 use components::join::JoinPage;
 use components::navbar::Navbar;
 use components::ourstory::OurStoryPage;
+use components::projects::ProjectsPage;
 use components::sayhello::SayHelloPage;
 use components::signin::SigninPage;
 use components::upload::UploadPage;
