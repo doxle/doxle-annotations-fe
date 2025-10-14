@@ -25,6 +25,12 @@ const MAIN_CSS_CONTENT: &str = r#"
 "#;
 
 const FONTS_CSS_TEMPLATE: &str = include_str!("font.css");
+const THEME_CSS: &str = include_str!("theme.css");
+const HOME_CSS: &str = include_str!("css/home.css");
+const LOGIN_CSS: &str = include_str!("css/login.css");
+const PROJECTS_CSS: &str = include_str!("css/projects.css");
+const BLOCK_CSS: &str = include_str!("css/block.css");
+const CANVAS_CSS: &str = include_str!("css/canvas.css");
 
 fn main() {
     // Initialize tracing and filter out noisy warnings
@@ -51,6 +57,12 @@ fn App() -> Element {
                 // Base styles
                 document::Link { rel: "stylesheet", href: TAILWIND_CSS }
                 document::Style { {MAIN_CSS_CONTENT} }
+                document::Style { {THEME_CSS} }
+                document::Style { {HOME_CSS} }
+                document::Style { {LOGIN_CSS} }
+                document::Style { {PROJECTS_CSS} }
+                document::Style { {BLOCK_CSS} }
+                document::Style { {CANVAS_CSS} }
 
 
                 // Fonts from template with asset URLs
@@ -76,8 +88,8 @@ enum Route {
     HomePage {},
     #[route("/ourstory")]
     OurStoryPage {},
-    #[route("/signin")]
-    SigninPage {},
+    #[route("/login")]
+    LoginPage {},
     #[route("/join")]
     JoinPage {},
     #[route("/upload")]
@@ -88,15 +100,21 @@ enum Route {
     // Authenticated pages without navbar
     #[route("/projects")]
     ProjectsPage {},
+    #[route("/block/:project_id")]
+    BlockPage { project_id: String },
+    #[route("/canvas/:task_id")]
+    CanvasPage { task_id: String },
 }
 
+use components::canvas::CanvasPage;
 use components::home::HomePage;
 use components::join::JoinPage;
+use components::login::LoginPage;
 use components::navbar::Navbar;
 use components::ourstory::OurStoryPage;
 use components::projects::ProjectsPage;
 use components::sayhello::SayHelloPage;
-use components::signin::SigninPage;
+use components::block::BlockPage;
 use components::upload::UploadPage;
 
 #[component]

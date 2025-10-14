@@ -27,8 +27,8 @@ const AUTOFOCUS_JS: &str = r#"
 "#;
 
 #[component]
-pub fn SigninPage() -> Element {
-    const LOGO: Asset = asset!("/assets/send.svg");
+pub fn LoginPage() -> Element {
+    const LOGO: Asset = asset!("/assets/images/send.svg");
 
     let mut email = use_signal(|| String::new());
     let mut password = use_signal(|| String::new());
@@ -99,15 +99,15 @@ pub fn SigninPage() -> Element {
     rsx! {
 
         div {
-            style: "min-height: 100vh;  background: white; display: flex; align-items: center; justify-content: center; padding: 40px 20px; font-family: Helvetica, Arial, sans-serif;",
+            class: "login-container",
 
             div {
-                style: "background: white; padding: 60px 50px; width: 100%; max-width: min(550px, 90%);",
+                class: "login-box",
 
 
 
                 h2 {
-                    style: "font-size: 24px; font-weight: 400; color: #333; margin-bottom: 10px; text-align: center; font-family: Helvetica, Arial, sans-serif;",
+                    class: "login-title",
                     "Sign in to Doxle"
                 }
 
@@ -117,11 +117,10 @@ pub fn SigninPage() -> Element {
 
                     // Email field
                     div {
-                        style: "margin-top: 21px;",
+                        class: "login-field",
 
                         input {
-                            class: "signin-email-input",
-                            style: "width: 100%; height:70px; padding: 14px 16px; background: white; border: 1px solid #DDD; border-bottom: none; font-size: 15px; box-sizing: border-box; outline: none;",
+                            class: "login-input login-input-email",
                             r#type: "email",
                             placeholder: "Email",
                             required: true,
@@ -135,8 +134,7 @@ pub fn SigninPage() -> Element {
                     div {
 
                         input {
-                            class: "signin-password-input",
-                            style: "width: 100%; height:70px; padding: 14px 16px; background: white; border: 1px solid #DDD; font-size: 15px; box-sizing: border-box; outline: none;",
+                            class: "login-input login-input-password",
                             r#type: "password",
                             placeholder: "Password",
                             required: true,
@@ -145,36 +143,32 @@ pub fn SigninPage() -> Element {
                         }
                     }
 
-                    div{
-                        style: "position: relative;",
+                    div {
+                        class: "login-button-wrapper",
                         button {
-                            class: "signin-submit-btn",
-                            style: "margin-top:21px; width: 100%; height:70px; padding: 16px; background: #4F5BF8; color: white; border: none; font-size: 16px; cursor: pointer; transition: opacity 0.2s; font-weight: 400; font-family: Helvetica, Arial, sans-serif; position: relative; display: flex; align-items: center; justify-content: center; gap: 12px;",
+                            class: "login-submit-button",
                             r#type: "submit",
                             img {
+                                class: "login-submit-logo",
                                 src: "{LOGO}",
                                 alt: "Send Logo",
-                                style: "height: 18px; width: auto;",
                             }
                             "Let's Sign In"
                         }
-
                     }
-                    div{
-                        style:"font-size:13px; font-weight:300; text-align: center; margin-top: 16px;",
+                    div {
+                        class: "login-links",
                         a {
-                            class: "signin-link",
-                            style: "color: #666; text-decoration: none; cursor: pointer; transition: color 0.2s; font-size:13px; font-weight:300; font-family: Helvetica, Arial, sans-serif;",
+                            class: "login-link",
                             onclick: move |_| { /* TODO: Implement login via link */ },
                             "Log in via link"
                         }
                         span {
-                            style: "color: #666; margin: 0 8px; font-size:13px; font-weight:300;",
+                            class: "login-divider",
                             "|"
                         }
                         a {
-                            class: "signin-link",
-                            style: "color: #666; text-decoration: none; cursor: pointer; transition: color 0.2s; font-size:13px; font-weight:300; font-family: Helvetica, Arial, sans-serif;",
+                            class: "login-link",
                             onclick: move |_| { /* TODO: Implement reset password */ },
                             "Reset Password"
                         }
@@ -184,7 +178,7 @@ pub fn SigninPage() -> Element {
                 // Error message
                 if let Some(error) = error_message() {
                     div {
-                        style: "margin-top: 16px; padding: 12px; background: #FEE; border: 1px solid #FCC; color: #C33; font-size: 13px; text-align: center;",
+                        class: "login-error",
                         "{error}"
                     }
                 }

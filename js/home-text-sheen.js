@@ -6,7 +6,7 @@
 
   function injectCSS(){
     if (document.getElementById('home-text-sheen-style')) return;
-    var css = "\n.home-text-sheen { position: relative; display: inline; overflow: visible; vertical-align: baseline; line-height: inherit; }\n.home-text-sheen::after {\n  content: \"\";\n  position: absolute;\n  top: 0; left: -70%;\n  width: 140%; height: 100%;\n  background: linear-gradient(120deg, rgba(255,255,255,0) 30%, rgba(255,255,255,0.75) 50%, rgba(255,255,255,0) 70%);\n  transform: skewX(-20deg);\n  animation: homeSheen 20s ease-in-out infinite;\n  opacity: 0; mix-blend-mode: screen; pointer-events: none; will-change: transform, opacity;\n}\n@keyframes homeSheen {\n  0%, 2% { transform: skewX(-20deg) translateX(-160%); opacity: 0; }\n  8% { opacity: 0.9; }\n  28% { transform: skewX(-20deg) translateX(160%); opacity: 1; }\n  30% { opacity: 0; }\n  34% { transform: skewX(-20deg) translateX(-160%); opacity: 0; }\n  40% { opacity: 0.9; }\n  60% { transform: skewX(-20deg) translateX(160%); opacity: 1; }\n  62% { opacity: 0; }\n  66% { transform: skewX(-20deg) translateX(-160%); opacity: 0; }\n  72% { opacity: 0.9; }\n  92% { transform: skewX(-20deg) translateX(160%); opacity: 1; }\n  94%, 100% { transform: skewX(-20deg) translateX(160%); opacity: 0; }\n}\n";
+    var css = "\n.home-text-sheen { position: relative; display: inline; overflow: visible; vertical-align: baseline; line-height: inherit; }\n.home-text-sheen::after {\n  content: \"\";\n  position: absolute;\n  top: 0; left: -70%;\n  width: 140%; height: 100%;\n  background: linear-gradient(120deg, transparent 30%, var(--shimmer-color) 50%, transparent 70%);\n  transform: skewX(-20deg);\n  animation: homeSheen 20s ease-in-out infinite;\n  opacity: 0; mix-blend-mode: screen; pointer-events: none; will-change: transform, opacity;\n}\n@keyframes homeSheen {\n  0%, 2% { transform: skewX(-20deg) translateX(-160%); opacity: 0; }\n  8% { opacity: 0.9; }\n  28% { transform: skewX(-20deg) translateX(160%); opacity: 1; }\n  30% { opacity: 0; }\n  34% { transform: skewX(-20deg) translateX(-160%); opacity: 0; }\n  40% { opacity: 0.9; }\n  60% { transform: skewX(-20deg) translateX(160%); opacity: 1; }\n  62% { opacity: 0; }\n  66% { transform: skewX(-20deg) translateX(-160%); opacity: 0; }\n  72% { opacity: 0.9; }\n  92% { transform: skewX(-20deg) translateX(160%); opacity: 1; }\n  94%, 100% { transform: skewX(-20deg) translateX(160%); opacity: 0; }\n}\n";
     var style = document.createElement('style');
     style.id = 'home-text-sheen-style';
     style.textContent = css;
@@ -14,7 +14,7 @@
   }
 
   function injectLineCSS(){
-    var css = "\n.home-line-sheen { position: relative; }\n.home-line-sheen::after {\n  content: \"\"; position: absolute; top: 0; left: var(--sheen-start, 0px); width: 140%; height: 100%;\n  background: linear-gradient(120deg, rgba(255,255,255,0) 30%, rgba(255,255,255,0.75) 50%, rgba(255,255,255,0) 70%);\n  transform: skewX(-20deg); opacity: 0; mix-blend-mode: screen; pointer-events: none; will-change: transform, opacity;\n}\n.home-line-sheen-run::after { animation: lineSheen 3.6s ease-in-out 1; }\n@keyframes lineSheen { 0% { transform: skewX(-20deg) translateX(0); opacity: 0; } 5% { opacity: 0.9; } 100% { transform: skewX(-20deg) translateX(160%); opacity: 0; } }\n";
+    var css = "\n.home-line-sheen { position: relative; }\n.home-line-sheen::after {\n  content: \"\"; position: absolute; top: 0; left: var(--sheen-start, 0px); width: 140%; height: 100%;\n  background: linear-gradient(120deg, transparent 30%, var(--shimmer-color) 50%, transparent 70%);\n  transform: skewX(-20deg); opacity: 0; mix-blend-mode: screen; pointer-events: none; will-change: transform, opacity;\n}\n.home-line-sheen-run::after { animation: lineSheen 3.6s ease-in-out 1; }\n@keyframes lineSheen { 0% { transform: skewX(-20deg) translateX(0); opacity: 0; } 5% { opacity: 0.9; } 100% { transform: skewX(-20deg) translateX(160%); opacity: 0; } }\n";
     var style = document.getElementById('home-line-sheen-style');
     if (!style) {
       style = document.createElement('style');
@@ -28,7 +28,7 @@
 
   // Overlay CSS for animating the entire hero text block with a single stripe
   function injectOverlayCSS(){
-var css = "\n.home-sheen-overlay { position: absolute; pointer-events: none; overflow: visible; z-index: 11; }\n.home-sheen-stripe { position: absolute; top: 0; left: var(--stripe-left, 0px); height: 100%; background: linear-gradient(120deg, rgba(255,255,255,0) 30%, rgba(255,255,255,0.75) 50%, rgba(255,255,255,0) 70%); transform: translateX(0); opacity: 0; will-change: transform, opacity; animation: overlaySheen 4.2s ease-in-out infinite; }\n@keyframes overlaySheen { 0% { transform: translateX(0); opacity: 0; } 6% { opacity: 0.9; } 86% { transform: translateX(var(--travel, 0px)); opacity: 1; } 100% { transform: translateX(var(--travel, 0px)); opacity: 0; } }\n";
+var css = "\n.home-sheen-overlay { position: absolute; pointer-events: none; overflow: visible; z-index: 11; }\n.home-sheen-stripe { position: absolute; top: 0; left: var(--stripe-left, 0px); height: 100%; background: linear-gradient(120deg, transparent 30%, var(--shimmer-color) 50%, transparent 70%); transform: translateX(0); opacity: 0; will-change: transform, opacity; animation: overlaySheen 4.2s ease-in-out infinite; }\n@keyframes overlaySheen { 0% { transform: translateX(0); opacity: 0; } 6% { opacity: 0.9; } 86% { transform: translateX(var(--travel, 0px)); opacity: 1; } 100% { transform: translateX(var(--travel, 0px)); opacity: 0; } }\n";
     var style = document.getElementById('home-overlay-sheen-style');
     if (!style) {
       style = document.createElement('style');
@@ -68,9 +68,13 @@ var css = "\n.home-sheen-overlay { position: absolute; pointer-events: none; ove
     var mid = heads.find(function(h){ return h.tagName.toLowerCase() === 'h2' && ((h.textContent || '').toUpperCase().indexOf('BUILD') !== -1); }) || heads[1] || heads[0];
     var midRect = mid.getBoundingClientRect();
 
-    var left = Math.max(0, Math.round(minL - pr.left));
+    // Find the BUILD span to constrain width
+    var buildSpanForWidth = mid ? Array.from(mid.querySelectorAll('span')).find(function(s){ return ((s.textContent || '').trim().toUpperCase() === 'BUILD'); }) : null;
+    var buildRect = buildSpanForWidth ? buildSpanForWidth.getBoundingClientRect() : midRect;
+
+    var left = Math.max(0, Math.round(buildRect.left - pr.left));
     var top = Math.max(0, Math.round(midRect.top - pr.top));
-    var width = Math.max(1, Math.round((maxR - pr.left) - left));
+    var width = Math.max(1, Math.round(buildRect.width));
     var height = Math.max(1, Math.round(midRect.height));
 
     var overlay = container.querySelector('#home-sheen-overlay');
@@ -91,23 +95,14 @@ var css = "\n.home-sheen-overlay { position: absolute; pointer-events: none; ove
     overlay.style.height = height + 'px';
 
     var stripe = overlay.firstElementChild;
-var stripeWidth = Math.round(width * 1.4);
+    var stripeWidth = Math.round(width * 0.6);
     stripe.style.width = stripeWidth + 'px';
     stripe.style.setProperty('--travel', width + 'px');
     // Slightly longer wait before next animation by increasing duration
     stripe.style.animationDuration = '5.2s';
 
-    // Start near the 'B' of BUILD if present in the middle line
-    var buildSpan = mid ? Array.from(mid.querySelectorAll('span')).find(function(s){ return ((s.textContent || '').trim().toUpperCase() === 'BUILD'); }) : null;
-    var startPx = 0;
-    if (buildSpan) {
-      // center the stripe gradient on the B at time 0
-      var sb = buildSpan.getBoundingClientRect();
-      var bc = (sb.left + (sb.width / 2)) - pr.left - left; // center of BUILD relative to overlay
-      startPx = Math.max(0, Math.round(bc - (stripeWidth / 2)));
-    } else {
-      startPx = 0 - Math.round(stripeWidth * 0.1);
-    }
+    // Start the stripe just before the BUILD word
+    var startPx = 0 - Math.round(stripeWidth * 0.3);
     stripe.style.setProperty('--stripe-left', startPx + 'px');
     stripe.style.left = startPx + 'px';
   }
