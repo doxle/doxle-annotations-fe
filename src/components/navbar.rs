@@ -1,7 +1,7 @@
 use crate::Route;
 use dioxus::prelude::*;
-const LOGO_LIGHT: Asset = asset!("/assets/images/dog-light.svg");
-const LOGO_DARK: Asset = asset!("/assets/images/dog-dark.svg");
+const LOGO_LIGHT: Asset = asset!("/assets/icons/dog-light.svg");
+const LOGO_DARK: Asset = asset!("/assets/icons/dog-dark.svg");
 const NAVBAR_CSS: &str = include_str!("../css/navbar.css");
 
 #[component]

@@ -2,7 +2,7 @@ use dioxus::prelude::*;
 
 #[component]
 pub fn LoadingPage() -> Element {
-    const LOADING_ANIMATION: Asset = asset!("/assets/images/dark-theme-animations.svg");
+    const LOADING_ANIMATION: Asset = asset!("/assets/icons/dark-theme-animations.svg");
 
     rsx! {
         div {

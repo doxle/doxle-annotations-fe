@@ -1,8 +1,8 @@
 use crate::Route;
 use dioxus::prelude::*;
 
-const LOGO_LIGHT: Asset = asset!("/assets/images/floorplan-light.svg");
-const LOGO_DARK: Asset = asset!("/assets/images/floorplan-dark.svg");
+const LOGO_LIGHT: Asset = asset!("/assets/icons/floorplan-light.svg");
+const LOGO_DARK: Asset = asset!("/assets/icons/floorplan-dark.svg");
 const DOTS_JS: &str = include_str!("../../js/dot-animation.js");
 const SHEEN_JS: &str = include_str!(concat!(
     env!("CARGO_MANIFEST_DIR"),

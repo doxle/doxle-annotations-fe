@@ -28,7 +28,7 @@ const AUTOFOCUS_JS: &str = r#"
 
 #[component]
 pub fn LoginPage() -> Element {
-    const LOGO: Asset = asset!("/assets/images/send.svg");
+    const LOGO: Asset = asset!("/assets/icons/send.svg");
 
     let mut email = use_signal(|| String::new());
     let mut password = use_signal(|| String::new());
