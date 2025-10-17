@@ -11,11 +11,15 @@
     cursor: default;
 
     /* Center the world inside the container */
-    display: grid;
-    place-items: center;
+    /*display: grid;
+    place-items: center;*/
+    display: block;
 
     /* Touch/trackpad gestures go to our handlers */
     touch-action: none;
+
+    /* Prevents text dragging / selection when panning */
+    user-select: none;
 
     /* Force GPU compositing */
     will-change: transform;
@@ -31,9 +35,11 @@
     /* Draw dots with zoom scale (min scale = 1.0 for viewport size) */
     background-image: radial-gradient(
         circle,
-        var(--dot-color) 0px,
-        var(--dot-color) calc(var(--dot-radius, 1px) * var(--dot-scale, 1)),
-        transparent calc(var(--dot-radius, 1px) * var(--dot-scale, 1))
+        var(--dot-color) 0,
+        /*var(--dot-color) calc(var(--dot-radius, 1px) * var(--dot-scale, 1)),
+        transparent calc(var(--dot-radius, 1px) * var(--dot-scale, 1))*/
+            var(--dot-color) var(--dot-radius, 1px),
+        transparent var(--dot-radius, 1px)
     );
 
     /* Scale the dot spacing with zoom (min = viewport size) */
@@ -55,8 +61,9 @@
     height: 100%;
 
     /* Center children (image, etc.) within the world */
-    display: grid;
-    place-items: center;
+    /*display: grid;
+    place-items: center;*/
+    display: block;
 
     /* Zoom origin: center of viewport (switch to 0 0 if you prefer) */
     transform-origin: 0 0;

@@ -41,14 +41,15 @@ pub fn CanvasPage(task_id: ReadSignal<String>) -> Element {
 
         //Calculate zoom change
         let delta_y = evt.data.delta().strip_units().y;
+        // let zoom_step: f64 = 0.0010;
         let zoom_factor = if delta_y < 0.0 { 1.1 } else { 0.9 };
 
         // ❶ exponential zoom factor:
         //    -dy makes scrolling up (negative) zoom in.
         //    1.0015 ~ gentle; bump to 1.003 for faster; 1.01 for super fast.
-        // let zoom_factor = (1.030_f64).powf(-delta_y);
+        // let zoom_factor = (1.0 + zoom_step).powf(-delta_y);
         let old_zoom = zoom();
-        let mut new_zoom = (old_zoom * zoom_factor as f64).clamp(0.05, 20.0);
+        let mut new_zoom = (old_zoom * zoom_factor as f64).clamp(0.3, 6.0);
 
         // (Optional) snap tiny zooms to avoid jitter
         if new_zoom < 0.06 {
@@ -67,22 +68,25 @@ pub fn CanvasPage(task_id: ReadSignal<String>) -> Element {
         let new_pan_x = mouse_x - zoom_ratio * (mouse_x - current_pan_x);
         let new_pan_y = mouse_y - zoom_ratio * (mouse_y - current_pan_y);
 
-        tracing::info!("=== ZOOM DEBUG ===");
-        tracing::info!(
-            "Mouse: ({}, {}), Old zoom: {}, New zoom: {}",
-            mouse_x,
-            mouse_y,
-            old_zoom,
-            new_zoom
-        );
-        tracing::info!("Zoom ratio: {}", zoom_ratio);
-        tracing::info!(
-            "Old pan: ({}, {}), New pan: ({}, {})",
-            pan_x(),
-            pan_y(),
-            new_pan_x,
-            new_pan_y
-        );
+        // let new_pan_x = current_pan_x + (mouse_x - current_pan_x) * (1.0 - zoom_ratio);
+        // let new_pan_y = current_pan_y + (mouse_y - current_pan_y) * (1.0 - zoom_ratio);
+
+        // tracing::info!("=== ZOOM DEBUG ===");
+        // tracing::info!(
+        //     "Mouse: ({}, {}), Old zoom: {}, New zoom: {}",
+        //     mouse_x,
+        //     mouse_y,
+        //     old_zoom,
+        //     new_zoom
+        // );
+        // tracing::info!("Zoom ratio: {}", zoom_ratio);
+        // tracing::info!(
+        //     "Old pan: ({}, {}), New pan: ({}, {})",
+        //     pan_x(),
+        //     pan_y(),
+        //     new_pan_x,
+        //     new_pan_y
+        // );
 
         //Apply new zoom & pan
         pan_x.set(new_pan_x);
@@ -126,6 +130,12 @@ pub fn CanvasPage(task_id: ReadSignal<String>) -> Element {
         is_panning.set(false);
     };
 
+    //Release pan
+    let onmouseleave = move |_evt: Event<MouseData>| {
+        //User has released mouse button - stop panning
+        is_panning.set(false);
+    };
+
     // -------------------------------------------------------------------------
 
     rsx! {
@@ -149,6 +159,7 @@ pub fn CanvasPage(task_id: ReadSignal<String>) -> Element {
             onmousedown:onmousedown,
             onmouseup:onmouseup,
             onmousemove:onmousemove,
+            onmouseleave:onmouseleave,
 
             div{
                 //Canvas world (zooms/pans)
