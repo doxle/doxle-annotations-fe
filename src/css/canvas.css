@@ -36,15 +36,15 @@
     background-image: radial-gradient(
         circle,
         var(--dot-color) 0,
-        /*var(--dot-color) calc(var(--dot-radius, 1px) * var(--dot-scale, 1)),
-        transparent calc(var(--dot-radius, 1px) * var(--dot-scale, 1))*/
-            var(--dot-color) var(--dot-radius, 1px),
-        transparent var(--dot-radius, 1px)
+        var(--dot-color) calc(var(--dot-radius, 1px) * var(--dot-size-scale, 1)),
+        transparent calc(var(--dot-radius, 1px) * var(--dot-size-scale, 1))
     );
 
     /* Scale the dot spacing with zoom (min = viewport size) */
-    background-size: calc(var(--dot-spacing, 12px) * var(--dot-scale, 1))
-        calc(var(--dot-spacing, 12px) * var(--dot-scale, 1));
+    background-size: calc(
+            var(--dot-spacing, 12px) * var(--dot-spacing-scale, 1)
+        )
+        calc(var(--dot-spacing, 12px) * var(--dot-spacing-scale, 1));
 
     /* Pan offset */
     background-position: var(--dot-offset-x, 0px) var(--dot-offset-y, 0px);
@@ -143,6 +143,12 @@
 
     user-select: none;
     pointer-events: none;
+}
+
+@media (prefers-color-scheme: dark) {
+    .canvas-image img {
+        filter: invert(1);
+    }
 }
 
 /* Layer 3: Annotations (top) */

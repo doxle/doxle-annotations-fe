@@ -145,13 +145,15 @@ pub fn CanvasPage(task_id: ReadSignal<String>) -> Element {
             style:format_args!("
                 --dot-spacing: {}px;
                 --dot-radius: {}px;
-                --dot-scale: {};
+                --dot-size-scale: {};
+                --dot-spacing-scale: {};
                 --dot-offset-x: {}px;
                 --dot-offset-y: {}px;
             ",
                 dot_spacing_px,
                 dot_radius_px,
-                zoom(),
+                zoom().clamp(1.0,4.0), //Dot size
+                zoom().clamp(1.0, 5.0), //Dot spacing
                 -pan_x(),
                 -pan_y(),
             ),

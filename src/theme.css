@@ -3,7 +3,7 @@
 :root {
     /* Light theme colors (default) */
     --bg-primary: #ffffff;
-    --bg-secondary:rgb(245,245,245);
+    --bg-secondary: rgb(245, 245, 245);
     --bg-card: #ffffff;
     --bg-card-hover: rgb(247, 247, 247);
     --text-primary: #333333;
@@ -17,14 +17,14 @@
     --button-secondary-bg: #000;
     --button-secondary-text: #fff;
     --shimmer-color: rgba(255, 255, 255, 0.75);
-    --dot-color: rgb(180, 180, 180);
+    --dot-color: rgb(180, 180, 230);
 }
 
 @media (prefers-color-scheme: dark) {
     :root {
         /* Dark theme colors */
         --bg-primary: #1a1a1a;
-        --bg-secondary: rgb(27,27,27);
+        --bg-secondary: rgb(27, 27, 27);
         --bg-card: #252525;
         --bg-card-hover: #2f2f2f;
         --text-primary: #e5e5e5;
@@ -38,6 +38,6 @@
         --button-secondary-bg: #fff;
         --button-secondary-text: #000;
         --shimmer-color: rgba(20, 16, 37, 0.75);
-        --dot-color: rgb(70, 70, 70);
+        --dot-color: rgb(70, 70, 90);
     }
 }
