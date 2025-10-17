@@ -42,6 +42,7 @@ pub fn CanvasPage(task_id: ReadSignal<String>) -> Element {
 
     rsx! {
         div{
+            //Canvas container (viewport has fixed dots)
             class:"canvas-container",
             style:format_args!("
                 --dot-spacing: {}px;
@@ -59,6 +60,7 @@ pub fn CanvasPage(task_id: ReadSignal<String>) -> Element {
             onwheel:onwheel,
 
             div{
+                //Canvas world (zooms/pans)
                 class:"canvas-world",
                 style: format_args!("
                     transform: translate({}px, {}px) scale({});
