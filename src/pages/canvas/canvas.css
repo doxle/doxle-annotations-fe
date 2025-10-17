@@ -1,21 +1,29 @@
 /* Canvas Page Styles */
+/* Safe-area + navbar height variables */
+:root {
+    --safe-top: env(safe-area-inset-top, 0px);
+    --nav-h: calc(36px + var(--safe-top));
+}
 
 .canvas-page {
-    position: fixed;
+    position: relative;
+    inset: 0;
     top: 0;
     left: 0;
     width: 100vw;
     height: 100vh;
     display: flex;
     flex-direction: column;
+    margin: 0;
+    padding: 0;
 }
 
 .canvas-container {
     position: fixed;
-    top: 0;
+    top: 36px; /* Below navbar */
     left: 0;
     width: 100vw;
-    height: 100vh;
+    height: calc(100vh - 36px);
     background-color: var(--bg-secondary);
     overflow: hidden;
     cursor: default;

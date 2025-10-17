@@ -17,7 +17,7 @@
     --button-secondary-bg: #000;
     --button-secondary-text: #fff;
     --shimmer-color: rgba(255, 255, 255, 0.75);
-    --dot-color: rgb(180, 180, 230);
+    --dot-color: rgb(180, 180, 180);
 }
 
 @media (prefers-color-scheme: dark) {

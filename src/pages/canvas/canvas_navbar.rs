@@ -14,81 +14,67 @@ pub fn CanvasNavbar(
     selected_tool: Signal<Option<AnnotationTool>>,
 ) -> Element {
     let nav = navigator();
+    let mut sidebar_open = use_signal(|| false);
 
-    // --- Assets ----
-    const DOG_LIGHT: Asset = asset!("/assets/icons/dog-light.svg");
-    const DOG_DARK: Asset = asset!("/assets/icons/dog-dark.svg");
-    const HOME_LIGHT: Asset = asset!("/assets/icons/home-light.svg");
-    const HOME_DARK: Asset = asset!("/assets/icons/home-dark.svg");
-    const BLOCK_LIGHT: Asset = asset!("/assets/icons/block-light.svg");
-    const BLOCK_DARK: Asset = asset!("/assets/icons/block-dark.svg");
-    const POLYGON_LIGHT: Asset = asset!("/assets/icons/polygon-light.svg");
-    const POLYGON_DARK: Asset = asset!("/assets/icons/polygon-dark.svg");
-    const BBOX_LIGHT: Asset = asset!("/assets/icons/bbox-light.svg");
-    const BBOX_DARK: Asset = asset!("/assets/icons/bbox-dark.svg");
-    const COMMENT_LIGHT: Asset = asset!("/assets/icons/comment-light.svg");
-    const COMMENT_DARK: Asset = asset!("/assets/icons/comment-dark.svg");
+    // --- Assets ---- (Only light icons since navbar is always dark)
+    const DOG: Asset = asset!("/assets/icons/dog-dark.svg");
+    const HOME: Asset = asset!("/assets/icons/home.svg");
+    const BLOCK: Asset = asset!("/assets/icons/block-dark.svg");
+    const POLYGON: Asset = asset!("/assets/icons/polygon-dark.svg");
+    const BBOX: Asset = asset!("/assets/icons/bbox-dark.svg");
+    const COMMENT: Asset = asset!("/assets/icons/comment-dark.svg");
+    const SIDEBAR: Asset = asset!("/assets/icons/sidebar.svg");
 
     rsx! {
+        // Navbar
         div {
             class: "canvas-navbar",
 
-            // Left: Dog logo
+            // Left section
             div {
-                class: "navbar-dog-logo",
-                onclick: move |_| { nav.push(Route::HomePage {}); },
-                img {
-                    class: "navbar-icon-dog navbar-icon-light",
-                    src: "{DOG_LIGHT}",
-                    alt: "Doxle Logo"
+                class: "navbar-left",
+
+                // Dog logo
+                div {
+                    class: "navbar-dog-logo",
+                    onclick: move |_| { nav.push(Route::HomePage {}); },
+                    img {
+                        class: "navbar-icon-dog",
+                        src: "{DOG}",
+                        alt: "Doxle"
+                    }
                 }
-                img {
-                    class: "navbar-icon-dog navbar-icon-dark",
-                    src: "{DOG_DARK}",
-                    alt: "Doxle Logo"
+
+                // Projects button
+                div {
+                    class: "navbar-nav-button",
+                    onclick: move |_| { nav.push(Route::ProjectsPage {}); },
+                    title: "Projects",
+                    img {
+                        class: "navbar-icon",
+                        src: "{HOME}",
+                        alt: "Projects"
+                    }
+                }
+
+                // Blocks button
+                div {
+                    class: "navbar-nav-button navbar-block-button",
+                    onclick: move |_| {
+                        nav.push(Route::BlocksPage { project_id: project_id.clone() });
+                    },
+                    title: "Blocks",
+                    img {
+                        class: "navbar-icon navbar-block-icon",
+                        src: "{BLOCK}",
+                        alt: "Blocks"
+                    }
                 }
             }
 
-            // Home button (rounded rect)
+            // Center section
             div {
-                class: "navbar-nav-button",
-                onclick: move |_| { nav.push(Route::ProjectsPage {}); },
-                title: "Projects",
-                img {
-                    class: "navbar-icon navbar-icon-light",
-                    src: "{HOME_LIGHT}",
-                    alt: "Home"
-                }
-                img {
-                    class: "navbar-icon navbar-icon-dark",
-                    src: "{HOME_DARK}",
-                    alt: "Home"
-                }
-            }
-
-            // Block button (rounded rect)
-            div {
-                class: "navbar-nav-button",
-                onclick: move |_| {
-                    // Navigate back to blocks page with proper project_id
-                    nav.push(Route::BlocksPage { project_id: project_id.clone() });
-                },
-                title: "Blocks",
-                img {
-                    class: "navbar-icon navbar-icon-light",
-                    src: "{BLOCK_LIGHT}",
-                    alt: "Blocks"
-                }
-                img {
-                    class: "navbar-icon navbar-icon-dark",
-                    src: "{BLOCK_DARK}",
-                    alt: "Blocks"
-                }
-            }
-
-            // Main toolbar (long navbar)
-            div {
-                class: "navbar-toolbar",
+                class: "navbar-center",
 
                 // Image name
                 span {
@@ -111,13 +97,8 @@ pub fn CanvasNavbar(
                     },
                     title: "Polygon Tool",
                     img {
-                        class: "navbar-icon navbar-icon-light",
-                        src: "{POLYGON_LIGHT}",
-                        alt: "Polygon"
-                    }
-                    img {
-                        class: "navbar-icon navbar-icon-dark",
-                        src: "{POLYGON_DARK}",
+                        class: "navbar-icon",
+                        src: "{POLYGON}",
                         alt: "Polygon"
                     }
                 }
@@ -134,14 +115,9 @@ pub fn CanvasNavbar(
                     },
                     title: "Bounding Box Tool",
                     img {
-                        class: "navbar-icon navbar-icon-light",
-                        src: "{BBOX_LIGHT}",
-                        alt: "Bounding Box"
-                    }
-                    img {
-                        class: "navbar-icon navbar-icon-dark",
-                        src: "{BBOX_DARK}",
-                        alt: "Bounding Box"
+                        class: "navbar-icon",
+                        src: "{BBOX}",
+                        alt: "BBox"
                     }
                 }
 
@@ -152,20 +128,52 @@ pub fn CanvasNavbar(
                 div {
                     class: "navbar-tool-button",
                     onclick: move |_| {
-                        // TODO: Toggle comments panel
+                        // TODO: Toggle comments
                     },
                     title: "Comments",
                     img {
-                        class: "navbar-icon navbar-icon-light",
-                        src: "{COMMENT_LIGHT}",
-                        alt: "Comments"
-                    }
-                    img {
-                        class: "navbar-icon navbar-icon-dark",
-                        src: "{COMMENT_DARK}",
+                        class: "navbar-icon",
+                        src: "{COMMENT}",
                         alt: "Comments"
                     }
                 }
+            }
+
+            // Right section
+            div {
+                class: "navbar-right",
+
+                // User avatar (first initial)
+                div {
+                    class: "navbar-user-avatar",
+                    title: "User",
+                    "S"  // TODO: Get from user data
+                }
+
+                // Sidebar toggle
+                div {
+                    class: "navbar-sidebar-toggle",
+                    onclick: move |_| {
+                        sidebar_open.set(!sidebar_open());
+                    },
+                    title: "Toggle Sidebar",
+                    img {
+                        class: "navbar-icon",
+                        src: "{SIDEBAR}",
+                        alt: "Sidebar"
+                    }
+                }
+            }
+        }
+
+        // Sidebar
+        div {
+            class: if sidebar_open() { "canvas-sidebar open" } else { "canvas-sidebar" },
+
+            div {
+                class: "sidebar-content",
+                h3 { "Annotations" }
+                p { "Sidebar content goes here..." }
             }
         }
     }
