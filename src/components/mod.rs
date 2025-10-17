@@ -1,12 +1,8 @@
-pub mod canvas;
 pub mod canvas_old;
-pub mod home;
 pub mod join;
 pub mod loading;
 pub mod login;
 pub mod navbar;
 pub mod ourstory;
-pub mod projects;
 pub mod sayhello;
-pub mod block;
 pub mod upload;

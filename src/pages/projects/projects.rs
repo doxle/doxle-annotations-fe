@@ -28,7 +28,7 @@ pub fn ProjectsPage() -> Element {
 
     let handle_project_click = move |index: usize| {
         println!("Project {} clicked", index);
-        nav.push(Route::BlockPage { project_id: index.to_string() });
+        nav.push(Route::BlocksPage { project_id: index.to_string() });
     };
     
 

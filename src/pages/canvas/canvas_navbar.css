@@ -1,0 +1,172 @@
+/* Canvas Navbar Styles */
+
+/* Navbar */
+.canvas-navbar {
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    right: 20px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    z-index: 1000;
+    pointer-events: none;
+}
+
+.canvas-navbar > * {
+    pointer-events: auto;
+}
+
+/* Dog Logo - Reduced by 30% */
+.navbar-dog-logo {
+    width: 28px;  /* Reduced from 40px */
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: transform 0.2s ease;
+    position: relative;
+}
+
+.navbar-dog-logo:hover {
+    transform: scale(1.1);
+}
+
+/* Tiny dropdown indicator */
+.navbar-dog-logo::after {
+    content: '▼';
+    position: absolute;
+    bottom: -4px;
+    right: -6px;
+    font-size: 6px;
+    color: var(--text-secondary);
+}
+
+.navbar-icon-dog {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+
+/* Navigation Buttons (Home, Block) - More border radius, stroke instead of shadow */
+.navbar-nav-button {
+    width: 40px;
+    height: 40px;
+    background: var(--bg-primary);
+    border: 1px solid rgb(230, 230, 230);
+    border-radius: 12px;  /* Increased from 8px */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+@media (prefers-color-scheme: dark) {
+    .navbar-nav-button {
+        border-color: rgb(60, 60, 60);
+    }
+}
+
+.navbar-nav-button:hover {
+    background: var(--bg-secondary);
+    transform: translateY(-2px);
+}
+
+.navbar-nav-button:active {
+    transform: translateY(0);
+}
+
+/* Main Toolbar - Fit content width, no shadow, stroke border */
+.navbar-toolbar {
+    width: fit-content;  /* Changed from flex: 1 */
+    height: 48px;
+    background: var(--bg-primary);
+    border: 1px solid rgb(230, 230, 230);
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    padding: 0 16px;
+    gap: 16px;
+}
+
+@media (prefers-color-scheme: dark) {
+    .navbar-toolbar {
+        border-color: rgb(60, 60, 60);
+    }
+}
+
+/* Image Name */
+.navbar-img-name {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text-primary);
+    white-space: nowrap;
+}
+
+/* Separator */
+.navbar-separator {
+    width: 1px;
+    height: 24px;
+    background: var(--border-color);
+}
+
+/* Tool Buttons - Compact size */
+.navbar-tool-button {
+    width: 24px;  /* Reduced from 32px */
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    border-radius: 6px;
+    transition: all 0.2s ease;
+    position: relative;
+}
+
+.navbar-tool-button:hover {
+    background: var(--bg-secondary);
+}
+
+.navbar-tool-button.active {
+    background: var(--accent-color);
+}
+
+.navbar-tool-button.active::after {
+    content: '';
+    position: absolute;
+    bottom: -4px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 20px;
+    height: 2px;
+    background: var(--accent-color);
+    border-radius: 1px;
+}
+
+/* Icons - Compact size */
+.navbar-icon {
+    width: 14px;  /* Reduced from 20px */
+    height: 14px;
+    object-fit: contain;
+}
+
+/* Light/Dark icon switching */
+.navbar-icon-light {
+    display: block;
+}
+
+.navbar-icon-dark {
+    display: none;
+}
+
+@media (prefers-color-scheme: dark) {
+    .navbar-icon-light {
+        display: none;
+    }
+
+    .navbar-icon-dark {
+        display: block;
+    }
+}

@@ -2,7 +2,7 @@ use dioxus::prelude::*;
 use crate::Route;
 
 #[component]
-pub fn BlockPage(project_id: String) -> Element {
+pub fn BlocksPage(project_id: String) -> Element {
     let nav = navigator();
     
     // Mock blocks data - in real app, fetch based on project_id

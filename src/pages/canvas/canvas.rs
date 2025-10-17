@@ -1,11 +1,16 @@
 use dioxus::prelude::*;
+use super::canvas_navbar::{CanvasNavbar, AnnotationTool};
 
 #[component]
-pub fn CanvasPage(task_id: ReadSignal<String>) -> Element {
+pub fn CanvasPage(task_id: String) -> Element {
+    // Extract project_id from task_id (format: "project_id-task_id" or just use "1" for now)
+    let project_id = "1".to_string(); // TODO: Parse from task_id or pass as separate param
+
     // --- State ---
     let mut zoom = use_signal(|| 1.0);
     let mut pan_x = use_signal(|| 0.0);
     let mut pan_y = use_signal(|| 0.0);
+    let mut selected_tool = use_signal(|| Option::<AnnotationTool>::None);
 
     // --- Pan ----
     let mut is_panning: Signal<bool> = use_signal(|| false);
@@ -139,9 +144,19 @@ pub fn CanvasPage(task_id: ReadSignal<String>) -> Element {
     // -------------------------------------------------------------------------
 
     rsx! {
-        div{
-            //Canvas container (viewport has fixed dots)
-            class:container_class,
+        div {
+            class: "canvas-page",
+
+            // Navbar
+            CanvasNavbar {
+                task_id: task_id.clone(),
+                project_id: project_id.clone(),
+                selected_tool: selected_tool
+            }
+
+            div{
+                //Canvas container (viewport has fixed dots)
+                class:container_class,
             style:format_args!("
                 --dot-spacing: {}px;
                 --dot-radius: {}px;
@@ -189,6 +204,7 @@ pub fn CanvasPage(task_id: ReadSignal<String>) -> Element {
                     style: "background-color: transparent;",
                 }
             }
+        }
         }
     }
 }

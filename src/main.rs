@@ -1,6 +1,7 @@
 use dioxus::prelude::*;
 
 mod components;
+mod pages;
 mod api;
 
 // Font assets
@@ -26,11 +27,12 @@ const MAIN_CSS_CONTENT: &str = r#"
 
 const FONTS_CSS_TEMPLATE: &str = include_str!("font.css");
 const THEME_CSS: &str = include_str!("theme.css");
-const HOME_CSS: &str = include_str!("css/home.css");
+const HOME_CSS: &str = include_str!("pages/home/home.css");
 const LOGIN_CSS: &str = include_str!("css/login.css");
-const PROJECTS_CSS: &str = include_str!("css/projects.css");
-const BLOCK_CSS: &str = include_str!("css/block.css");
-const CANVAS_CSS: &str = include_str!("css/canvas.css");
+const PROJECTS_CSS: &str = include_str!("pages/projects/projects.css");
+const BLOCK_CSS: &str = include_str!("pages/blocks/blocks.css");
+const CANVAS_CSS: &str = include_str!("pages/canvas/canvas.css");
+const CANVAS_NAVBAR_CSS: &str = include_str!("pages/canvas/canvas_navbar.css");
 
 fn main() {
     // Initialize tracing and filter out noisy warnings
@@ -63,6 +65,7 @@ fn App() -> Element {
                 document::Style { {PROJECTS_CSS} }
                 document::Style { {BLOCK_CSS} }
                 document::Style { {CANVAS_CSS} }
+                document::Style { {CANVAS_NAVBAR_CSS} }
 
 
                 // Fonts from template with asset URLs
@@ -101,20 +104,20 @@ enum Route {
     #[route("/projects")]
     ProjectsPage {},
     #[route("/block/:project_id")]
-    BlockPage { project_id: String },
+    BlocksPage { project_id: String },
     #[route("/canvas/:task_id")]
     CanvasPage { task_id: String },
 }
 
-use components::canvas::CanvasPage;
-use components::home::HomePage;
+// Page imports
+use pages::{CanvasPage, HomePage, ProjectsPage, BlocksPage};
+
+// Component imports (non-page components)
 use components::join::JoinPage;
 use components::login::LoginPage;
 use components::navbar::Navbar;
 use components::ourstory::OurStoryPage;
-use components::projects::ProjectsPage;
 use components::sayhello::SayHelloPage;
-use components::block::BlockPage;
 use components::upload::UploadPage;
 
 #[component]
