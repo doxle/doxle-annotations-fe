@@ -5,7 +5,7 @@ html,
 body {
     margin: 0;
     padding: 0;
-    background: rgb(51, 55, 61);
+    background: var(--navbar-bg);
 }
 
 /* Full-width navbar */
@@ -15,8 +15,7 @@ body {
     left: 0;
     right: 0;
     height: 36px;
-    background: rgb(51, 55, 61);
-    /*background: red;*/
+    background: var(--navbar-bg);
     border: none;
     display: flex;
     align-items: center;
@@ -29,12 +28,6 @@ body {
     transform: translateZ(0);
     -webkit-backface-visibility: hidden;
     backface-visibility: hidden;
-}
-
-@media (prefers-color-scheme: dark) {
-    .canvas-navbar {
-        background: black;
-    }
 }
 
 /* Left section - Dog, Projects, Blocks */
@@ -103,7 +96,7 @@ body {
 }
 
 .navbar-nav-button:hover {
-    background: rgb(99, 138, 255);
+    background: var(--hover-blue);
     border-radius: 0;
 }
 
@@ -123,7 +116,7 @@ body {
     font-size: 13px;
     font-weight: 300 !important;
     font-family: HelveticaNeue, Helvetica, Arial, sans-serif;
-    color: rgba(255, 255, 255, 0.9);
+    color: var(--navbar-text-bright);
     white-space: nowrap;
     margin-right: 8px;
 }
@@ -132,7 +125,7 @@ body {
 .navbar-separator {
     width: 1px;
     height: 20px;
-    background: rgba(255, 255, 255, 0.2);
+    background: var(--navbar-separator);
     margin: 0 4px;
 }
 
@@ -150,12 +143,12 @@ body {
 }
 
 .navbar-tool-button:hover {
-    background: rgb(99, 138, 255);
+    background: var(--hover-blue);
     border-radius: 0;
 }
 
 .navbar-tool-button.active {
-    background: rgba(255, 255, 255, 0.15);
+    background: var(--navbar-tool-active);
     border-radius: 0;
 }
 
@@ -177,19 +170,19 @@ body {
     width: 21px;
     height: 21px;
     border-radius: 50%;
-    background: #3b82f6; /* Blue */
+    background: var(--avatar-bg);
     display: flex;
     align-items: center;
     justify-content: center;
-    color: white;
+    color: var(--avatar-text);
     font-size: 12px;
-    font-weight: 300;
+    font-weight: 300 !important;
     cursor: pointer;
     transition: all 0.2s ease;
 }
 
 .navbar-user-avatar:hover {
-    background: rgb(99, 138, 255);
+    background: var(--hover-blue);
     border-radius: 0;
 }
 
@@ -206,7 +199,7 @@ body {
 }
 
 .navbar-sidebar-toggle:hover {
-    background: rgb(99, 138, 255);
+    background: var(--hover-blue);
     border-radius: 0;
 }
 
@@ -216,9 +209,10 @@ body {
     top: 36px; /* Below navbar */
     right: 0;
     bottom: 0;
-    width: 20%;
-    background: white;
-    border-left: 1px solid rgb(230, 230, 230);
+    width: 18%;
+    background: var(--sidebar-bg);
+    border-left: 1px solid var(--sidebar-border);
+    color: var(--sidebar-text);
     transform: translateX(100%);
     transition: transform 0.3s ease;
     z-index: 999;
@@ -229,14 +223,17 @@ body {
     transform: translateX(0);
 }
 
-@media (prefers-color-scheme: dark) {
-    .canvas-sidebar {
-        background: rgb(30, 30, 30);
-        border-left-color: rgb(60, 60, 60);
-    }
-}
-
 /* Sidebar Content */
 .sidebar-content {
     padding: 20px;
+    color: var(--sidebar-text);
+}
+
+.sidebar-content h3 {
+    color: var(--sidebar-text);
+    margin: 0 0 16px 0;
+}
+
+.sidebar-content p {
+    color: var(--text-secondary);
 }

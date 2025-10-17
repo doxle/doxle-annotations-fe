@@ -22,7 +22,7 @@
 
 .btn-add-block {
     background: var(--accent-blue);
-    color: white;
+    color: var(--primary-button-text);
     border: none;
     padding: 14px 24px;
     border-radius: 0px;
@@ -67,7 +67,7 @@
 }
 
 .block-row:hover {
-    outline: 2px solid rgba(51, 66, 255, 0.4);
+    outline: 2px solid var(--outline-blue);
     outline-offset: -2px;
     background: var(--bg-card-hover);
     border-radius: 4px;

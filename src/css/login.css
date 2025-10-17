@@ -46,11 +46,11 @@
 }
 
 .login-input:focus {
-    border-color: #4F5BF8 !important;
+    border-color: var(--focus-blue) !important;
 }
 
 .login-input-email:focus {
-    border-bottom: 1px solid #4F5BF8 !important;
+    border-bottom: 1px solid var(--focus-blue) !important;
 }
 
 /* Hide second input top border when first is focused */
@@ -67,12 +67,12 @@ form:has(.login-input-email:focus) .login-input-password {
     width: 100%;
     height: 70px;
     padding: 16px;
-    background: #4F5BF8;
-    color: white;
+    background: var(--primary-button-bg);
+    color: var(--primary-button-text);
     border: none;
     font-size: 16px;
     cursor: pointer;
-    transition: opacity 0.2s;
+    transition: background 0.2s;
     font-weight: 400;
     font-family: Helvetica, Arial, sans-serif;
     position: relative;
@@ -83,7 +83,7 @@ form:has(.login-input-email:focus) .login-input-password {
 }
 
 .login-submit-button:hover {
-    opacity: 0.9;
+    background: var(--primary-button-hover);
 }
 
 .login-submit-logo {
@@ -109,7 +109,7 @@ form:has(.login-input-email:focus) .login-input-password {
 }
 
 .login-link:hover {
-    color: #4F5BF8 !important;
+    color: var(--focus-blue) !important;
 }
 
 .login-divider {
@@ -122,9 +122,9 @@ form:has(.login-input-email:focus) .login-input-password {
 .login-error {
     margin-top: 16px;
     padding: 12px;
-    background: #FEE;
-    border: 1px solid #FCC;
-    color: #C33;
+    background: var(--error-bg);
+    border: 1px solid var(--error-border);
+    color: var(--error-text);
     font-size: 13px;
     text-align: center;
 }

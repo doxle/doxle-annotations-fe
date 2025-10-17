@@ -18,6 +18,42 @@
     --button-secondary-text: #fff;
     --shimmer-color: rgba(255, 255, 255, 0.75);
     --dot-color: rgb(180, 180, 180);
+    --navbar-bg: rgb(51, 55, 61);
+    --sidebar-bg: #ffffff;
+    --sidebar-border: rgb(230, 230, 230);
+    --sidebar-text: #333333;
+
+    /* UI element colors */
+    --primary-button-bg: #4f5bf8;
+    --primary-button-text: #ffffff;
+    --primary-button-hover: rgba(79, 91, 248, 0.9);
+
+    /* Hover and focus colors */
+    --hover-blue: rgb(99, 138, 255);
+    --focus-blue: #4f5bf8;
+    --outline-blue: rgba(51, 66, 255, 0.4);
+
+    /* Error colors */
+    --error-bg: #fee;
+    --error-border: #fcc;
+    --error-text: #c33;
+
+    /* Zoom controls */
+    --zoom-control-bg: rgba(0, 0, 0, 0.7);
+    --zoom-control-text: #ffffff;
+    --zoom-button-bg: rgba(255, 255, 255, 0.1);
+    --zoom-button-border: rgba(255, 255, 255, 0.2);
+    --zoom-button-hover-bg: rgba(255, 255, 255, 0.2);
+    --zoom-button-hover-border: rgba(255, 255, 255, 0.3);
+
+    /* Avatar colors */
+    --avatar-bg: #3b82f6;
+    --avatar-text: #ffffff;
+
+    /* Navbar element colors */
+    --navbar-text-bright: rgba(255, 255, 255, 0.9);
+    --navbar-separator: rgba(255, 255, 255, 0.2);
+    --navbar-tool-active: rgba(255, 255, 255, 0.15);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -39,5 +75,41 @@
         --button-secondary-text: #000;
         --shimmer-color: rgba(20, 16, 37, 0.75);
         --dot-color: rgb(70, 70, 90);
+        --navbar-bg: rgb(25, 25, 25);
+        --sidebar-bg: rgb(30, 30, 30);
+        --sidebar-border: rgb(60, 60, 60);
+        --sidebar-text: #e5e5e5;
+
+        /* UI element colors (dark mode) */
+        --primary-button-bg: #4f5bf8;
+        --primary-button-text: #ffffff;
+        --primary-button-hover: rgba(79, 91, 248, 0.9);
+
+        /* Hover and focus colors (dark mode) */
+        --hover-blue: rgb(99, 138, 255);
+        --focus-blue: #4f5bf8;
+        --outline-blue: rgba(51, 66, 255, 0.4);
+
+        /* Error colors (dark mode) */
+        --error-bg: rgba(255, 68, 68, 0.1);
+        --error-border: rgba(255, 68, 68, 0.3);
+        --error-text: #ff6b6b;
+
+        /* Zoom controls (dark mode) */
+        --zoom-control-bg: rgba(0, 0, 0, 0.7);
+        --zoom-control-text: #ffffff;
+        --zoom-button-bg: rgba(255, 255, 255, 0.1);
+        --zoom-button-border: rgba(255, 255, 255, 0.2);
+        --zoom-button-hover-bg: rgba(255, 255, 255, 0.2);
+        --zoom-button-hover-border: rgba(255, 255, 255, 0.3);
+
+        /* Avatar colors (dark mode) */
+        --avatar-bg: #3b82f6;
+        --avatar-text: #ffffff;
+
+        /* Navbar element colors (dark mode) */
+        --navbar-text-bright: rgba(255, 255, 255, 0.9);
+        --navbar-separator: rgba(255, 255, 255, 0.2);
+        --navbar-tool-active: rgba(255, 255, 255, 0.15);
     }
 }

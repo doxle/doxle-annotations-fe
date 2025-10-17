@@ -18,13 +18,13 @@
     width: 27px;
     height: 27px;
     border-radius: 50%;
-    background: #3342ff;
+    background: var(--avatar-bg);
     display: flex;
     align-items: center;
     justify-content: center;
     cursor: pointer;
     transition: opacity 0.2s;
-    color: white;
+    color: var(--avatar-text);
     font-size: 14px;
     font-weight: 500;
     font-family: Helvetica, Arial, sans-serif;
@@ -51,7 +51,7 @@
 
 .btn-add-project {
     background: var(--accent-blue);
-    color: white;
+    color: var(--primary-button-text);
     border: none;
     padding: 12px 24px;
     border-radius: 8px;
@@ -124,7 +124,7 @@
 
 .btn-delete-project {
     background: var(--accent-red);
-    color: white;
+    color: var(--primary-button-text);
     border: none;
     padding: 6px 12px;
     border-radius: 6px;

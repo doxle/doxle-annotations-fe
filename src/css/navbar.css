@@ -47,7 +47,7 @@
 }
 
 .say-hello-btn {
-    background: #4F5BF8;
+    background: var(--primary-button-bg);
     font-weight: 300 !important;
     width: 140px;
     height: 60px;
@@ -55,10 +55,10 @@
     border: none;
     font-family: Helvetica, Arial, sans-serif;
     cursor: pointer;
-    color: white;
+    color: var(--primary-button-text);
     padding: 10px 24px;
     border-radius: 0px;
-    transition: opacity 0.2s;
+    transition: background 0.2s;
 }
 
 .mobile-menu-btn {
@@ -112,8 +112,8 @@
 }
 
 .mobile-menu-item.say-hello {
-    background: #4F5BF8;
-    color: white;
+    background: var(--primary-button-bg);
+    color: var(--primary-button-text);
     padding: 12px 24px;
     border-radius: 0px;
     width: 100%;
@@ -138,18 +138,18 @@
 }
 
 .say-hello-btn:hover {
-    opacity: 0.9;
+    background: var(--primary-button-hover);
 }
 
 .nav-btn:hover:not(.active) {
     text-decoration: underline;
-    text-decoration-color: #4F5BF8;
+    text-decoration-color: var(--focus-blue);
     text-underline-offset: 4px;
 }
 
 .nav-btn.active {
     text-decoration: underline;
-    text-decoration-color: #4F5BF8;
+    text-decoration-color: var(--focus-blue);
     text-underline-offset: 4px;
 }
 
@@ -186,6 +186,5 @@
 }
 
 .mobile-menu-item.say-hello:hover {
-    background: #4f5bf8 !important;
-    opacity: 0.9;
+    background: var(--primary-button-hover) !important;
 }
