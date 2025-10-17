@@ -8,9 +8,9 @@ pub fn CanvasPage(task_id: ReadSignal<String>) -> Element {
     let mut pan_y = use_signal(|| 0.0);
 
     // --- Pan ----
-    let mut _is_panning: Signal<bool> = use_signal(|| false);
-    let mut _last_x: Signal<f64> = use_signal(|| 0.0);
-    let mut _last_y: Signal<f64> = use_signal(|| 0.0);
+    let mut is_panning: Signal<bool> = use_signal(|| false);
+    let mut last_x: Signal<f64> = use_signal(|| 0.0);
+    let mut last_y: Signal<f64> = use_signal(|| 0.0);
 
     // --- Assets ----
     const CANVAS_IMG: Asset = asset!("/assets/images/test.png");
@@ -29,6 +29,7 @@ pub fn CanvasPage(task_id: ReadSignal<String>) -> Element {
 
     // --- Handlers ----
 
+    //Zoom
     let onwheel = move |evt: Event<WheelData>| {
         evt.prevent_default();
         let delta = evt.data.delta().strip_units().y;
@@ -36,6 +37,42 @@ pub fn CanvasPage(task_id: ReadSignal<String>) -> Element {
         let zoom_factor = if delta < 0.0 { 1.1 } else { 0.9 };
         let new_zoom = ((zoom() * zoom_factor) as f64).clamp(0.1, 5.0);
         zoom.set(new_zoom);
+    };
+
+    //Start Panning
+    let onmousedown = move |evt: Event<MouseData>| {
+        is_panning.set(true);
+        let coords = evt.client_coordinates();
+        last_x.set(coords.x);
+        last_y.set(coords.y);
+    };
+
+    let onmousemove = move |evt: Event<MouseData>| {
+        //User is moving mouse - update pan if dragging
+        if is_panning() {
+            //Get current mouse position
+            let coords = evt.client_coordinates();
+            let current_x = coords.x;
+            let current_y = coords.y;
+
+            //Calculate how far the mouse has moved
+            let dx = current_x - last_x();
+            let dy = current_y - last_y();
+
+            //Update pan position
+            pan_x.set(pan_x() + dx);
+            pan_y.set(pan_y() + dy);
+
+            //Remember the last position
+            last_x.set(current_x);
+            last_y.set(current_y);
+        }
+    };
+
+    //Release pan
+    let onmouseup = move |_evt: Event<MouseData>| {
+        //User has released mouse button - stop panning
+        is_panning.set(false);
     };
 
     // -------------------------------------------------------------------------
@@ -58,6 +95,9 @@ pub fn CanvasPage(task_id: ReadSignal<String>) -> Element {
                 pan_y()*zoom(),
             ),
             onwheel:onwheel,
+            onmousedown:onmousedown,
+            onmouseup:onmouseup,
+            onmousemove:onmousemove,
 
             div{
                 //Canvas world (zooms/pans)
