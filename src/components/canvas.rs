@@ -4,8 +4,8 @@ use dioxus::prelude::*;
 pub fn CanvasPage(task_id: ReadSignal<String>) -> Element {
     // --- State ---
     let mut zoom = use_signal(|| 1.0);
-    let mut _pan_x = use_signal(|| 0.0);
-    let mut _pan_y = use_signal(|| 0.0);
+    let mut pan_x = use_signal(|| 0.0);
+    let mut pan_y = use_signal(|| 0.0);
 
     // --- Pan ----
     let mut _is_panning: Signal<bool> = use_signal(|| false);
@@ -18,11 +18,12 @@ pub fn CanvasPage(task_id: ReadSignal<String>) -> Element {
     // --- Dots & Theme ---
     let dot_spacing_px: f64 = 12.0;
     let dot_radius_px: f64 = 1.0;
-    let dots_style = format!(
-        "pointer-events: none; background: radial-gradient(circle, var(--dot-color) 0px, var(--dot-color) {r}px, transparent {r}px); background-size: {s}px {s}px; background-position: 0 0;",
-        r = dot_radius_px,
-        s = dot_spacing_px,
-    );
+
+    // let dots_style = format!(
+    //     "pointer-events: none; background: radial-gradient(circle, var(--dot-color) 0px, var(--dot-color) {r}px, transparent {r}px); background-size: {s}px {s}px; background-position: 0 0;",
+    //     r = dot_radius_px,
+    //     s = dot_spacing_px,
+    // );
 
     // -------------------------------------------------------------------------
 
@@ -42,51 +43,42 @@ pub fn CanvasPage(task_id: ReadSignal<String>) -> Element {
     rsx! {
         div{
             class:"canvas-container",
-            style:"display:grid; place-items:center;",
+            style:format_args!("
+                --dot-spacing: {}px;
+                --dot-radius: {}px;
+                --dot-scale: {};
+                --dot-offset-x: {}px;
+                --dot-offset-y: {}px;
+            ",
+                dot_spacing_px,
+                dot_radius_px,
+                zoom().max(0.4),
+                pan_x()*zoom(),
+                pan_y()*zoom(),
+            ),
             onwheel:onwheel,
 
             div{
                 class:"canvas-world",
                 style: format_args!("
-                    position:relative;
-                    width:100%;
-                    height:100%;
-                    display:grid;
-                    place-items:center;
-                    transform-origin:center center;
-                    will-change: transform;
-                    transform: scale({});
-                    ",zoom()),
+                    transform: translate({}px, {}px) scale({});
+                    ",
+                    pan_x(), pan_y(), zoom(),
+                ),
 
 
                 // Layer 1: Background Dots - GPU-accelerated
-                div{
-                    class: "canvas-layer canvas-dots",
-                    style: format_args!("{}",dots_style),
-                }
+                // div{ class: "canvas-layer canvas-dots"}
 
                 // Layer 2: Image - GPU-accelerated (starts at 60% width, centered)
                 div {
                     class: "canvas-layer canvas-image",
-                    style: "display: grid; place-items: center;",
-                    img {
-                        src: CANVAS_IMG,
-                        style: "
-                        display: block;
-                        width: 60%; /* intial size = 60% of canvas */
-                        height: auto;
-                        max-width: none;
-                        user-select:none;
-                        pointer-events:none;
-                        image-rendering: -webkit-optimize-contrast;
-                        image-rendering: crisp-edges;
-                        "
-                    }
+                    img {src: CANVAS_IMG}
                 }
 
                 // Layer 3: Annotations - CPU - Scales with world
                 canvas{
-                    id:"dots-canvas",
+                    id:"canvas-annotations",
                     class:"canvas-layer canvas-annotations",
                     style: "background-color: transparent;",
                 }

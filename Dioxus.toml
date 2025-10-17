@@ -5,7 +5,7 @@ out_dir = "dist"
 asset_dir = "public"
 
 [web.app]
-title = "Doxle - Annotation Tool"
+title = "Doxle"
 
 [web.watcher]
 reload_html = true
