@@ -19,23 +19,74 @@ pub fn CanvasPage(task_id: ReadSignal<String>) -> Element {
     let dot_spacing_px: f64 = 12.0;
     let dot_radius_px: f64 = 1.0;
 
-    // let dots_style = format!(
-    //     "pointer-events: none; background: radial-gradient(circle, var(--dot-color) 0px, var(--dot-color) {r}px, transparent {r}px); background-size: {s}px {s}px; background-position: 0 0;",
-    //     r = dot_radius_px,
-    //     s = dot_spacing_px,
-    // );
+    // --- Cursor State ---
+    let container_class = if is_panning() {
+        "canvas-container is-panning"
+    } else {
+        "canvas-container"
+    };
 
     // -------------------------------------------------------------------------
 
     // --- Handlers ----
 
-    //Zoom
+    //Zoom with current cursor position
     let onwheel = move |evt: Event<WheelData>| {
         evt.prevent_default();
-        let delta = evt.data.delta().strip_units().y;
-        tracing::info!("delta : {}", delta);
-        let zoom_factor = if delta < 0.0 { 1.1 } else { 0.9 };
-        let new_zoom = ((zoom() * zoom_factor) as f64).clamp(0.1, 5.0);
+
+        //Get mouse position in viewport (where cursor is on screen)
+        let mouse_coords = evt.client_coordinates();
+        let mouse_x = mouse_coords.x;
+        let mouse_y = mouse_coords.y;
+
+        //Calculate zoom change
+        let delta_y = evt.data.delta().strip_units().y;
+        let zoom_factor = if delta_y < 0.0 { 1.1 } else { 0.9 };
+
+        // ❶ exponential zoom factor:
+        //    -dy makes scrolling up (negative) zoom in.
+        //    1.0015 ~ gentle; bump to 1.003 for faster; 1.01 for super fast.
+        // let zoom_factor = (1.030_f64).powf(-delta_y);
+        let old_zoom = zoom();
+        let mut new_zoom = (old_zoom * zoom_factor as f64).clamp(0.05, 20.0);
+
+        // (Optional) snap tiny zooms to avoid jitter
+        if new_zoom < 0.06 {
+            new_zoom = 0.05;
+        }
+
+        //Calculate the zoom ratio
+        let zoom_ratio = new_zoom / old_zoom;
+
+        //Current pans
+        let current_pan_x = pan_x();
+        let current_pan_y = pan_y();
+
+        //Adjust for pan so the same world coordinates stays under the cursor
+        // Formula: pan = mouse_position - (world_position * new_zoom)
+        let new_pan_x = mouse_x - zoom_ratio * (mouse_x - current_pan_x);
+        let new_pan_y = mouse_y - zoom_ratio * (mouse_y - current_pan_y);
+
+        tracing::info!("=== ZOOM DEBUG ===");
+        tracing::info!(
+            "Mouse: ({}, {}), Old zoom: {}, New zoom: {}",
+            mouse_x,
+            mouse_y,
+            old_zoom,
+            new_zoom
+        );
+        tracing::info!("Zoom ratio: {}", zoom_ratio);
+        tracing::info!(
+            "Old pan: ({}, {}), New pan: ({}, {})",
+            pan_x(),
+            pan_y(),
+            new_pan_x,
+            new_pan_y
+        );
+
+        //Apply new zoom & pan
+        pan_x.set(new_pan_x);
+        pan_y.set(new_pan_y);
         zoom.set(new_zoom);
     };
 
@@ -80,7 +131,7 @@ pub fn CanvasPage(task_id: ReadSignal<String>) -> Element {
     rsx! {
         div{
             //Canvas container (viewport has fixed dots)
-            class:"canvas-container",
+            class:container_class,
             style:format_args!("
                 --dot-spacing: {}px;
                 --dot-radius: {}px;
@@ -90,9 +141,9 @@ pub fn CanvasPage(task_id: ReadSignal<String>) -> Element {
             ",
                 dot_spacing_px,
                 dot_radius_px,
-                zoom().max(0.4),
-                pan_x()*zoom(),
-                pan_y()*zoom(),
+                zoom(),
+                -pan_x(),
+                -pan_y(),
             ),
             onwheel:onwheel,
             onmousedown:onmousedown,

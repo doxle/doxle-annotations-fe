@@ -8,7 +8,7 @@
     height: 100vh;
     background-color: var(--bg-secondary);
     overflow: hidden;
-    cursor: grab;
+    cursor: default;
 
     /* Center the world inside the container */
     display: grid;
@@ -37,13 +37,14 @@
     );
 
     /* Scale the dot spacing with zoom (min = viewport size) */
-    background-size: calc(var(--dot-spacing, 12px) * var(--dot-scale, 1)) calc(var(--dot-spacing, 12px) * var(--dot-scale, 1));
+    background-size: calc(var(--dot-spacing, 12px) * var(--dot-scale, 1))
+        calc(var(--dot-spacing, 12px) * var(--dot-scale, 1));
 
     /* Pan offset */
     background-position: var(--dot-offset-x, 0px) var(--dot-offset-y, 0px);
 }
 
-.canvas-container:active {
+.canvas-container.is-panning {
     cursor: grabbing;
 }
 
@@ -58,7 +59,7 @@
     place-items: center;
 
     /* Zoom origin: center of viewport (switch to 0 0 if you prefer) */
-    transform-origin: center center;
+    transform-origin: 0 0;
     will-change: transform;
 }
 
