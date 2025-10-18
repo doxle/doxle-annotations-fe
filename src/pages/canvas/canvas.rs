@@ -1,5 +1,5 @@
+use super::canvas_navbar::{AnnotationTool, CanvasNavbar};
 use dioxus::prelude::*;
-use super::canvas_navbar::{CanvasNavbar, AnnotationTool};
 
 #[component]
 pub fn CanvasPage(task_id: String) -> Element {
@@ -144,6 +144,7 @@ pub fn CanvasPage(task_id: String) -> Element {
     // -------------------------------------------------------------------------
 
     rsx! {
+        div { class: "top-edge-mask" }
         div {
             class: "canvas-page",
 

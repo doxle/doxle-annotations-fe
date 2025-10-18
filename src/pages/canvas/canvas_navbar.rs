@@ -1,5 +1,6 @@
 use crate::Route;
 use dioxus::prelude::*;
+use super::more_menu::MoreMenu;
 
 #[derive(Clone, Copy, PartialEq)]
 pub enum AnnotationTool {
@@ -15,14 +16,18 @@ pub fn CanvasNavbar(
 ) -> Element {
     let nav = navigator();
     let mut sidebar_open = use_signal(|| false);
+    let mut dog_hover = use_signal(|| false);
+    let mut more_menu_open = use_signal(|| false);
 
     // --- Assets ---- (Only light icons since navbar is always dark)
-    const DOG: Asset = asset!("/assets/icons/dog-dark.svg");
+    const DOG: Asset = asset!("/assets/icons/dog.svg");
+    const DOG_HOVER: Asset = asset!("/assets/icons/dog-hover.svg");
     const HOME: Asset = asset!("/assets/icons/home.svg");
-    const BLOCK: Asset = asset!("/assets/icons/block-dark.svg");
-    const POLYGON: Asset = asset!("/assets/icons/polygon-dark.svg");
-    const BBOX: Asset = asset!("/assets/icons/bbox-dark.svg");
-    const COMMENT: Asset = asset!("/assets/icons/comment-dark.svg");
+    const BLOCK: Asset = asset!("/assets/icons/blocks.svg");
+    const POLYGON: Asset = asset!("/assets/icons/polygon.svg");
+    const BBOX: Asset = asset!("/assets/icons/bbox.svg");
+    const COMMENT: Asset = asset!("/assets/icons/comment.svg");
+    const MORE: Asset = asset!("/assets/icons/more.svg");
     const SIDEBAR: Asset = asset!("/assets/icons/sidebar.svg");
 
     rsx! {
@@ -38,20 +43,22 @@ pub fn CanvasNavbar(
                 div {
                     class: "navbar-dog-logo",
                     onclick: move |_| { nav.push(Route::HomePage {}); },
+                    onmouseenter: move |_| { dog_hover.set(true); },
+                    onmouseleave: move |_| { dog_hover.set(false); },
                     img {
                         class: "navbar-icon-dog",
-                        src: "{DOG}",
+                        src: if dog_hover() { "{DOG_HOVER}" } else { "{DOG}" },
                         alt: "Doxle"
                     }
                 }
 
                 // Projects button
                 div {
-                    class: "navbar-nav-button",
+                    class: "navbar-nav-button navbar-home-button",
                     onclick: move |_| { nav.push(Route::ProjectsPage {}); },
-                    title: "Projects",
+                    "data-tooltip": "Projects",
                     img {
-                        class: "navbar-icon",
+                        class: "navbar-icon navbar-home-icon",
                         src: "{HOME}",
                         alt: "Projects"
                     }
@@ -63,7 +70,7 @@ pub fn CanvasNavbar(
                     onclick: move |_| {
                         nav.push(Route::BlocksPage { project_id: project_id.clone() });
                     },
-                    title: "Blocks",
+                    "data-tooltip": "Blocks",
                     img {
                         class: "navbar-icon navbar-block-icon",
                         src: "{BLOCK}",
@@ -87,6 +94,7 @@ pub fn CanvasNavbar(
 
                 // Polygon tool
                 div {
+                    "data-tooltip": "Polygon",
                     class: if selected_tool() == Some(AnnotationTool::Polygon) {
                         "navbar-tool-button active"
                     } else {
@@ -95,9 +103,8 @@ pub fn CanvasNavbar(
                     onclick: move |_| {
                         selected_tool.set(Some(AnnotationTool::Polygon));
                     },
-                    title: "Polygon Tool",
                     img {
-                        class: "navbar-icon",
+                        class: "navbar-icon navbar-polygon-icon",
                         src: "{POLYGON}",
                         alt: "Polygon"
                     }
@@ -105,6 +112,7 @@ pub fn CanvasNavbar(
 
                 // Bounding Box tool
                 div {
+                    "data-tooltip": "BBox",
                     class: if selected_tool() == Some(AnnotationTool::BoundingBox) {
                         "navbar-tool-button active"
                     } else {
@@ -113,26 +121,22 @@ pub fn CanvasNavbar(
                     onclick: move |_| {
                         selected_tool.set(Some(AnnotationTool::BoundingBox));
                     },
-                    title: "Bounding Box Tool",
                     img {
-                        class: "navbar-icon",
+                        class: "navbar-icon navbar-bbox-icon",
                         src: "{BBOX}",
                         alt: "BBox"
                     }
                 }
 
-                // Separator
-                div { class: "navbar-separator" }
-
                 // Comment button
                 div {
+                    "data-tooltip": "Comment",
                     class: "navbar-tool-button",
                     onclick: move |_| {
                         // TODO: Toggle comments
                     },
-                    title: "Comments",
                     img {
-                        class: "navbar-icon",
+                        class: "navbar-icon navbar-comment-icon",
                         src: "{COMMENT}",
                         alt: "Comments"
                     }
@@ -150,15 +154,32 @@ pub fn CanvasNavbar(
                     "S"  // TODO: Get from user data
                 }
 
+                // More button
+                div {
+                    "data-tooltip": "More",
+                    class: "navbar-more-button",
+                    onclick: move |_| {
+                        more_menu_open.set(!more_menu_open());
+                    },
+                    img {
+                        class: "navbar-icon navbar-more-icon",
+                        src: "{MORE}",
+                        alt: "More"
+                    }
+
+                    // Dropdown menu component
+                    MoreMenu { is_open: more_menu_open }
+                }
+
                 // Sidebar toggle
                 div {
+                    "data-tooltip": "Sidebar",
                     class: "navbar-sidebar-toggle",
                     onclick: move |_| {
                         sidebar_open.set(!sidebar_open());
                     },
-                    title: "Toggle Sidebar",
                     img {
-                        class: "navbar-icon",
+                        class: "navbar-icon navbar-sidebar-icon",
                         src: "{SIDEBAR}",
                         alt: "Sidebar"
                     }

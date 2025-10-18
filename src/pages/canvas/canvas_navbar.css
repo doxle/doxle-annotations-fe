@@ -1,16 +1,18 @@
 /* Canvas Navbar Styles - Full Width Design */
 
 /* Ensure no body margin affects navbar */
-html,
+/*html,
 body {
     margin: 0;
     padding: 0;
     background: var(--navbar-bg);
-}
+    background-color: var(--navbar-bg);
+    overflow-x: hidden;
+}*/
 
 /* Full-width navbar */
 .canvas-navbar {
-    position: fixed;
+    position: absolute;
     top: 0;
     left: 0;
     right: 0;
@@ -19,36 +21,31 @@ body {
     border: none;
     display: flex;
     align-items: center;
-    justify-content: space-between;
+    justify-content: flex-start;
     padding: 0 16px 0 12px;
-    gap: 12px;
     margin: 0 !important;
-    z-index: 1000;
+    z-index: 2;
     /* prevent 0.5–1px hairlines on some GPUs */
-    transform: translateZ(0);
+    /*transform: translateZ(0);
     -webkit-backface-visibility: hidden;
-    backface-visibility: hidden;
+    backface-visibility: hidden;*/
+    /* Avoid GPU seam above on some devices */
+    will-change: opacity;
+}
+
+.canvas-navbar::before {
+    content: "";
+    position: absolute;
+    top: -3px; /* covers the hairline above */
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: var(--navbar-bg);
+    pointer-events: none;
 }
 
 /* Left section - Dog, Projects, Blocks */
 .navbar-left {
-    display: flex;
-    align-items: center;
-    gap: 0;
-}
-
-/* Center section - Image name and tools */
-.navbar-center {
-    display: flex;
-    align-items: center;
-    gap: 0;
-    position: absolute;
-    left: 50%;
-    transform: translateX(-50%);
-}
-
-/* Right section - Avatar and Sidebar toggle */
-.navbar-right {
     display: flex;
     align-items: center;
     gap: 0;
@@ -71,8 +68,8 @@ body {
 }
 
 .navbar-dog-logo img {
-    width: 21px;
-    height: 21px;
+    width: 24px;
+    height: 24px;
 }
 
 .navbar-icon-dog {
@@ -93,6 +90,7 @@ body {
     cursor: pointer;
     transition: all 0.2s ease;
     border-radius: 0;
+    position: relative;
 }
 
 .navbar-nav-button:hover {
@@ -100,15 +98,66 @@ body {
     border-radius: 0;
 }
 
-/* Block button - larger */
+/* Custom tooltip */
+.navbar-nav-button::after {
+    content: attr(data-tooltip);
+    position: absolute;
+    bottom: -35px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--tooltip-bg);
+    color: white;
+    padding: 6px 10px;
+    border-radius: 4px;
+    font-size: 10px;
+    font-weight: 300 !important;
+    font-family: Helvetica, Arial, sans-serif;
+    white-space: nowrap;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s ease;
+    z-index: 10000;
+}
+
+.navbar-nav-button:hover::after {
+    opacity: 1;
+}
+
+/* Home button */
+.navbar-home-button {
+    width: 36px;
+    height: 36px;
+}
+
+.navbar-home-icon {
+    width: 18px !important;
+    height: 18px !important;
+    display: block;
+    object-fit: contain;
+}
+
+/* Block button */
 .navbar-block-button {
     width: 36px;
     height: 36px;
 }
 
 .navbar-block-icon {
-    width: 20px !important;
-    height: 20px !important;
+    width: 22px !important;
+    height: 22px !important;
+    display: block;
+    object-fit: contain;
+}
+
+/* --------------Center Menu ------------------*/
+/* Center section - Image name and tools */
+.navbar-center {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
 }
 
 /* Image Name */
@@ -119,19 +168,22 @@ body {
     color: var(--navbar-text-bright);
     white-space: nowrap;
     margin-right: 8px;
+    line-height: 1;
+    display: flex;
+    align-items: center;
 }
 
 /* Separator */
 .navbar-separator {
     width: 1px;
-    height: 20px;
+    height: 30px;
     background: var(--navbar-separator);
     margin: 0 4px;
 }
 
 /* Tool Buttons - Compact */
 .navbar-tool-button {
-    width: 36px;
+    width: 30px;
     height: 36px;
     display: flex;
     align-items: center;
@@ -152,17 +204,78 @@ body {
     border-radius: 0;
 }
 
+/* Custom tooltip for tool buttons */
+.navbar-tool-button::after {
+    content: attr(data-tooltip);
+    position: absolute;
+    bottom: -35px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--tooltip-bg);
+    color: white;
+    padding: 6px 10px;
+    border-radius: 4px;
+    font-size: 10px;
+    font-weight: 300 !important;
+    font-family: Helvetica, Arial, sans-serif;
+    white-space: nowrap;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s ease;
+    z-index: 10000;
+}
+
+.navbar-tool-button:hover::after {
+    opacity: 1;
+}
+
 /* Icons */
 .navbar-icon {
     width: 16px;
     height: 16px;
     object-fit: contain;
     opacity: 0.7;
+    display: block;
 }
 
 .navbar-tool-button:hover .navbar-icon,
 .navbar-tool-button.active .navbar-icon {
     opacity: 1;
+}
+
+/* Polygon icon */
+.navbar-polygon-icon {
+    width: 17px !important;
+    height: 17px !important;
+    display: block;
+    object-fit: contain;
+}
+
+/* BBox icon */
+.navbar-bbox-icon {
+    width: 16px !important;
+    height: 16px !important;
+    display: block;
+    object-fit: contain;
+}
+
+/* Comment icon */
+.navbar-comment-icon {
+    width: 17px !important;
+    height: 17px !important;
+    display: block;
+    object-fit: contain;
+}
+
+/* --------------Right Menu ------------------*/
+
+/* Right section - Avatar and Sidebar toggle */
+.navbar-right {
+    display: flex;
+    align-items: center;
+    position: absolute;
+    right: 16px; /* pushes entire group to the right edge */
+    gap: 0; /* remove default gap, we'll add custom spacing */
 }
 
 /* User Avatar */
@@ -178,17 +291,17 @@ body {
     font-size: 12px;
     font-weight: 300 !important;
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: opacity 0.2s ease;
+    margin-right: 20px; /* 30px gap before the grouped icons */
 }
 
 .navbar-user-avatar:hover {
-    background: var(--hover-blue);
-    border-radius: 0;
+    opacity: 0.7;
 }
 
-/* Sidebar Toggle */
-.navbar-sidebar-toggle {
-    width: 36px;
+/* More button */
+.navbar-more-button {
+    width: 30px;
     height: 36px;
     display: flex;
     align-items: center;
@@ -196,6 +309,64 @@ body {
     cursor: pointer;
     border-radius: 0;
     transition: all 0.2s ease;
+    position: relative;
+    margin-right: 4px; /* small gap between the 2 grouped icons */
+}
+
+.navbar-more-button:hover {
+    background: var(--hover-blue);
+    border-radius: 0;
+}
+
+/* Custom tooltip for more button */
+.navbar-more-button::after {
+    content: attr(data-tooltip);
+    position: absolute;
+    bottom: -35px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--tooltip-bg);
+    color: white;
+    padding: 6px 10px;
+    border-radius: 4px;
+    font-size: 10px;
+    font-weight: 300 !important;
+    font-family: Helvetica, Arial, sans-serif;
+    white-space: nowrap;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s ease;
+    z-index: 10000;
+}
+
+.navbar-more-button:hover::after {
+    opacity: 1;
+}
+
+/* More icon */
+.navbar-more-icon {
+    width: 16px !important;
+    height: 16px !important;
+    display: block;
+    object-fit: contain;
+    opacity: 0.7;
+}
+
+.navbar-more-button:hover .navbar-more-icon {
+    opacity: 1;
+}
+
+/* Sidebar Toggle */
+.navbar-sidebar-toggle {
+    width: 30px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    border-radius: 0;
+    transition: all 0.2s ease;
+    position: relative;
 }
 
 .navbar-sidebar-toggle:hover {
@@ -203,9 +374,47 @@ body {
     border-radius: 0;
 }
 
+/* Custom tooltip for sidebar toggle */
+.navbar-sidebar-toggle::after {
+    content: attr(data-tooltip);
+    position: absolute;
+    bottom: -35px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--tooltip-bg);
+    color: white;
+    padding: 6px 10px;
+    border-radius: 4px;
+    font-size: 10px;
+    font-weight: 300 !important;
+    font-family: Helvetica, Arial, sans-serif;
+    white-space: nowrap;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s ease;
+    z-index: 10000;
+}
+
+.navbar-sidebar-toggle:hover::after {
+    opacity: 1;
+}
+
+/* Sidebar icon */
+.navbar-sidebar-icon {
+    width: 16px !important;
+    height: 16px !important;
+    display: block;
+    object-fit: contain;
+    opacity: 0.7;
+}
+
+.navbar-sidebar-toggle:hover .navbar-sidebar-icon {
+    opacity: 1;
+}
+
 /* Sidebar */
 .canvas-sidebar {
-    position: fixed;
+    position: absolute;
     top: 36px; /* Below navbar */
     right: 0;
     bottom: 0;

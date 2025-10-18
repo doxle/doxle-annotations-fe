@@ -1,12 +1,31 @@
 /* Canvas Page Styles */
-/* Safe-area + navbar height variables */
-:root {
-    --safe-top: env(safe-area-inset-top, 0px);
-    --nav-h: calc(36px + var(--safe-top));
+
+html,
+body,
+.canvas-page {
+    margin: 0;
+    padding: 0;
+    border: 0;
+    outline: 0;
+    box-shadow: none;
+    background: var(--navbar-bg);
+    background-color: var(--navbar-bg);
+    overflow-x: hidden;
+}
+
+.top-edge-mask {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px; /* thick enough to beat odd DPRs */
+    background: var(--navbar-bg);
+    z-index: 2147483647; /* above everything */
+    pointer-events: none;
 }
 
 .canvas-page {
-    position: relative;
+    position: fixed;
     inset: 0;
     top: 0;
     left: 0;
@@ -16,14 +35,18 @@
     flex-direction: column;
     margin: 0;
     padding: 0;
+    background: var(--navbar-bg);
+    overflow: hidden;
+    z-index: 0;
 }
 
 .canvas-container {
-    position: fixed;
-    top: 36px; /* Below navbar */
+    position: absolute;
+    top: 35px; /* Below navbar */
     left: 0;
     width: 100vw;
-    height: calc(100vh - 36px);
+    height: calc(100vh - 35px);
+    /*height: auto;*/
     background-color: var(--bg-secondary);
     overflow: hidden;
     cursor: default;
@@ -40,11 +63,11 @@
     user-select: none;
 
     /* Force GPU compositing */
-    will-change: transform;
+    /*will-change: transform;
     transform: translate3d(0, 0, 0);
     -webkit-transform: translate3d(0, 0, 0);
     backface-visibility: hidden;
-    -webkit-backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;*/
 
     /* Smooth transition during macOS maximize */
     transition: background-color 0s;
