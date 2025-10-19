@@ -200,8 +200,13 @@ body {
 }
 
 .navbar-tool-button.active {
-    background: var(--navbar-tool-active);
+    background: var(--hover-blue) !important;
     border-radius: 0;
+}
+
+.navbar-tool-button.active:hover {
+    background: var(--hover-blue) !important;
+    opacity: 0.9;
 }
 
 /* Custom tooltip for tool buttons */

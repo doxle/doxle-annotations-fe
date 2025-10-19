@@ -15,8 +15,20 @@ pub fn MoreMenu(is_open: Signal<bool>) -> Element {
                         // Toggle between dark and light
                         if current_class.contains("dark") {
                             html_el.set_class_name("light");
-                        } else {
+                        } else if current_class.contains("light") {
                             html_el.set_class_name("dark");
+                        } else {
+                            // If no theme class yet, initialize to the opposite of system preference
+                            let prefers_dark = window.match_media("(prefers-color-scheme: dark)")
+                                .ok()
+                                .flatten()
+                                .map(|m| m.matches())
+                                .unwrap_or(false);
+                            if prefers_dark {
+                                html_el.set_class_name("light");
+                            } else {
+                                html_el.set_class_name("dark");
+                            }
                         }
                     }
                 }

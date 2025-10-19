@@ -13,6 +13,7 @@
     background: transparent;
 }
 
+
 .navbar-logo {
     display: flex;
     align-items: center;
@@ -174,6 +175,20 @@
     .logo-dark {
         display: block;
     }
+}
+
+.logo-img:hover {
+    filter: invert(42%) sepia(100%) saturate(5000%) hue-rotate(225deg) brightness(110%) contrast(100%);
+}
+
+.mobile-menu-item:hover {
+    background: var(--bg-card-hover) !important;
+    padding: 6px;
+}
+
+.mobile-menu-item.say-hello:hover {
+    background: var(--primary-button-hover) !important;
+}
 }
 
 .logo-img:hover {

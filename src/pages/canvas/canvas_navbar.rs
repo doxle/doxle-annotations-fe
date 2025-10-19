@@ -1,23 +1,18 @@
 use crate::Route;
 use dioxus::prelude::*;
 use super::more_menu::MoreMenu;
-
-#[derive(Clone, Copy, PartialEq)]
-pub enum AnnotationTool {
-    Polygon,
-    BoundingBox,
-}
+use super::annotations::AnnotationTool;
 
 #[component]
 pub fn CanvasNavbar(
     task_id: String,
     project_id: String,
     selected_tool: Signal<Option<AnnotationTool>>,
+    more_menu_open: Signal<bool>,
 ) -> Element {
     let nav = navigator();
     let mut sidebar_open = use_signal(|| false);
     let mut dog_hover = use_signal(|| false);
-    let mut more_menu_open = use_signal(|| false);
 
     // --- Assets ---- (Only light icons since navbar is always dark)
     const DOG: Asset = asset!("/assets/icons/dog.svg");
@@ -34,6 +29,13 @@ pub fn CanvasNavbar(
         // Navbar
         div {
             class: "canvas-navbar",
+            onclick: move |e| {
+                tracing::info!("🎯 NAVBAR CLICKED!");
+                e.stop_propagation();
+                if more_menu_open() {
+                    more_menu_open.set(false);
+                }
+            },
 
             // Left section
             div {
@@ -100,8 +102,16 @@ pub fn CanvasNavbar(
                     } else {
                         "navbar-tool-button"
                     },
-                    onclick: move |_| {
+                    style: if selected_tool() == Some(AnnotationTool::Polygon) {
+                        "background: rgb(99, 138, 255) !important;"
+                    } else {
+                        ""
+                    },
+                    onclick: move |e| {
+                        tracing::info!("🔵 POLYGON TOOL CLICKED!");
+                        e.stop_propagation();
                         selected_tool.set(Some(AnnotationTool::Polygon));
+                        tracing::info!("🔵 Tool set to: {:?}", selected_tool());
                     },
                     img {
                         class: "navbar-icon navbar-polygon-icon",
@@ -158,7 +168,8 @@ pub fn CanvasNavbar(
                 div {
                     "data-tooltip": "More",
                     class: "navbar-more-button",
-                    onclick: move |_| {
+                    onclick: move |e| {
+                        e.stop_propagation();
                         more_menu_open.set(!more_menu_open());
                     },
                     img {

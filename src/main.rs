@@ -69,6 +69,12 @@ fn App() -> Element {
                 document::Style { {CANVAS_NAVBAR_CSS} }
                 document::Style { {MORE_MENU_CSS} }
 
+                // Ensure html has an initial theme class matching system preference
+                script {
+                    {
+                        r#"(function(){var html=document.documentElement;if(!html.classList.contains('dark')&&!html.classList.contains('light')){var prefersDark=window.matchMedia('(prefers-color-scheme: dark)').matches;html.classList.add(prefersDark?'dark':'light');}})();"#
+                    }
+                }
 
                 // Fonts from template with asset URLs
                 document::Style {

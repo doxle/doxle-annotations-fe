@@ -55,6 +55,11 @@
     --navbar-separator: rgba(255, 255, 255, 0.2);
     --navbar-tool-active: rgba(255, 255, 255, 0.15);
     --tooltip-bg: rgb(51, 55, 61);
+
+    /* Annotation colors */
+    --annotation-point-fill: rgba(51, 66, 255, 0.3);
+    --annotation-point-stroke: rgb(51, 66, 255);
+    --annotation-stroke-width: 2;
 }
 
 /* Dark theme via media query OR .dark class on html */
@@ -114,6 +119,11 @@
         --navbar-separator: rgba(255, 255, 255, 0.2);
         --navbar-tool-active: rgba(255, 255, 255, 0.15);
         --tooltip-bg: #000000;
+
+        /* Annotation colors (dark mode) */
+        --annotation-point-fill: rgba(51, 66, 255, 0.3);
+        --annotation-point-stroke: rgb(51, 66, 255);
+        --annotation-stroke-width: 2;
     }
 }
 
@@ -173,6 +183,11 @@ html.dark {
     --navbar-separator: rgba(255, 255, 255, 0.2);
     --navbar-tool-active: rgba(255, 255, 255, 0.15);
     --tooltip-bg: #000000;
+
+    /* Annotation colors (dark mode) */
+    --annotation-point-fill: rgba(51, 66, 255, 0.3);
+    --annotation-point-stroke: rgb(51, 66, 255);
+    --annotation-stroke-width: 2;
 }
 
 /* Manual light theme override */
@@ -231,4 +246,9 @@ html.light {
     --navbar-separator: rgba(255, 255, 255, 0.2);
     --navbar-tool-active: rgba(255, 255, 255, 0.15);
     --tooltip-bg: rgb(51, 55, 61);
+
+    /* Annotation colors */
+    --annotation-point-fill: rgba(51, 66, 255, 0.3);
+    --annotation-point-stroke: rgb(51, 66, 255);
+    --annotation-stroke-width: 2;
 }

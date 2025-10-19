@@ -42,14 +42,18 @@ body,
 
 .canvas-container {
     position: absolute;
-    top: 35px; /* Below navbar */
+    top: 36px; /* Below navbar */
     left: 0;
     width: 100vw;
-    height: calc(100vh - 35px);
+    height: calc(100vh - 36px);
     /*height: auto;*/
     background-color: var(--bg-secondary);
     overflow: hidden;
     cursor: default;
+    
+    /* Crosshair guide lines (hidden by default) */
+    --guide-x: 0px;
+    --guide-y: 0px;
 
     /* Center the world inside the container */
     /*display: grid;
@@ -63,11 +67,11 @@ body,
     user-select: none;
 
     /* Force GPU compositing */
-    /*will-change: transform;
+    will-change: transform;
     transform: translate3d(0, 0, 0);
     -webkit-transform: translate3d(0, 0, 0);
     backface-visibility: hidden;
-    -webkit-backface-visibility: hidden;*/
+    -webkit-backface-visibility: hidden;
 
     /* Smooth transition during macOS maximize */
     transition: background-color 0s;
@@ -93,6 +97,50 @@ body,
 
 .canvas-container.is-panning {
     cursor: grabbing;
+}
+
+/* Crosshair cursor for polygon tool */
+.canvas-container.polygon-tool-active {
+    cursor: url('/assets/cursors/crosshair.svg') 32 32, crosshair;
+}
+
+/* Crosshair guide lines */
+.canvas-container.polygon-tool-active::before,
+.canvas-container.polygon-tool-active::after {
+    content: '';
+    position: absolute;
+    pointer-events: none;
+    z-index: 999;
+}
+
+/* Vertical guide line */
+.canvas-container.polygon-tool-active::before {
+    left: var(--guide-x);
+    top: 0;
+    width: 2px;
+    height: 100%;
+    background: repeating-linear-gradient(
+        to bottom,
+        rgb(255, 140, 0) 0px,
+        rgb(255, 140, 0) 8px,
+        transparent 8px,
+        transparent 16px
+    );
+}
+
+/* Horizontal guide line */
+.canvas-container.polygon-tool-active::after {
+    left: 0;
+    top: var(--guide-y);
+    width: 100%;
+    height: 2px;
+    background: repeating-linear-gradient(
+        to right,
+        rgb(255, 140, 0) 0px,
+        rgb(255, 140, 0) 8px,
+        transparent 8px,
+        transparent 16px
+    );
 }
 
 /* Parent “world” that we pan/zoom (children inherit transform visually) */
@@ -192,10 +240,24 @@ body,
     }
 }
 
+/* Respect manual theme overrides */
+html.dark .canvas-image img {
+    filter: invert(1);
+}
+
+html.light .canvas-image img {
+    filter: none;
+}
+
 /* Layer 3: Annotations (top) */
 .canvas-annotations {
     z-index: 3;
     pointer-events: none;
+}
+
+/* Enable pointer events when a tool is active */
+.canvas-annotations.tool-active {
+    pointer-events: auto;
 }
 
 /* Optional: overlay UI that sits above everything and can receive input */
