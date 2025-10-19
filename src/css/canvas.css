@@ -1,0 +1,211 @@
+/* Canvas Page Styles */
+
+.canvas-container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background-color: var(--bg-secondary);
+    overflow: hidden;
+    cursor: default;
+
+    /* Center the world inside the container */
+    /*display: grid;
+    place-items: center;*/
+    display: block;
+
+    /* Touch/trackpad gestures go to our handlers */
+    touch-action: none;
+
+    /* Prevents text dragging / selection when panning */
+    user-select: none;
+
+    /* Force GPU compositing */
+    will-change: transform;
+    transform: translate3d(0, 0, 0);
+    -webkit-transform: translate3d(0, 0, 0);
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+
+    /* Smooth transition during macOS maximize */
+    transition: background-color 0s;
+    -webkit-transition: background-color 0s;
+
+    /* Draw dots with zoom scale (min scale = 1.0 for viewport size) */
+    background-image: radial-gradient(
+        circle,
+        var(--dot-color) 0,
+        /*var(--dot-color) calc(var(--dot-radius, 1px) * var(--dot-scale, 1)),
+        transparent calc(var(--dot-radius, 1px) * var(--dot-scale, 1))*/
+            var(--dot-color) var(--dot-radius, 1px),
+        transparent var(--dot-radius, 1px)
+    );
+
+    /* Scale the dot spacing with zoom (min = viewport size) */
+    background-size: calc(var(--dot-spacing, 12px) * var(--dot-scale, 1))
+        calc(var(--dot-spacing, 12px) * var(--dot-scale, 1));
+
+    /* Pan offset */
+    background-position: var(--dot-offset-x, 0px) var(--dot-offset-y, 0px);
+}
+
+.canvas-container.is-panning {
+    cursor: grabbing;
+}
+
+/* Parent “world” that we pan/zoom (children inherit transform visually) */
+.canvas-world {
+    position: relative;
+    width: 100%;
+    height: 100%;
+
+    /* Center children (image, etc.) within the world */
+    /*display: grid;
+    place-items: center;*/
+    display: block;
+
+    /* Zoom origin: center of viewport (switch to 0 0 if you prefer) */
+    transform-origin: 0 0;
+    will-change: transform;
+}
+
+/* Layered canvas architecture */
+.canvas-layer {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: block;
+
+    /* Prevent flash during macOS animations */
+    opacity: 1;
+    transition: opacity 0s;
+    will-change: opacity;
+}
+
+/* Layer 1: Dots (bottom) */
+.canvas-dots {
+    z-index: 1;
+    pointer-events: none;
+
+    /* Aggressive GPU compositing for macOS maximize animation */
+    will-change: transform, opacity;
+    transform: translate3d(0, 0, 0);
+    -webkit-transform: translate3d(0, 0, 0);
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+    perspective: 1000px;
+    -webkit-perspective: 1000px;
+
+    /* Prevent subpixel rendering issues */
+    image-rendering: -webkit-optimize-contrast;
+    image-rendering: crisp-edges;
+
+    /* Dot paint using CSS variables (theme color preserved) */
+    background: radial-gradient(
+        circle,
+        var(--dot-color) 0px,
+        var(--dot-color) var(--dot-radius, 1px),
+        transparent var(--dot-radius, 1px)
+    );
+    background-size: var(--dot-spacing, 12px) var(--dot-spacing, 12px);
+    background-position: 0 0;
+}
+
+/* Layer 2: Image (middle) */
+.canvas-image {
+    z-index: 2;
+    pointer-events: none;
+
+    /* Keep in case you later move transform here for per-layer effects */
+    transform-origin: 0 0;
+    will-change: transform;
+
+    /* Use GPU acceleration hint */
+    transform: translate3d(0, 0, 0);
+
+    /* Center the IMG inside this layer box */
+    display: grid;
+    place-items: center;
+}
+
+.canvas-image img {
+    display: block;
+    width: 60%; /* initial size = 60% of the canvas */
+    height: auto;
+    max-width: none;
+
+    /* Crisp image rendering */
+    image-rendering: -webkit-optimize-contrast;
+    image-rendering: crisp-edges;
+
+    user-select: none;
+    pointer-events: none;
+}
+
+/* Layer 3: Annotations (top) */
+.canvas-annotations {
+    z-index: 3;
+    pointer-events: none;
+}
+
+/* Optional: overlay UI that sits above everything and can receive input */
+.canvas-ui-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 100;
+}
+
+/* Zoom controls (if you keep them) */
+.zoom-controls {
+    position: absolute;
+    bottom: 20px;
+    right: 20px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(0, 0, 0, 0.7);
+    padding: 8px 12px;
+    border-radius: 8px;
+    pointer-events: auto;
+    backdrop-filter: blur(10px);
+}
+
+.zoom-btn {
+    width: 32px;
+    height: 32px;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 4px;
+    color: #fff;
+    font-size: 18px;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+}
+
+.zoom-btn:hover {
+    background: rgba(255, 255, 255, 0.2);
+    border-color: rgba(255, 255, 255, 0.3);
+}
+
+.zoom-btn:active {
+    transform: scale(0.95);
+}
+
+.zoom-level {
+    color: #fff;
+    font-size: 14px;
+    font-weight: 500;
+    min-width: 50px;
+    text-align: center;
+}

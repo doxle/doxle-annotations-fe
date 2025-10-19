@@ -84,7 +84,9 @@ pub fn CanvasPage(task_id: String) -> Element {
         let r = new / old;
 
         // keep cursor position stable visually
-        let (mx, my) = (mouse.x, mouse.y);
+        // Convert viewport coords to container coords (container starts at NAVBAR_H)
+        let mx = mouse.x;
+        let my = mouse.y - NAVBAR_H;
         let (px, py) = (pan_x(), pan_y());
 
         let new_pan_x = mx - r * (mx - px);
