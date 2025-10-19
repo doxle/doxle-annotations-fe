@@ -101,7 +101,61 @@ body,
 
 /* Crosshair cursor for polygon tool */
 .canvas-container.polygon-tool-active {
-    cursor: url('/assets/cursors/crosshair.svg') 32 32, crosshair;
+    cursor: none; /* Hide default cursor */
+}
+
+/* Custom crosshair cursor overlay */
+.crosshair-cursor {
+    position: absolute;
+    pointer-events: none;
+    z-index: 10000;
+    width: 40px;
+    height: 40px;
+    left: var(--cursor-x, 0);
+    top: var(--cursor-y, 0);
+    margin-left: -20px;
+    margin-top: -20px;
+}
+
+/* Vertical line */
+.crosshair-cursor::before {
+    content: '';
+    position: absolute;
+    left: 50%;
+    top: 0;
+    width: 2px;
+    height: 100%;
+    background: white;
+    margin-left: -1px;
+}
+
+/* Horizontal line */
+.crosshair-cursor::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 50%;
+    width: 100%;
+    height: 2px;
+    background: white;
+    margin-top: -1px;
+}
+
+@media (prefers-color-scheme: light) {
+    .crosshair-cursor::before,
+    .crosshair-cursor::after {
+        background: black;
+    }
+}
+
+html.light .crosshair-cursor::before,
+html.light .crosshair-cursor::after {
+    background: black;
+}
+
+html.dark .crosshair-cursor::before,
+html.dark .crosshair-cursor::after {
+    background: white;
 }
 
 /* Crosshair guide lines */
@@ -117,12 +171,12 @@ body,
 .canvas-container.polygon-tool-active::before {
     left: var(--guide-x);
     top: 0;
-    width: 2px;
+    width: 1px;
     height: 100%;
     background: repeating-linear-gradient(
         to bottom,
-        rgb(255, 140, 0) 0px,
-        rgb(255, 140, 0) 8px,
+        rgb(100, 150, 255) 0px,
+        rgb(100, 150, 255) 8px,
         transparent 8px,
         transparent 16px
     );
@@ -133,11 +187,72 @@ body,
     left: 0;
     top: var(--guide-y);
     width: 100%;
-    height: 2px;
+    height: 1px;
     background: repeating-linear-gradient(
         to right,
-        rgb(255, 140, 0) 0px,
-        rgb(255, 140, 0) 8px,
+        rgb(100, 150, 255) 0px,
+        rgb(100, 150, 255) 8px,
+        transparent 8px,
+        transparent 16px
+    );
+}
+
+@media (prefers-color-scheme: light) {
+    .canvas-container.polygon-tool-active::before {
+        background: repeating-linear-gradient(
+            to bottom,
+            rgb(51, 66, 255) 0px,
+            rgb(51, 66, 255) 8px,
+            transparent 8px,
+            transparent 16px
+        );
+    }
+    .canvas-container.polygon-tool-active::after {
+        background: repeating-linear-gradient(
+            to right,
+            rgb(51, 66, 255) 0px,
+            rgb(51, 66, 255) 8px,
+            transparent 8px,
+            transparent 16px
+        );
+    }
+}
+
+html.light .canvas-container.polygon-tool-active::before {
+    background: repeating-linear-gradient(
+        to bottom,
+        rgb(51, 66, 255) 0px,
+        rgb(51, 66, 255) 8px,
+        transparent 8px,
+        transparent 16px
+    );
+}
+
+html.light .canvas-container.polygon-tool-active::after {
+    background: repeating-linear-gradient(
+        to right,
+        rgb(51, 66, 255) 0px,
+        rgb(51, 66, 255) 8px,
+        transparent 8px,
+        transparent 16px
+    );
+}
+
+html.dark .canvas-container.polygon-tool-active::before {
+    background: repeating-linear-gradient(
+        to bottom,
+        rgb(100, 150, 255) 0px,
+        rgb(100, 150, 255) 8px,
+        transparent 8px,
+        transparent 16px
+    );
+}
+
+html.dark .canvas-container.polygon-tool-active::after {
+    background: repeating-linear-gradient(
+        to right,
+        rgb(100, 150, 255) 0px,
+        rgb(100, 150, 255) 8px,
         transparent 8px,
         transparent 16px
     );

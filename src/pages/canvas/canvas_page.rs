@@ -60,6 +60,8 @@ pub fn CanvasPage(task_id: String) -> Element {
     // --- Cursor State ---
     let mut guide_x = use_signal(|| 0.0);
     let mut guide_y = use_signal(|| 0.0);
+    let mut cursor_x = use_signal(|| 0.0);
+    let mut cursor_y = use_signal(|| 0.0);
     
     let container_class = if is_panning() {
         "canvas-container is-panning"
@@ -172,9 +174,11 @@ pub fn CanvasPage(task_id: String) -> Element {
         
         // Update preview line and guide lines when drawing polygon
         if let Some(AnnotationTool::Polygon) = selected_tool() {
-            // Update guide line positions
+            // Update cursor positions (no snapping - blazing fast)
             guide_x.set(coords.x);
             guide_y.set(coords.y - NAVBAR_H);
+            cursor_x.set(coords.x);
+            cursor_y.set(coords.y - NAVBAR_H); // Match guide_y to align with canvas
             
             if polygon().points.len() > 0 && !polygon().is_closed {
                 // Convert screen to world coords for preview
@@ -279,6 +283,14 @@ pub fn CanvasPage(task_id: String) -> Element {
                     "canvas-layer canvas-annotations"
                 },
                 style: "background-color: transparent;",
+            }
+            
+            // Custom crosshair cursor overlay
+            if selected_tool().is_some() {
+                div {
+                    class: "crosshair-cursor",
+                    style: format_args!("--cursor-x: {}px; --cursor-y: {}px;", cursor_x(), cursor_y()),
+                }
             }
         }
         }
