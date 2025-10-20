@@ -12,6 +12,7 @@ pub struct Polygon {
     pub points: Vec<Point>,
     pub is_closed: bool,
     pub preview_point: Option<Point>, // For live preview line
+    pub undo_history: Vec<Point>,     // Stack of undone points
 }
 
 impl Polygon {
@@ -20,10 +21,13 @@ impl Polygon {
             points: Vec::new(),
             is_closed: false,
             preview_point: None,
+            undo_history: Vec::new(),
         }
     }
     pub fn add(&mut self, p: Point) {
         self.points.push(p);
+        // Clear redo history when new action is taken
+        self.undo_history.clear();
     }
     pub fn close(&mut self) {
         if self.points.len() >= 3 {
@@ -34,6 +38,40 @@ impl Polygon {
     pub fn set_preview(&mut self, p: Option<Point>) {
         self.preview_point = p;
     }
+    
+    pub fn undo(&mut self) -> bool {
+        if let Some(point) = self.points.pop() {
+            self.undo_history.push(point);
+            self.is_closed = false; // Reopen if was closed
+            true
+        } else {
+            false
+        }
+    }
+    
+    pub fn redo(&mut self) -> bool {
+        if let Some(point) = self.undo_history.pop() {
+            self.points.push(point);
+            true
+        } else {
+            false
+        }
+    }
+    
+    pub fn reset(&mut self) {
+        self.points.clear();
+        self.is_closed = false;
+        self.preview_point = None;
+        self.undo_history.clear();
+    }
+    
+    pub fn can_undo(&self) -> bool {
+        !self.points.is_empty()
+    }
+    
+    pub fn can_redo(&self) -> bool {
+        !self.undo_history.is_empty()
+    }
 }
 
 /* ---- styles (edit once here) ---- */
@@ -43,7 +81,7 @@ const POINT_RADIUS: f64 = 18.0;
 const ENDPOINT_STROKE: &str = "rgb(0, 255, 0)";
 const ENDPOINT_FILL: &str = "rgba(0, 255, 0, 0.4)";
 const LINE_COLOR: &str = "rgb(51, 66, 255)";
-const LINE_WIDTH: f64 = 5.0;
+const LINE_WIDTH: f64 = 3.0;
 const FILL_COLOR: &str = "rgba(51, 66, 255, 0.5)";
 const PREVIEW_LINE_COLOR: &str = "rgba(51, 66, 255, 0.6)";
 

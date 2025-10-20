@@ -209,6 +209,23 @@ body {
     opacity: 0.9;
 }
 
+.navbar-tool-button.disabled {
+    cursor: not-allowed;
+    opacity: 0.3;
+}
+
+.navbar-tool-button.disabled:hover {
+    background: transparent;
+}
+
+.navbar-tool-button.disabled:hover::after {
+    opacity: 0;
+}
+
+.navbar-tool-button.disabled .navbar-icon {
+    opacity: 0.3;
+}
+
 /* Custom tooltip for tool buttons */
 .navbar-tool-button::after {
     content: attr(data-tooltip);

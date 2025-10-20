@@ -33,7 +33,7 @@ const PROJECTS_CSS: &str = include_str!("pages/projects/projects.css");
 const BLOCK_CSS: &str = include_str!("pages/blocks/blocks.css");
 const CANVAS_CSS: &str = include_str!("pages/canvas/canvas.css");
 const CANVAS_NAVBAR_CSS: &str = include_str!("pages/canvas/canvas_navbar.css");
-const AVATAR_MENU_CSS: &str = include_str!("pages/canvas/avatar_menu.css");
+const AVATAR_MENU_CSS: &str = include_str!("pages/canvas/navbar/avatar_menu.css");
 
 fn main() {
     // Initialize tracing and filter out noisy warnings

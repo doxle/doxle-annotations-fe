@@ -1,7 +1,8 @@
 use super::annotations::polygon::on_polygon_click;
 use super::annotations::polygon::{get_canvas_context, Polygon};
 use super::annotations::bbox::{on_bbox_click, redraw_bbox, BBox};
-use super::annotations::AnnotationTool;
+use super::annotations::comment::{on_comment_click, redraw_comment, Comment};
+use super::annotations::Tool;
 use super::canvas_navbar::CanvasNavbar;
 use crate::dioxus_elements::input_data::MouseButton;
 use dioxus::prelude::*;
@@ -16,7 +17,7 @@ pub fn CanvasPage(task_id: String) -> Element {
     let mut zoom = use_signal(|| 1.0);
     let mut pan_x = use_signal(|| 0.0);
     let mut pan_y = use_signal(|| 0.0);
-    let selected_tool = use_signal(|| Option::<AnnotationTool>::None);
+    let selected_tool = use_signal(|| Tool::Select); // Default is Select (Arrow)
     let mut avatar_menu_open = use_signal(|| false);
     let mut show_grid_lines = use_signal(|| false);
     let mut is_panning: Signal<bool> = use_signal(|| false);
@@ -24,6 +25,7 @@ pub fn CanvasPage(task_id: String) -> Element {
     let mut last_y: Signal<f64> = use_signal(|| 0.0);
     let mut polygon = use_signal(Polygon::new);
     let mut bbox = use_signal(BBox::new);
+    let mut comment = use_signal(Comment::new);
     let dot_spacing_px: f64 = 12.0;
     let dot_radius_px: f64 = 1.0;
 
@@ -79,6 +81,40 @@ pub fn CanvasPage(task_id: String) -> Element {
         }
     });
 
+    // Redraw when polygon or bbox state changes (for undo/redo)
+    use_effect(move || {
+        let _ = polygon();
+        let _ = bbox();
+        
+        if let Some(ctx) = get_canvas_context() {
+            match selected_tool() {
+                Tool::Polygon => {
+                    if polygon().points.len() > 0 {
+                        super::annotations::polygon::redraw_polygon(
+                            &ctx,
+                            &polygon(),
+                            zoom(),
+                            pan_x(),
+                            pan_y(),
+                        );
+                    }
+                }
+                Tool::BoundingBox => {
+                    if bbox().start_point.is_some() {
+                        redraw_bbox(
+                            &ctx,
+                            &bbox(),
+                            zoom(),
+                            pan_x(),
+                            pan_y(),
+                        );
+                    }
+                }
+                _ => {}
+            }
+        }
+    });
+    
     // Clear annotations when switching tools
     use_effect(move || {
         if let Some(ctx) = get_canvas_context() {
@@ -91,24 +127,36 @@ pub fn CanvasPage(task_id: String) -> Element {
                 ctx.clear_rect(0.0, 0.0, css_w, css_h);
             }
 
-            // Reset polygon if bbox is selected
-            if selected_tool() == Some(AnnotationTool::BoundingBox) {
-                polygon.write().points.clear();
-                polygon.write().is_closed = false;
-                polygon.write().preview_point = None;
-            }
-
-            // Reset bbox if polygon is selected
-            if selected_tool() == Some(AnnotationTool::Polygon) {
-                bbox.write().reset();
-            }
-
-            // Reset both if no tool selected
-            if selected_tool().is_none() {
-                polygon.write().points.clear();
-                polygon.write().is_closed = false;
-                polygon.write().preview_point = None;
-                bbox.write().reset();
+            // When switching tools, clear the previous tool's annotation
+            // TODO: Save to database before clearing
+            match selected_tool() {
+                Tool::Select | Tool::Pan => {
+                    // Clear all annotations when switching to Select or Pan
+                    polygon.write().points.clear();
+                    polygon.write().is_closed = false;
+                    polygon.write().preview_point = None;
+                    bbox.write().reset();
+                    comment.write().reset();
+                }
+                Tool::Polygon => {
+                    // Clear bbox and comment when switching to Polygon
+                    bbox.write().reset();
+                    comment.write().reset();
+                }
+                Tool::BoundingBox => {
+                    // Clear polygon and comment when switching to BBox
+                    polygon.write().points.clear();
+                    polygon.write().is_closed = false;
+                    polygon.write().preview_point = None;
+                    comment.write().reset();
+                }
+                Tool::Comment => {
+                    // Clear polygon and bbox when switching to Comment
+                    polygon.write().points.clear();
+                    polygon.write().is_closed = false;
+                    polygon.write().preview_point = None;
+                    bbox.write().reset();
+                }
             }
         }
     });
@@ -120,19 +168,23 @@ pub fn CanvasPage(task_id: String) -> Element {
     let mut cursor_y = use_signal(|| 0.0);
 
     let container_class = if is_panning() {
-        if show_grid_lines() && selected_tool().is_some() {
+        if show_grid_lines() && selected_tool().is_drawing_tool() {
             "canvas-container is-panning polygon-tool-active"
         } else if show_grid_lines() {
             "canvas-container is-panning polygon-tool-active"
         } else {
             "canvas-container is-panning"
         }
-    } else if selected_tool().is_some() {
+    } else if selected_tool() == Tool::Comment {
+        "canvas-container comment-tool-active"
+    } else if selected_tool() == Tool::Polygon || selected_tool() == Tool::BoundingBox {
         if show_grid_lines() {
             "canvas-container polygon-tool-active"
         } else {
             "canvas-container polygon-tool-active-no-grid"
         }
+    } else if selected_tool() == Tool::Pan {
+        "canvas-container pan-tool-active"
     } else {
         "canvas-container"
     };
@@ -166,7 +218,7 @@ pub fn CanvasPage(task_id: String) -> Element {
         // Redraw only the active tool's annotation
         if let Some(ctx) = get_canvas_context() {
             match selected_tool() {
-                Some(AnnotationTool::Polygon) => {
+                Tool::Polygon => {
                     if polygon().points.len() > 0 {
                         super::annotations::polygon::redraw_polygon(
                             &ctx,
@@ -177,7 +229,7 @@ pub fn CanvasPage(task_id: String) -> Element {
                         );
                     }
                 }
-                Some(AnnotationTool::BoundingBox) => {
+                Tool::BoundingBox => {
                     if bbox().start_point.is_some() {
                         redraw_bbox(
                             &ctx,
@@ -188,15 +240,19 @@ pub fn CanvasPage(task_id: String) -> Element {
                         );
                     }
                 }
-                None => {
-                    // Clear canvas when no tool is selected
-                    if let Some(canvas) = ctx.canvas() {
-                        let window = window().expect("Should get window");
-                        let dpr = window.device_pixel_ratio();
-                        let css_w = canvas.width() as f64 / dpr;
-                        let css_h = canvas.height() as f64 / dpr;
-                        ctx.clear_rect(0.0, 0.0, css_w, css_h);
+                Tool::Comment => {
+                    if comment().position.is_some() {
+                        redraw_comment(
+                            &ctx,
+                            &comment(),
+                            new,
+                            new_pan_x,
+                            new_pan_y,
+                        );
                     }
+                }
+                Tool::Select | Tool::Pan => {
+                    // No active annotation to redraw
                 }
             }
         }
@@ -206,15 +262,24 @@ pub fn CanvasPage(task_id: String) -> Element {
     let onmousedown = move |evt: Event<MouseData>| {
         let coords = evt.client_coordinates();
 
-        // middle mouse or no tool -> pan
-        if evt.data.trigger_button() == Some(MouseButton::Auxiliary) || selected_tool().is_none() {
+        // middle mouse -> pan (keeping existing logic)
+        if evt.data.trigger_button() == Some(MouseButton::Auxiliary) {
             is_panning.set(true);
             last_x.set(coords.x);
             last_y.set(coords.y);
             return;
         }
 
-        if let Some(AnnotationTool::Polygon) = selected_tool() {
+        // Pan tool with left mouse button -> pan
+        if selected_tool() == Tool::Pan && evt.data.trigger_button() == Some(MouseButton::Primary) {
+            is_panning.set(true);
+            last_x.set(coords.x);
+            last_y.set(coords.y);
+            return;
+        }
+
+        // Tool-based handling
+        if selected_tool() == Tool::Polygon {
             // Convert screen coordinates to world coordinates
             let screen_x = coords.x;
             let screen_y = coords.y - NAVBAR_H;
@@ -254,7 +319,7 @@ pub fn CanvasPage(task_id: String) -> Element {
             }
         }
 
-        if let Some(AnnotationTool::BoundingBox) = selected_tool() {
+        if selected_tool() == Tool::BoundingBox {
             // Convert screen coordinates to world coordinates
             let screen_x = coords.x;
             let screen_y = coords.y - NAVBAR_H;
@@ -288,7 +353,7 @@ pub fn CanvasPage(task_id: String) -> Element {
             // Redraw only the active tool's annotation
             if let Some(ctx) = get_canvas_context() {
                 match selected_tool() {
-                    Some(AnnotationTool::Polygon) => {
+                    Tool::Polygon => {
                         if polygon().points.len() > 0 {
                             super::annotations::polygon::redraw_polygon(
                                 &ctx,
@@ -299,7 +364,7 @@ pub fn CanvasPage(task_id: String) -> Element {
                             );
                         }
                     }
-                    Some(AnnotationTool::BoundingBox) => {
+                    Tool::BoundingBox => {
                         if bbox().start_point.is_some() {
                             redraw_bbox(
                                 &ctx,
@@ -310,14 +375,25 @@ pub fn CanvasPage(task_id: String) -> Element {
                             );
                         }
                     }
-                    None => {}
+                    Tool::Comment => {
+                        if comment().position.is_some() {
+                            redraw_comment(
+                                &ctx,
+                                &comment(),
+                                zoom(),
+                                new_pan_x,
+                                new_pan_y,
+                            );
+                        }
+                    }
+                    Tool::Select | Tool::Pan => {}
                 }
             }
             return;
         }
 
         // Update preview line and guide lines when drawing polygon
-        if let Some(AnnotationTool::Polygon) = selected_tool() {
+        if selected_tool() == Tool::Polygon {
             // Update cursor positions (no snapping - blazing fast)
             guide_x.set(coords.x);
             guide_y.set(coords.y - NAVBAR_H);
@@ -351,7 +427,7 @@ pub fn CanvasPage(task_id: String) -> Element {
         }
 
         // Update preview box when drawing bbox
-        if let Some(AnnotationTool::BoundingBox) = selected_tool() {
+        if selected_tool() == Tool::BoundingBox {
             // Update cursor positions
             guide_x.set(coords.x);
             guide_y.set(coords.y - NAVBAR_H);
@@ -407,7 +483,9 @@ pub fn CanvasPage(task_id: String) -> Element {
                 project_id: project_id.clone(),
                 selected_tool: selected_tool,
                 avatar_menu_open: avatar_menu_open,
-                show_grid_lines: show_grid_lines
+                show_grid_lines: show_grid_lines,
+                polygon: polygon,
+                bbox: bbox
             }
 
             div{
@@ -464,7 +542,7 @@ pub fn CanvasPage(task_id: String) -> Element {
             // Annotation canvas - outside transform for crisp rendering
             canvas {
                 id: "canvas-annotations",
-                class: if selected_tool().is_some() {
+                class: if selected_tool().is_drawing_tool() {
                     "canvas-layer canvas-annotations tool-active"
                 } else {
                     "canvas-layer canvas-annotations"
@@ -473,7 +551,7 @@ pub fn CanvasPage(task_id: String) -> Element {
             }
 
             // Custom crosshair cursor overlay
-            if selected_tool().is_some() {
+            if selected_tool() == Tool::Polygon || selected_tool() == Tool::BoundingBox {
                 div {
                     class: "crosshair-cursor",
                     style: format_args!("--cursor-x: {}px; --cursor-y: {}px;", cursor_x(), cursor_y()),

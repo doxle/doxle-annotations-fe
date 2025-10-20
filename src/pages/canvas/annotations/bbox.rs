@@ -8,11 +8,18 @@ pub struct Point {
 }
 
 #[derive(Clone, Debug, PartialEq)]
+pub enum BBoxAction {
+    SetStart(Point),
+    SetEnd(Point),
+}
+
+#[derive(Clone, Debug, PartialEq)]
 pub struct BBox {
     pub start_point: Option<Point>,
     pub end_point: Option<Point>,
     pub is_complete: bool,
     pub preview_point: Option<Point>, // For live preview of box
+    pub undo_history: Vec<BBoxAction>, // Stack of undone actions
 }
 
 impl BBox {
@@ -22,22 +29,64 @@ impl BBox {
             end_point: None,
             is_complete: false,
             preview_point: None,
+            undo_history: Vec::new(),
         }
     }
 
     pub fn set_start(&mut self, p: Point) {
         self.start_point = Some(p);
         self.is_complete = false;
+        // Clear redo history when new action is taken
+        self.undo_history.clear();
     }
 
     pub fn set_end(&mut self, p: Point) {
         self.end_point = Some(p);
         self.is_complete = true;
         self.preview_point = None;
+        // Clear redo history when new action is taken
+        self.undo_history.clear();
     }
 
     pub fn set_preview(&mut self, p: Option<Point>) {
         self.preview_point = p;
+    }
+
+    pub fn undo(&mut self) -> bool {
+        if self.end_point.is_some() {
+            // Undo end point
+            if let Some(end) = self.end_point.take() {
+                self.undo_history.push(BBoxAction::SetEnd(end));
+                self.is_complete = false;
+                return true;
+            }
+        } else if self.start_point.is_some() {
+            // Undo start point
+            if let Some(start) = self.start_point.take() {
+                self.undo_history.push(BBoxAction::SetStart(start));
+                return true;
+            }
+        }
+        false
+    }
+
+    pub fn redo(&mut self) -> bool {
+        if let Some(action) = self.undo_history.pop() {
+            match action {
+                BBoxAction::SetStart(p) => {
+                    self.start_point = Some(p);
+                    self.is_complete = false;
+                }
+                BBoxAction::SetEnd(p) => {
+                    self.end_point = Some(p);
+                    self.is_complete = true;
+                    self.preview_point = None;
+                }
+            }
+            true
+        } else {
+            false
+        }
     }
 
     pub fn reset(&mut self) {
@@ -45,6 +94,15 @@ impl BBox {
         self.end_point = None;
         self.is_complete = false;
         self.preview_point = None;
+        self.undo_history.clear();
+    }
+
+    pub fn can_undo(&self) -> bool {
+        self.start_point.is_some()
+    }
+
+    pub fn can_redo(&self) -> bool {
+        !self.undo_history.is_empty()
     }
 }
 
@@ -164,7 +222,7 @@ pub fn redraw_bbox(
                 x: preview.x * zoom + pan_x,
                 y: preview.y * zoom + pan_y,
             };
-            fill_bbox(ctx, start_screen, preview_screen, true);
+            draw_bbox_outline(ctx, start_screen, preview_screen, true);
         }
     }
 }

@@ -3,14 +3,21 @@
     position: absolute;
     top: 40px;
     right: 0;
-    background: var(--navbar-bg);
+    background: rgb(0, 0, 0) !important;
     border-radius: 4px;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
     padding: 4px 0;
-    min-width: 140px;
+    min-width: 160px;
     z-index: 10001;
     display: flex;
     flex-direction: column;
+    opacity: 1 !important;
+    backdrop-filter: none !important;
+    pointer-events: auto;
+}
+
+.avatar-dropdown-menu:hover {
+    background: rgb(0, 0, 0) !important;
 }
 
 /* Dropdown menu items */
@@ -19,9 +26,9 @@
     border: none;
     color: var(--navbar-text-bright);
     font-size: 10px !important;
-    font-weight: 300 !important;
+    font-weight: 400 !important;
     font-family: Helvetica, Arial, sans-serif !important;
-    padding: 8px 16px;
+    padding: 8px 24px;
     text-align: left;
     cursor: pointer;
     transition: background 0.2s ease;
