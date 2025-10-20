@@ -6,6 +6,8 @@ mod home;
 mod projects;
 mod shared;
 
+use shared::{THEME, apply_theme_class, load_theme_preference};
+
 // Font assets
 const HELVETICA_REGULAR: Asset = asset!("/assets/fonts/HelveticaNeue.woff2");
 const HELVETICA_BOLD: Asset = asset!("/assets/fonts/HelveticaNeue-Bold.woff2");
@@ -53,6 +55,19 @@ fn main() {
 
 #[component]
 fn App() -> Element {
+    // Load saved theme on app startup
+    use_hook(|| {
+        if let Some(saved_theme) = load_theme_preference() {
+            *THEME.write() = saved_theme;
+        }
+    });
+
+    // Watch THEME signal and apply to HTML element
+    use_effect(move || {
+        let theme = *THEME.read();
+        apply_theme_class(theme);
+    });
+
     rsx! {
         // Filter console warnings
                 document::Script { src: asset!("/public/filter-console.js") }
