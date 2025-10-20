@@ -6,8 +6,8 @@ use super::annotations::Tool;
 use super::canvas_navbar::CanvasNavbar;
 use crate::dioxus_elements::input_data::MouseButton;
 use dioxus::prelude::*;
-use wasm_bindgen::JsCast;
-use web_sys::{window, CanvasRenderingContext2d, HtmlCanvasElement};
+use wasm_bindgen::{closure::Closure, JsCast};
+use web_sys::{window, CanvasRenderingContext2d, HtmlCanvasElement, HtmlElement, KeyboardEvent};
 
 const NAVBAR_H: f64 = 36.0; // canvas container sits below navbar
 
@@ -17,7 +17,7 @@ pub fn CanvasPage(task_id: String) -> Element {
     let mut zoom = use_signal(|| 1.0);
     let mut pan_x = use_signal(|| 0.0);
     let mut pan_y = use_signal(|| 0.0);
-    let selected_tool = use_signal(|| Tool::Select); // Default is Select (Arrow)
+    let mut selected_tool = use_signal(|| Tool::Select); // Default is Select (Arrow)
     let mut avatar_menu_open = use_signal(|| false);
     let mut show_grid_lines = use_signal(|| false);
     let mut is_panning: Signal<bool> = use_signal(|| false);
@@ -159,6 +159,98 @@ pub fn CanvasPage(task_id: String) -> Element {
                 }
             }
         }
+    });
+
+    // Keyboard shortcuts handler
+    use_effect(move || {
+        let win = match window() {
+            Some(w) => w,
+            None => return,
+        };
+
+        let closure = Closure::wrap(Box::new(move |event: KeyboardEvent| {
+            let key = event.key();
+            
+            // Handle ESC key - clear annotations when drawing
+            if key == "Escape" {
+                match selected_tool() {
+                    Tool::Polygon => {
+                        if polygon().points.len() > 0 {
+                            polygon.write().reset();
+                            if let Some(ctx) = get_canvas_context() {
+                                if let Some(canvas) = ctx.canvas() {
+                                    let win = window().expect("Should get window");
+                                    let dpr = win.device_pixel_ratio();
+                                    let css_w = canvas.width() as f64 / dpr;
+                                    let css_h = canvas.height() as f64 / dpr;
+                                    ctx.clear_rect(0.0, 0.0, css_w, css_h);
+                                }
+                            }
+                        }
+                    }
+                    Tool::BoundingBox => {
+                        if bbox().start_point.is_some() {
+                            bbox.write().reset();
+                            if let Some(ctx) = get_canvas_context() {
+                                if let Some(canvas) = ctx.canvas() {
+                                    let win = window().expect("Should get window");
+                                    let dpr = win.device_pixel_ratio();
+                                    let css_w = canvas.width() as f64 / dpr;
+                                    let css_h = canvas.height() as f64 / dpr;
+                                    ctx.clear_rect(0.0, 0.0, css_w, css_h);
+                                }
+                            }
+                        }
+                    }
+                    _ => {}
+                }
+                return;
+            }
+
+            // Handle tool shortcuts (p, b, c, a, h, t)
+            match key.as_str() {
+                "p" => selected_tool.set(Tool::Polygon),
+                "b" => selected_tool.set(Tool::BoundingBox),
+                "c" => selected_tool.set(Tool::Comment),
+                "a" => selected_tool.set(Tool::Select),
+                "h" => selected_tool.set(Tool::Pan),
+                "t" => {
+                    // Toggle theme
+                    if let Some(win) = window() {
+                        if let Some(document) = win.document() {
+                            if let Some(html) = document.document_element() {
+                                if let Ok(html_el) = html.dyn_into::<HtmlElement>() {
+                                    let current_class = html_el.class_name();
+                                    if current_class.contains("dark") {
+                                        html_el.set_class_name("light");
+                                    } else if current_class.contains("light") {
+                                        html_el.set_class_name("dark");
+                                    } else {
+                                        let prefers_dark = win.match_media("(prefers-color-scheme: dark)")
+                                            .ok()
+                                            .flatten()
+                                            .map(|m| m.matches())
+                                            .unwrap_or(false);
+                                        if prefers_dark {
+                                            html_el.set_class_name("light");
+                                        } else {
+                                            html_el.set_class_name("dark");
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                _ => {}
+            }
+        }) as Box<dyn FnMut(_)>);
+
+        let _ = win
+            .add_event_listener_with_callback("keydown", closure.as_ref().unchecked_ref());
+
+        // Keep closure alive
+        closure.forget();
     });
 
     // --- Cursor State ---
