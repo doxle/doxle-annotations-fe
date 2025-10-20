@@ -1,6 +1,6 @@
 mod canvas_page;
 mod canvas_navbar;
-mod more_menu;
+mod avatar_menu;
 mod canvas_drawing;
 pub mod annotations;
 

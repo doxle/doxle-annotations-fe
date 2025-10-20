@@ -1,6 +1,6 @@
 use crate::Route;
 use dioxus::prelude::*;
-use super::more_menu::MoreMenu;
+use super::avatar_menu::AvatarMenu;
 use super::annotations::AnnotationTool;
 
 #[component]
@@ -8,7 +8,8 @@ pub fn CanvasNavbar(
     task_id: String,
     project_id: String,
     selected_tool: Signal<Option<AnnotationTool>>,
-    more_menu_open: Signal<bool>,
+    avatar_menu_open: Signal<bool>,
+    show_grid_lines: Signal<bool>,
 ) -> Element {
     let nav = navigator();
     let mut sidebar_open = use_signal(|| false);
@@ -32,8 +33,8 @@ pub fn CanvasNavbar(
             onclick: move |e| {
                 tracing::info!("🎯 NAVBAR CLICKED!");
                 e.stop_propagation();
-                if more_menu_open() {
-                    more_menu_open.set(false);
+                if avatar_menu_open() {
+                    avatar_menu_open.set(false);
                 }
             },
 
@@ -157,29 +158,21 @@ pub fn CanvasNavbar(
             div {
                 class: "navbar-right",
 
-                // User avatar (first initial)
+                // User avatar with dropdown
                 div {
                     class: "navbar-user-avatar",
                     title: "User",
-                    "S"  // TODO: Get from user data
-                }
-
-                // More button
-                div {
-                    "data-tooltip": "More",
-                    class: "navbar-more-button",
                     onclick: move |e| {
                         e.stop_propagation();
-                        more_menu_open.set(!more_menu_open());
+                        avatar_menu_open.set(!avatar_menu_open());
                     },
-                    img {
-                        class: "navbar-icon navbar-more-icon",
-                        src: "{MORE}",
-                        alt: "More"
-                    }
+                    "S"  // TODO: Get from user data
 
                     // Dropdown menu component
-                    MoreMenu { is_open: more_menu_open }
+                    AvatarMenu {
+                        is_open: avatar_menu_open,
+                        show_grid_lines: show_grid_lines
+                    }
                 }
 
                 // Sidebar toggle

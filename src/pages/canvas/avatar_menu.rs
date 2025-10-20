@@ -3,7 +3,7 @@ use wasm_bindgen::JsCast;
 use web_sys::{window, HtmlElement};
 
 #[component]
-pub fn MoreMenu(is_open: Signal<bool>) -> Element {
+pub fn AvatarMenu(is_open: Signal<bool>, show_grid_lines: Signal<bool>) -> Element {
     let toggle_theme = move |_| {
         if let Some(window) = window() {
             if let Some(document) = window.document() {
@@ -40,28 +40,32 @@ pub fn MoreMenu(is_open: Signal<bool>) -> Element {
     rsx! {
         if is_open() {
         div {
-            class: "more-dropdown-menu",
+            class: "avatar-dropdown-menu",
             onclick: move |e| {
                 e.stop_propagation();
             },
 
             button {
-                class: "more-dropdown-item",
+                class: "avatar-dropdown-item",
                 onclick: toggle_theme,
                 "Change Theme"
             }
 
             button {
-                class: "more-dropdown-item",
+                class: "avatar-dropdown-item",
                 onclick: move |_| {
-                    // TODO: Button 1 action
+                    show_grid_lines.set(!show_grid_lines());
                     is_open.set(false);
                 },
-                "Button 1"
+                if show_grid_lines() {
+                    "Hide Grid Lines"
+                } else {
+                    "Show Grid Lines"
+                }
             }
 
             button {
-                class: "more-dropdown-item",
+                class: "avatar-dropdown-item",
                 onclick: move |_| {
                     // TODO: Button 2 action
                     is_open.set(false);
@@ -70,7 +74,7 @@ pub fn MoreMenu(is_open: Signal<bool>) -> Element {
             }
 
             button {
-                class: "more-dropdown-item",
+                class: "avatar-dropdown-item",
                 onclick: move |_| {
                     // TODO: Button 3 action
                     is_open.set(false);

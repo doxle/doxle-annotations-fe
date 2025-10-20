@@ -16,7 +16,8 @@ pub fn CanvasPage(task_id: String) -> Element {
     let mut pan_x = use_signal(|| 0.0);
     let mut pan_y = use_signal(|| 0.0);
     let selected_tool = use_signal(|| Option::<AnnotationTool>::None);
-    let mut more_menu_open = use_signal(|| false);
+    let mut avatar_menu_open = use_signal(|| false);
+    let mut show_grid_lines = use_signal(|| false);
     let mut is_panning: Signal<bool> = use_signal(|| false);
     let mut last_x: Signal<f64> = use_signal(|| 0.0);
     let mut last_y: Signal<f64> = use_signal(|| 0.0);
@@ -30,8 +31,17 @@ pub fn CanvasPage(task_id: String) -> Element {
             if let Some(document) = window.document() {
                 if let Some(canvas_el) = document.get_element_by_id("canvas-annotations") {
                     if let Ok(canvas) = canvas_el.dyn_into::<HtmlCanvasElement>() {
-                        let css_w = window.inner_width().ok().and_then(|w| w.as_f64()).unwrap_or(1920.0);
-                        let css_h = window.inner_height().ok().and_then(|h| h.as_f64()).map(|h| h - 36.0).unwrap_or(1080.0);
+                        let css_w = window
+                            .inner_width()
+                            .ok()
+                            .and_then(|w| w.as_f64())
+                            .unwrap_or(1920.0);
+                        let css_h = window
+                            .inner_height()
+                            .ok()
+                            .and_then(|h| h.as_f64())
+                            .map(|h| h - 36.0)
+                            .unwrap_or(1080.0);
                         let dpr = window.device_pixel_ratio();
 
                         // Set internal buffer size (with DPR for crisp rendering)
@@ -39,8 +49,12 @@ pub fn CanvasPage(task_id: String) -> Element {
                         canvas.set_height((css_h * dpr).round() as u32);
 
                         // Set CSS display size
-                        let _ = canvas.style().set_property("width", &format!("{}px", css_w));
-                        let _ = canvas.style().set_property("height", &format!("{}px", css_h));
+                        let _ = canvas
+                            .style()
+                            .set_property("width", &format!("{}px", css_w));
+                        let _ = canvas
+                            .style()
+                            .set_property("height", &format!("{}px", css_h));
 
                         // Scale the context by DPR so we can draw in CSS pixels
                         if let Ok(Some(ctx_any)) = canvas.get_context("2d") {
@@ -49,8 +63,14 @@ pub fn CanvasPage(task_id: String) -> Element {
                             }
                         }
 
-                        tracing::info!("Canvas sized: {}x{} CSS, buffer: {}x{}, DPR: {}",
-                            css_w, css_h, (css_w * dpr) as u32, (css_h * dpr) as u32, dpr);
+                        tracing::info!(
+                            "Canvas sized: {}x{} CSS, buffer: {}x{}, DPR: {}",
+                            css_w,
+                            css_h,
+                            (css_w * dpr) as u32,
+                            (css_h * dpr) as u32,
+                            dpr
+                        );
                     }
                 }
             }
@@ -62,11 +82,21 @@ pub fn CanvasPage(task_id: String) -> Element {
     let mut guide_y = use_signal(|| 0.0);
     let mut cursor_x = use_signal(|| 0.0);
     let mut cursor_y = use_signal(|| 0.0);
-    
+
     let container_class = if is_panning() {
-        "canvas-container is-panning"
+        if show_grid_lines() && selected_tool().is_some() {
+            "canvas-container is-panning polygon-tool-active"
+        } else if show_grid_lines() {
+            "canvas-container is-panning polygon-tool-active"
+        } else {
+            "canvas-container is-panning"
+        }
     } else if selected_tool().is_some() {
-        "canvas-container polygon-tool-active"
+        if show_grid_lines() {
+            "canvas-container polygon-tool-active"
+        } else {
+            "canvas-container polygon-tool-active-no-grid"
+        }
     } else {
         "canvas-container"
     };
@@ -78,9 +108,9 @@ pub fn CanvasPage(task_id: String) -> Element {
         evt.prevent_default();
         let mouse = evt.client_coordinates();
         let dy = evt.data.delta().strip_units().y;
-        let factor = if dy < 0.0 { 1.1 } else { 0.9 };
+        let factor = if dy < 0.0 { 1.2 } else { 0.8 };
         let old = zoom();
-        let new = (old * factor as f64).clamp(0.3, 6.0);
+        let new = (old * factor as f64).clamp(0.3, 50.0);
         let r = new / old;
 
         // keep cursor position stable visually
@@ -96,11 +126,17 @@ pub fn CanvasPage(task_id: String) -> Element {
         pan_x.set(new_pan_x);
         pan_y.set(new_pan_y);
         zoom.set(new);
-        
+
         // Redraw polygon with new transform
         if polygon().points.len() > 0 {
             if let Some(ctx) = get_canvas_context() {
-                super::annotations::polygon::redraw_polygon(&ctx, &polygon(), new, new_pan_x, new_pan_y);
+                super::annotations::polygon::redraw_polygon(
+                    &ctx,
+                    &polygon(),
+                    new,
+                    new_pan_x,
+                    new_pan_y,
+                );
             }
         }
     };
@@ -121,7 +157,7 @@ pub fn CanvasPage(task_id: String) -> Element {
             // Convert screen coordinates to world coordinates
             let screen_x = coords.x;
             let screen_y = coords.y - NAVBAR_H;
-            
+
             // Apply inverse transform: (screen - pan) / zoom
             let world_x = (screen_x - pan_x()) / zoom();
             let world_y = (screen_y - pan_y()) / zoom();
@@ -136,11 +172,19 @@ pub fn CanvasPage(task_id: String) -> Element {
                         let dx = screen_x - first_screen_x;
                         let dy = screen_y - first_screen_y;
                         let distance = (dx * dx + dy * dy).sqrt();
-                        
+
                         if distance < 30.0 {
                             // Close the polygon
                             poly.close();
-                            on_polygon_click(world_x, world_y, &mut poly, &ctx, zoom(), pan_x(), pan_y());
+                            on_polygon_click(
+                                world_x,
+                                world_y,
+                                &mut poly,
+                                &ctx,
+                                zoom(),
+                                pan_x(),
+                                pan_y(),
+                            );
                             return;
                         }
                     }
@@ -153,7 +197,7 @@ pub fn CanvasPage(task_id: String) -> Element {
     // pan drag and preview line tracking
     let onmousemove = move |evt: Event<MouseData>| {
         let coords = evt.client_coordinates();
-        
+
         // Handle panning
         if is_panning() {
             let dx = coords.x - last_x();
@@ -164,16 +208,22 @@ pub fn CanvasPage(task_id: String) -> Element {
             pan_y.set(new_pan_y);
             last_x.set(coords.x);
             last_y.set(coords.y);
-            
+
             // Redraw polygon with new transform
             if polygon().points.len() > 0 {
                 if let Some(ctx) = get_canvas_context() {
-                    super::annotations::polygon::redraw_polygon(&ctx, &polygon(), zoom(), new_pan_x, new_pan_y);
+                    super::annotations::polygon::redraw_polygon(
+                        &ctx,
+                        &polygon(),
+                        zoom(),
+                        new_pan_x,
+                        new_pan_y,
+                    );
                 }
             }
             return;
         }
-        
+
         // Update preview line and guide lines when drawing polygon
         if let Some(AnnotationTool::Polygon) = selected_tool() {
             // Update cursor positions (no snapping - blazing fast)
@@ -181,21 +231,29 @@ pub fn CanvasPage(task_id: String) -> Element {
             guide_y.set(coords.y - NAVBAR_H);
             cursor_x.set(coords.x);
             cursor_y.set(coords.y - NAVBAR_H); // Match guide_y to align with canvas
-            
+
             if polygon().points.len() > 0 && !polygon().is_closed {
                 // Convert screen to world coords for preview
                 let screen_x = coords.x;
                 let screen_y = coords.y - NAVBAR_H;
                 let world_x = (screen_x - pan_x()) / zoom();
                 let world_y = (screen_y - pan_y()) / zoom();
-                
-                polygon.write().set_preview(Some(super::annotations::polygon::Point {
-                    x: world_x,
-                    y: world_y,
-                }));
-                
+
+                polygon
+                    .write()
+                    .set_preview(Some(super::annotations::polygon::Point {
+                        x: world_x,
+                        y: world_y,
+                    }));
+
                 if let Some(ctx) = get_canvas_context() {
-                    super::annotations::polygon::redraw_polygon(&ctx, &polygon(), zoom(), pan_x(), pan_y());
+                    super::annotations::polygon::redraw_polygon(
+                        &ctx,
+                        &polygon(),
+                        zoom(),
+                        pan_x(),
+                        pan_y(),
+                    );
                 }
             }
         }
@@ -222,7 +280,8 @@ pub fn CanvasPage(task_id: String) -> Element {
                 task_id: task_id.clone(),
                 project_id: project_id.clone(),
                 selected_tool: selected_tool,
-                more_menu_open: more_menu_open
+                avatar_menu_open: avatar_menu_open,
+                show_grid_lines: show_grid_lines
             }
 
             div{
@@ -249,8 +308,8 @@ pub fn CanvasPage(task_id: String) -> Element {
             ),
 
             onclick: move |_evt| {
-                if more_menu_open() {
-                    more_menu_open.set(false);
+                if avatar_menu_open() {
+                    avatar_menu_open.set(false);
                 }
                 // Don't stop propagation - let mousedown handle it
             },
@@ -286,13 +345,18 @@ pub fn CanvasPage(task_id: String) -> Element {
                 },
                 style: "background-color: transparent;",
             }
-            
+
             // Custom crosshair cursor overlay
             if selected_tool().is_some() {
                 div {
                     class: "crosshair-cursor",
                     style: format_args!("--cursor-x: {}px; --cursor-y: {}px;", cursor_x(), cursor_y()),
+                    // Center rectangle
+                    div {
+                        class: "crosshair-center"
+                    }
                 }
+
             }
         }
         }

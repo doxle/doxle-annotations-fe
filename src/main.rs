@@ -33,7 +33,7 @@ const PROJECTS_CSS: &str = include_str!("pages/projects/projects.css");
 const BLOCK_CSS: &str = include_str!("pages/blocks/blocks.css");
 const CANVAS_CSS: &str = include_str!("pages/canvas/canvas.css");
 const CANVAS_NAVBAR_CSS: &str = include_str!("pages/canvas/canvas_navbar.css");
-const MORE_MENU_CSS: &str = include_str!("pages/canvas/more_menu.css");
+const AVATAR_MENU_CSS: &str = include_str!("pages/canvas/avatar_menu.css");
 
 fn main() {
     // Initialize tracing and filter out noisy warnings
@@ -67,7 +67,7 @@ fn App() -> Element {
                 document::Style { {BLOCK_CSS} }
                 document::Style { {CANVAS_CSS} }
                 document::Style { {CANVAS_NAVBAR_CSS} }
-                document::Style { {MORE_MENU_CSS} }
+                document::Style { {AVATAR_MENU_CSS} }
 
                 // Ensure html has an initial theme class matching system preference
                 script {

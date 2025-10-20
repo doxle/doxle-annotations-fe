@@ -1,5 +1,5 @@
-/* More dropdown menu */
-.more-dropdown-menu {
+/* Avatar dropdown menu */
+.avatar-dropdown-menu {
     position: absolute;
     top: 40px;
     right: 0;
@@ -14,7 +14,7 @@
 }
 
 /* Dropdown menu items */
-.more-dropdown-item {
+.avatar-dropdown-item {
     background: transparent;
     border: none;
     color: var(--navbar-text-bright);
@@ -28,6 +28,6 @@
     white-space: nowrap;
 }
 
-.more-dropdown-item:hover {
+.avatar-dropdown-item:hover {
     background: var(--hover-blue);
 }

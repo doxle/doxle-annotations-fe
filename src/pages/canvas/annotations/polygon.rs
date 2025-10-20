@@ -43,7 +43,7 @@ const POINT_RADIUS: f64 = 18.0;
 const ENDPOINT_STROKE: &str = "rgb(0, 255, 0)";
 const ENDPOINT_FILL: &str = "rgba(0, 255, 0, 0.4)";
 const LINE_COLOR: &str = "rgb(51, 66, 255)";
-const LINE_WIDTH: f64 = 7.0;
+const LINE_WIDTH: f64 = 5.0;
 const FILL_COLOR: &str = "rgba(51, 66, 255, 0.5)";
 const PREVIEW_LINE_COLOR: &str = "rgba(51, 66, 255, 0.6)";
 
