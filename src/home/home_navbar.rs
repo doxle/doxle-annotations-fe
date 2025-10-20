@@ -2,7 +2,7 @@ use crate::Route;
 use dioxus::prelude::*;
 const LOGO_LIGHT: Asset = asset!("/assets/icons/dog-light.svg");
 const LOGO_DARK: Asset = asset!("/assets/icons/dog-dark.svg");
-const NAVBAR_CSS: &str = include_str!("../css/navbar.css");
+const NAVBAR_CSS: &str = include_str!("home_navbar.css");
 
 #[component]
 pub fn Navbar() -> Element {

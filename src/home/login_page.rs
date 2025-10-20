@@ -1,6 +1,6 @@
 use crate::Route;
-use crate::api::{cognito, client};
-use crate::components::loading::LoadingPage;
+use crate::home::api::{cognito, client};
+use crate::shared::loading::LoadingPage;
 use dioxus::prelude::*;
 
 const SIGNIN_CSS: &str = r#"

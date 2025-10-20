@@ -1,6 +1,6 @@
 use dioxus::prelude::*;
 use crate::Route;
-use crate::api::cognito;
+use crate::home::api::cognito;
 
 #[component]
 pub fn ProjectsPage() -> Element {

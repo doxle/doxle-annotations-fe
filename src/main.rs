@@ -1,8 +1,10 @@
 use dioxus::prelude::*;
 
-mod components;
-mod pages;
-mod api;
+mod blocks;
+mod canvas;
+mod home;
+mod projects;
+mod shared;
 
 // Font assets
 const HELVETICA_REGULAR: Asset = asset!("/assets/fonts/HelveticaNeue.woff2");
@@ -27,13 +29,13 @@ const MAIN_CSS_CONTENT: &str = r#"
 
 const FONTS_CSS_TEMPLATE: &str = include_str!("font.css");
 const THEME_CSS: &str = include_str!("theme.css");
-const HOME_CSS: &str = include_str!("pages/home/home.css");
-const LOGIN_CSS: &str = include_str!("css/login.css");
-const PROJECTS_CSS: &str = include_str!("pages/projects/projects.css");
-const BLOCK_CSS: &str = include_str!("pages/blocks/blocks.css");
-const CANVAS_CSS: &str = include_str!("pages/canvas/canvas.css");
-const CANVAS_NAVBAR_CSS: &str = include_str!("pages/canvas/canvas_navbar.css");
-const AVATAR_MENU_CSS: &str = include_str!("pages/canvas/navbar/avatar_menu.css");
+const HOME_CSS: &str = include_str!("home/home.css");
+const LOGIN_CSS: &str = include_str!("home/login.css");
+const PROJECTS_CSS: &str = include_str!("projects/projects.css");
+const BLOCK_CSS: &str = include_str!("blocks/blocks.css");
+const CANVAS_CSS: &str = include_str!("canvas/canvas.css");
+const CANVAS_NAVBAR_CSS: &str = include_str!("canvas/canvas_navbar.css");
+const AVATAR_MENU_CSS: &str = include_str!("canvas/navbar/avatar_menu.css");
 
 fn main() {
     // Initialize tracing and filter out noisy warnings
@@ -42,7 +44,7 @@ fn main() {
             .set_max_level(tracing::Level::INFO)
             .build(),
     );
-    
+
     dioxus::launch(App);
 }
 
@@ -51,7 +53,7 @@ fn App() -> Element {
     rsx! {
         // Filter console warnings
                 document::Script { src: asset!("/public/filter-console.js") }
-        
+
         // Head meta for proper mobile viewport and safe areas
                 document::Meta { name: "viewport", content: "width=device-width, initial-scale=1, viewport-fit=cover" }
                 document::Meta { name: "apple-mobile-web-app-capable", content: "yes" }
@@ -118,15 +120,11 @@ enum Route {
 }
 
 // Page imports
-use pages::{CanvasPage, HomePage, ProjectsPage, BlocksPage};
-
-// Component imports (non-page components)
-use components::join::JoinPage;
-use components::login::LoginPage;
-use components::navbar::Navbar;
-use components::ourstory::OurStoryPage;
-use components::sayhello::SayHelloPage;
-use components::upload::UploadPage;
+use blocks::BlocksPage;
+use canvas::CanvasPage;
+use home::upload::UploadPage;
+use home::{HomePage, JoinPage, LoginPage, Navbar, OurStoryPage, SayHelloPage};
+use projects::ProjectsPage;
 
 #[component]
 fn NavBar() -> Element {
