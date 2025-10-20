@@ -38,7 +38,7 @@ impl Polygon {
     pub fn set_preview(&mut self, p: Option<Point>) {
         self.preview_point = p;
     }
-    
+
     pub fn undo(&mut self) -> bool {
         if let Some(point) = self.points.pop() {
             self.undo_history.push(point);
@@ -48,7 +48,7 @@ impl Polygon {
             false
         }
     }
-    
+
     pub fn redo(&mut self) -> bool {
         if let Some(point) = self.undo_history.pop() {
             self.points.push(point);
@@ -57,18 +57,18 @@ impl Polygon {
             false
         }
     }
-    
+
     pub fn reset(&mut self) {
         self.points.clear();
         self.is_closed = false;
         self.preview_point = None;
         self.undo_history.clear();
     }
-    
+
     pub fn can_undo(&self) -> bool {
         !self.points.is_empty()
     }
-    
+
     pub fn can_redo(&self) -> bool {
         !self.undo_history.is_empty()
     }
@@ -76,13 +76,15 @@ impl Polygon {
 
 /* ---- styles (edit once here) ---- */
 const POINT_STROKE: &str = "rgb(51, 66, 255)";
-const POINT_FILL: &str = "rgba(51, 66, 255, 0.4)";
-const POINT_RADIUS: f64 = 18.0;
+const POINT_FILL: &str = "rgba(51, 66, 255, 0.28)";
+const POINT_RADIUS: f64 = 7.2;
+const ZOOMED_IN_RADIUS: f64 = 9.0; // Radius when zoomed in (large)
+const ZOOMED_OUT_RADIUS: f64 = 3.0; // Radius when zoomed out (small)
 const ENDPOINT_STROKE: &str = "rgb(0, 255, 0)";
-const ENDPOINT_FILL: &str = "rgba(0, 255, 0, 0.4)";
+const ENDPOINT_FILL: &str = "rgba(0, 255, 0, 0.28)";
 const LINE_COLOR: &str = "rgb(51, 66, 255)";
 const LINE_WIDTH: f64 = 3.0;
-const FILL_COLOR: &str = "rgba(51, 66, 255, 0.5)";
+const FILL_COLOR: &str = "rgba(51, 66, 255, 0.35)";
 const PREVIEW_LINE_COLOR: &str = "rgba(51, 66, 255, 0.6)";
 
 fn clear_canvas(ctx: &CanvasRenderingContext2d) {
@@ -99,27 +101,27 @@ fn clear_canvas(ctx: &CanvasRenderingContext2d) {
 }
 
 //Draw a point with 40% opacity fill
-fn draw_point(ctx: &CanvasRenderingContext2d, p: Point) {
+fn draw_point(ctx: &CanvasRenderingContext2d, p: Point, radius: f64) {
     // Draw filled circle with 40% opacity
     ctx.set_fill_style(&JsValue::from_str(POINT_FILL));
     ctx.set_stroke_style(&JsValue::from_str(POINT_STROKE));
     ctx.set_line_width(2.0);
 
     ctx.begin_path();
-    let _ = ctx.arc(p.x, p.y, POINT_RADIUS, 0.0, std::f64::consts::PI * 2.0);
+    let _ = ctx.arc(p.x, p.y, radius, 0.0, std::f64::consts::PI * 2.0);
     ctx.fill();
     ctx.stroke();
 }
 
 //Draw endpoint with green color
-fn draw_endpoint(ctx: &CanvasRenderingContext2d, p: Point) {
+fn draw_endpoint(ctx: &CanvasRenderingContext2d, p: Point, radius: f64) {
     // Draw filled circle with green color
     ctx.set_fill_style(&JsValue::from_str(ENDPOINT_FILL));
     ctx.set_stroke_style(&JsValue::from_str(ENDPOINT_STROKE));
     ctx.set_line_width(2.0);
 
     ctx.begin_path();
-    let _ = ctx.arc(p.x, p.y, POINT_RADIUS, 0.0, std::f64::consts::PI * 2.0);
+    let _ = ctx.arc(p.x, p.y, radius, 0.0, std::f64::consts::PI * 2.0);
     ctx.fill();
     ctx.stroke();
 }
@@ -232,13 +234,14 @@ pub fn redraw_polygon(
         }
     }
 
-    // Draw all points
+    // Draw all points with zoom-adjusted radius
+    let adjusted_radius = (POINT_RADIUS * zoom).clamp(ZOOMED_OUT_RADIUS, ZOOMED_IN_RADIUS);
     for (i, &p) in screen_points.iter().enumerate() {
         // First point is green when we have 3+ points and hovering near it
         if i == 0 && screen_points.len() >= 3 && can_close_polygon(poly, zoom, pan_x, pan_y) {
-            draw_endpoint(ctx, p);
+            draw_endpoint(ctx, p, adjusted_radius);
         } else {
-            draw_point(ctx, p);
+            draw_point(ctx, p, adjusted_radius);
         }
     }
 }
