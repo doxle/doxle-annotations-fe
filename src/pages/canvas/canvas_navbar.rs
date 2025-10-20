@@ -111,7 +111,11 @@ pub fn CanvasNavbar(
                     onclick: move |e| {
                         tracing::info!("🔵 POLYGON TOOL CLICKED!");
                         e.stop_propagation();
-                        selected_tool.set(Some(AnnotationTool::Polygon));
+                        if selected_tool() == Some(AnnotationTool::Polygon) {
+                            selected_tool.set(None);
+                        } else {
+                            selected_tool.set(Some(AnnotationTool::Polygon));
+                        }
                         tracing::info!("🔵 Tool set to: {:?}", selected_tool());
                     },
                     img {
@@ -129,8 +133,13 @@ pub fn CanvasNavbar(
                     } else {
                         "navbar-tool-button"
                     },
-                    onclick: move |_| {
-                        selected_tool.set(Some(AnnotationTool::BoundingBox));
+                    onclick: move |e| {
+                        e.stop_propagation();
+                        if selected_tool() == Some(AnnotationTool::BoundingBox) {
+                            selected_tool.set(None);
+                        } else {
+                            selected_tool.set(Some(AnnotationTool::BoundingBox));
+                        }
                     },
                     img {
                         class: "navbar-icon navbar-bbox-icon",

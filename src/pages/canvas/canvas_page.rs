@@ -1,5 +1,6 @@
 use super::annotations::polygon::on_polygon_click;
 use super::annotations::polygon::{get_canvas_context, Polygon};
+use super::annotations::bbox::{on_bbox_click, redraw_bbox, BBox};
 use super::annotations::AnnotationTool;
 use super::canvas_navbar::CanvasNavbar;
 use crate::dioxus_elements::input_data::MouseButton;
@@ -22,6 +23,7 @@ pub fn CanvasPage(task_id: String) -> Element {
     let mut last_x: Signal<f64> = use_signal(|| 0.0);
     let mut last_y: Signal<f64> = use_signal(|| 0.0);
     let mut polygon = use_signal(Polygon::new);
+    let mut bbox = use_signal(BBox::new);
     let dot_spacing_px: f64 = 12.0;
     let dot_radius_px: f64 = 1.0;
 
@@ -77,6 +79,40 @@ pub fn CanvasPage(task_id: String) -> Element {
         }
     });
 
+    // Clear annotations when switching tools
+    use_effect(move || {
+        if let Some(ctx) = get_canvas_context() {
+            // Clear canvas
+            if let Some(canvas) = ctx.canvas() {
+                let window = window().expect("Should get window");
+                let dpr = window.device_pixel_ratio();
+                let css_w = canvas.width() as f64 / dpr;
+                let css_h = canvas.height() as f64 / dpr;
+                ctx.clear_rect(0.0, 0.0, css_w, css_h);
+            }
+
+            // Reset polygon if bbox is selected
+            if selected_tool() == Some(AnnotationTool::BoundingBox) {
+                polygon.write().points.clear();
+                polygon.write().is_closed = false;
+                polygon.write().preview_point = None;
+            }
+
+            // Reset bbox if polygon is selected
+            if selected_tool() == Some(AnnotationTool::Polygon) {
+                bbox.write().reset();
+            }
+
+            // Reset both if no tool selected
+            if selected_tool().is_none() {
+                polygon.write().points.clear();
+                polygon.write().is_closed = false;
+                polygon.write().preview_point = None;
+                bbox.write().reset();
+            }
+        }
+    });
+
     // --- Cursor State ---
     let mut guide_x = use_signal(|| 0.0);
     let mut guide_y = use_signal(|| 0.0);
@@ -127,16 +163,41 @@ pub fn CanvasPage(task_id: String) -> Element {
         pan_y.set(new_pan_y);
         zoom.set(new);
 
-        // Redraw polygon with new transform
-        if polygon().points.len() > 0 {
-            if let Some(ctx) = get_canvas_context() {
-                super::annotations::polygon::redraw_polygon(
-                    &ctx,
-                    &polygon(),
-                    new,
-                    new_pan_x,
-                    new_pan_y,
-                );
+        // Redraw only the active tool's annotation
+        if let Some(ctx) = get_canvas_context() {
+            match selected_tool() {
+                Some(AnnotationTool::Polygon) => {
+                    if polygon().points.len() > 0 {
+                        super::annotations::polygon::redraw_polygon(
+                            &ctx,
+                            &polygon(),
+                            new,
+                            new_pan_x,
+                            new_pan_y,
+                        );
+                    }
+                }
+                Some(AnnotationTool::BoundingBox) => {
+                    if bbox().start_point.is_some() {
+                        redraw_bbox(
+                            &ctx,
+                            &bbox(),
+                            new,
+                            new_pan_x,
+                            new_pan_y,
+                        );
+                    }
+                }
+                None => {
+                    // Clear canvas when no tool is selected
+                    if let Some(canvas) = ctx.canvas() {
+                        let window = window().expect("Should get window");
+                        let dpr = window.device_pixel_ratio();
+                        let css_w = canvas.width() as f64 / dpr;
+                        let css_h = canvas.height() as f64 / dpr;
+                        ctx.clear_rect(0.0, 0.0, css_w, css_h);
+                    }
+                }
             }
         }
     };
@@ -192,6 +253,21 @@ pub fn CanvasPage(task_id: String) -> Element {
                 on_polygon_click(world_x, world_y, &mut poly, &ctx, zoom(), pan_x(), pan_y());
             }
         }
+
+        if let Some(AnnotationTool::BoundingBox) = selected_tool() {
+            // Convert screen coordinates to world coordinates
+            let screen_x = coords.x;
+            let screen_y = coords.y - NAVBAR_H;
+
+            // Apply inverse transform: (screen - pan) / zoom
+            let world_x = (screen_x - pan_x()) / zoom();
+            let world_y = (screen_y - pan_y()) / zoom();
+
+            if let Some(ctx) = get_canvas_context() {
+                let mut bb = bbox.write();
+                on_bbox_click(world_x, world_y, &mut bb, &ctx, zoom(), pan_x(), pan_y());
+            }
+        }
     };
 
     // pan drag and preview line tracking
@@ -209,16 +285,32 @@ pub fn CanvasPage(task_id: String) -> Element {
             last_x.set(coords.x);
             last_y.set(coords.y);
 
-            // Redraw polygon with new transform
-            if polygon().points.len() > 0 {
-                if let Some(ctx) = get_canvas_context() {
-                    super::annotations::polygon::redraw_polygon(
-                        &ctx,
-                        &polygon(),
-                        zoom(),
-                        new_pan_x,
-                        new_pan_y,
-                    );
+            // Redraw only the active tool's annotation
+            if let Some(ctx) = get_canvas_context() {
+                match selected_tool() {
+                    Some(AnnotationTool::Polygon) => {
+                        if polygon().points.len() > 0 {
+                            super::annotations::polygon::redraw_polygon(
+                                &ctx,
+                                &polygon(),
+                                zoom(),
+                                new_pan_x,
+                                new_pan_y,
+                            );
+                        }
+                    }
+                    Some(AnnotationTool::BoundingBox) => {
+                        if bbox().start_point.is_some() {
+                            redraw_bbox(
+                                &ctx,
+                                &bbox(),
+                                zoom(),
+                                new_pan_x,
+                                new_pan_y,
+                            );
+                        }
+                    }
+                    None => {}
                 }
             }
             return;
@@ -250,6 +342,40 @@ pub fn CanvasPage(task_id: String) -> Element {
                     super::annotations::polygon::redraw_polygon(
                         &ctx,
                         &polygon(),
+                        zoom(),
+                        pan_x(),
+                        pan_y(),
+                    );
+                }
+            }
+        }
+
+        // Update preview box when drawing bbox
+        if let Some(AnnotationTool::BoundingBox) = selected_tool() {
+            // Update cursor positions
+            guide_x.set(coords.x);
+            guide_y.set(coords.y - NAVBAR_H);
+            cursor_x.set(coords.x);
+            cursor_y.set(coords.y - NAVBAR_H);
+
+            if bbox().start_point.is_some() && !bbox().is_complete {
+                // Convert screen to world coords for preview
+                let screen_x = coords.x;
+                let screen_y = coords.y - NAVBAR_H;
+                let world_x = (screen_x - pan_x()) / zoom();
+                let world_y = (screen_y - pan_y()) / zoom();
+
+                bbox
+                    .write()
+                    .set_preview(Some(super::annotations::bbox::Point {
+                        x: world_x,
+                        y: world_y,
+                    }));
+
+                if let Some(ctx) = get_canvas_context() {
+                    redraw_bbox(
+                        &ctx,
+                        &bbox(),
                         zoom(),
                         pan_x(),
                         pan_y(),
