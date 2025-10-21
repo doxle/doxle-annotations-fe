@@ -11,10 +11,10 @@ pub fn CanvasNavbar(
     selected_tool: Signal<Tool>,
     avatar_menu_open: Signal<bool>,
     show_grid_lines: Signal<bool>,
+    sidebar_open: Signal<bool>,
     polygon: Signal<Polygon>,
     bbox: Signal<BBox>,
 ) -> Element {
-    let mut sidebar_open = use_signal(|| false);
 
     rsx! {
         // Navbar
@@ -49,15 +49,5 @@ pub fn CanvasNavbar(
             }
         }
 
-        // Sidebar
-        div {
-            class: if sidebar_open() { "canvas-sidebar open" } else { "canvas-sidebar" },
-
-            div {
-                class: "sidebar-content",
-                h3 { "Annotations" }
-                p { "Sidebar content goes here..." }
-            }
-        }
     }
 }

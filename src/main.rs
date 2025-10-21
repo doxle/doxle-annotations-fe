@@ -41,6 +41,7 @@ const NAVBAR_LEFT_CSS: &str = include_str!("canvas/navbar/left_section.css");
 const NAVBAR_CENTER_CSS: &str = include_str!("canvas/navbar/center_section.css");
 const NAVBAR_RIGHT_CSS: &str = include_str!("canvas/navbar/right_section.css");
 const AVATAR_MENU_CSS: &str = include_str!("canvas/navbar/avatar_menu.css");
+const SIDEBAR_CSS: &str = include_str!("canvas/sidebar/sidebar.css");
 
 fn main() {
     // Initialize tracing and filter out noisy warnings
@@ -91,6 +92,7 @@ fn App() -> Element {
                 document::Style { {NAVBAR_CENTER_CSS} }
                 document::Style { {NAVBAR_RIGHT_CSS} }
                 document::Style { {AVATAR_MENU_CSS} }
+                document::Style { {SIDEBAR_CSS} }
 
                 // Ensure html has an initial theme class matching system preference
                 // and listen for system theme changes

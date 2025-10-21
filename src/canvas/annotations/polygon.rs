@@ -75,33 +75,28 @@ impl Polygon {
 }
 
 /* ---- styles (edit once here) ---- */
-const POINT_STROKE: &str = "rgb(51, 66, 255)";
-const POINT_FILL: &str = "rgba(51, 66, 255, 0.28)";
-const POINT_RADIUS: f64 = 7.2;
-const ZOOMED_IN_RADIUS: f64 = 9.0; // Radius when zoomed in (large)
-const ZOOMED_OUT_RADIUS: f64 = 3.0; // Radius when zoomed out (small)
-const ENDPOINT_STROKE: &str = "rgb(0, 255, 0)";
-const ENDPOINT_FILL: &str = "rgba(0, 255, 0, 0.28)";
-const LINE_COLOR: &str = "rgb(51, 66, 255)";
-const LINE_WIDTH: f64 = 3.0;
-const FILL_COLOR: &str = "rgba(51, 66, 255, 0.35)";
-const PREVIEW_LINE_COLOR: &str = "rgba(51, 66, 255, 0.6)";
+pub const POINT_STROKE: &str = "rgb(51, 66, 255)";
+pub const POINT_FILL: &str = "rgba(51, 66, 255, 0.28)";
+pub const POINT_RADIUS: f64 = 7.2;
+pub const ZOOMED_IN_RADIUS: f64 = 9.0; // Radius when zoomed in (large)
+pub const ZOOMED_OUT_RADIUS: f64 = 3.0; // Radius when zoomed out (small)
+pub const ENDPOINT_STROKE: &str = "rgb(0, 255, 0)";
+pub const ENDPOINT_FILL: &str = "rgba(0, 255, 0, 0.28)";
+pub const LINE_COLOR: &str = "rgb(51, 66, 255)";
+pub const LINE_WIDTH: f64 = 3.0;
+pub const FILL_COLOR: &str = "rgba(51, 66, 255, 0.35)";
+pub const PREVIEW_LINE_COLOR: &str = "rgba(51, 66, 255, 0.6)";
 
 fn clear_canvas(ctx: &CanvasRenderingContext2d) {
     if let Some(canvas) = ctx.canvas() {
-        // Get DPR to clear the full buffer
-        let window = window().expect("Should get window");
-        let dpr = window.device_pixel_ratio();
-
-        // Clear using CSS pixel dimensions since context is scaled
-        let css_w = canvas.width() as f64 / dpr;
-        let css_h = canvas.height() as f64 / dpr;
-        ctx.clear_rect(0.0, 0.0, css_w, css_h);
+        // Clear entire device buffer regardless of current transform
+        let _ = ctx.set_transform(1.0, 0.0, 0.0, 1.0, 0.0, 0.0);
+        ctx.clear_rect(0.0, 0.0, canvas.width() as f64, canvas.height() as f64);
     }
 }
 
 //Draw a point with 40% opacity fill
-fn draw_point(ctx: &CanvasRenderingContext2d, p: Point, radius: f64) {
+pub fn draw_point(ctx: &CanvasRenderingContext2d, p: Point, radius: f64) {
     // Draw filled circle with 40% opacity
     ctx.set_fill_style(&JsValue::from_str(POINT_FILL));
     ctx.set_stroke_style(&JsValue::from_str(POINT_STROKE));
@@ -114,7 +109,7 @@ fn draw_point(ctx: &CanvasRenderingContext2d, p: Point, radius: f64) {
 }
 
 //Draw endpoint with green color
-fn draw_endpoint(ctx: &CanvasRenderingContext2d, p: Point, radius: f64) {
+pub fn draw_endpoint(ctx: &CanvasRenderingContext2d, p: Point, radius: f64) {
     // Draw filled circle with green color
     ctx.set_fill_style(&JsValue::from_str(ENDPOINT_FILL));
     ctx.set_stroke_style(&JsValue::from_str(ENDPOINT_STROKE));
@@ -126,7 +121,7 @@ fn draw_endpoint(ctx: &CanvasRenderingContext2d, p: Point, radius: f64) {
     ctx.stroke();
 }
 
-fn draw_polygon(ctx: &CanvasRenderingContext2d, pts: &[Point], close_shape: bool) {
+pub fn draw_polygon(ctx: &CanvasRenderingContext2d, pts: &[Point], close_shape: bool) {
     // Draw polyline connecting points
     if pts.is_empty() {
         return;
@@ -155,7 +150,7 @@ fn draw_polygon(ctx: &CanvasRenderingContext2d, pts: &[Point], close_shape: bool
 }
 
 // Draw preview line from last point to cursor
-fn draw_preview_line(ctx: &CanvasRenderingContext2d, from: Point, to: Point) {
+pub fn draw_preview_line(ctx: &CanvasRenderingContext2d, from: Point, to: Point) {
     ctx.set_line_width(LINE_WIDTH);
     ctx.set_stroke_style(&JsValue::from_str(PREVIEW_LINE_COLOR));
     ctx.set_line_cap("round");
@@ -166,7 +161,7 @@ fn draw_preview_line(ctx: &CanvasRenderingContext2d, from: Point, to: Point) {
     ctx.stroke();
 }
 
-fn fill_polygon(ctx: &CanvasRenderingContext2d, pts: &[Point]) {
+pub fn fill_polygon(ctx: &CanvasRenderingContext2d, pts: &[Point]) {
     if pts.len() < 3 {
         return;
     }
@@ -224,8 +219,8 @@ pub fn redraw_polygon(
                 // Draw line from last point to cursor
                 draw_preview_line(ctx, *last, preview_screen);
 
-                // Draw closing line from cursor to first point (CVAT polygon style)
-                if screen_points.len() >= 2 {
+                // Draw closing line only when near first point
+                if screen_points.len() >= 2 && can_close_polygon(poly, zoom, pan_x, pan_y) {
                     if let Some(first) = screen_points.first() {
                         draw_preview_line(ctx, preview_screen, *first);
                     }
@@ -238,6 +233,49 @@ pub fn redraw_polygon(
     let adjusted_radius = (POINT_RADIUS * zoom).clamp(ZOOMED_OUT_RADIUS, ZOOMED_IN_RADIUS);
     for (i, &p) in screen_points.iter().enumerate() {
         // First point is green when we have 3+ points and hovering near it
+        if i == 0 && screen_points.len() >= 3 && can_close_polygon(poly, zoom, pan_x, pan_y) {
+            draw_endpoint(ctx, p, adjusted_radius);
+        } else {
+            draw_point(ctx, p, adjusted_radius);
+        }
+    }
+}
+
+// Draw current polygon without clearing the canvas (overlay)
+pub fn draw_polygon_overlay(
+    ctx: &CanvasRenderingContext2d,
+    poly: &Polygon,
+    zoom: f64,
+    pan_x: f64,
+    pan_y: f64,
+) {
+    // Transform world to screen
+    let screen_points: Vec<Point> = poly
+        .points
+        .iter()
+        .map(|p| Point { x: p.x * zoom + pan_x, y: p.y * zoom + pan_y })
+        .collect();
+
+    if poly.is_closed {
+        fill_polygon(ctx, &screen_points);
+    } else {
+        draw_polygon(ctx, &screen_points, false);
+        if let Some(preview) = poly.preview_point {
+            if let Some(last) = screen_points.last() {
+                let preview_screen = Point { x: preview.x * zoom + pan_x, y: preview.y * zoom + pan_y };
+                draw_preview_line(ctx, *last, preview_screen);
+                if screen_points.len() >= 2 && can_close_polygon(poly, zoom, pan_x, pan_y) {
+                    if let Some(first) = screen_points.first() {
+                        draw_preview_line(ctx, preview_screen, *first);
+                    }
+                }
+            }
+        }
+    }
+
+    // draw points
+    let adjusted_radius = (POINT_RADIUS * zoom).clamp(ZOOMED_OUT_RADIUS, ZOOMED_IN_RADIUS);
+    for (i, &p) in screen_points.iter().enumerate() {
         if i == 0 && screen_points.len() >= 3 && can_close_polygon(poly, zoom, pan_x, pan_y) {
             draw_endpoint(ctx, p, adjusted_radius);
         } else {
@@ -289,7 +327,6 @@ pub fn on_polygon_click(
         x: world_x,
         y: world_y,
     });
-    redraw_polygon(ctx, poly, zoom, pan_x, pan_y);
 }
 
 //Get the canvas element and its 2d context

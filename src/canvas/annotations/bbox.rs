@@ -118,14 +118,9 @@ const PREVIEW_FILL_COLOR: &str = "rgba(51, 66, 255, 0.3)";
 
 fn clear_canvas(ctx: &CanvasRenderingContext2d) {
     if let Some(canvas) = ctx.canvas() {
-        // Get DPR to clear the full buffer
-        let window = web_sys::window().expect("Should get window");
-        let dpr = window.device_pixel_ratio();
-
-        // Clear using CSS pixel dimensions since context is scaled
-        let css_w = canvas.width() as f64 / dpr;
-        let css_h = canvas.height() as f64 / dpr;
-        ctx.clear_rect(0.0, 0.0, css_w, css_h);
+        // Clear entire device buffer regardless of current transform
+        let _ = ctx.set_transform(1.0, 0.0, 0.0, 1.0, 0.0, 0.0);
+        ctx.clear_rect(0.0, 0.0, canvas.width() as f64, canvas.height() as f64);
     }
 }
 
@@ -260,5 +255,7 @@ pub fn on_bbox_click(
         });
     }
 
+    // Immediate visual feedback on the overlay canvas
+    redraw_bbox(ctx, bbox, zoom, pan_x, pan_y);
     redraw_bbox(ctx, bbox, zoom, pan_x, pan_y);
 }

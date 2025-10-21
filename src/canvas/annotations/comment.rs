@@ -48,11 +48,9 @@ const TEXT_BG: &str = "rgba(255, 255, 255, 0.9)";
 
 fn clear_canvas(ctx: &CanvasRenderingContext2d) {
     if let Some(canvas) = ctx.canvas() {
-        let window = web_sys::window().expect("Should get window");
-        let dpr = window.device_pixel_ratio();
-        let css_w = canvas.width() as f64 / dpr;
-        let css_h = canvas.height() as f64 / dpr;
-        ctx.clear_rect(0.0, 0.0, css_w, css_h);
+        // Clear entire device buffer regardless of current transform
+        let _ = ctx.set_transform(1.0, 0.0, 0.0, 1.0, 0.0, 0.0);
+        ctx.clear_rect(0.0, 0.0, canvas.width() as f64, canvas.height() as f64);
     }
 }
 
@@ -152,5 +150,7 @@ pub fn on_comment_click(
         comment.set_text("Comment text".to_string());
     }
 
+    // Immediate visual feedback on the overlay canvas
+    redraw_comment(ctx, comment, zoom, pan_x, pan_y);
     redraw_comment(ctx, comment, zoom, pan_x, pan_y);
 }

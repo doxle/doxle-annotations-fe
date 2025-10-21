@@ -1,15 +1,25 @@
 use super::annotations::polygon::on_polygon_click;
-use super::annotations::polygon::{get_canvas_context, Polygon};
+use super::annotations::polygon::{Polygon, Point};
 use super::annotations::bbox::{on_bbox_click, redraw_bbox, BBox};
-use super::annotations::comment::{on_comment_click, redraw_comment, Comment};
+use super::annotations::comment::Comment;
 use super::annotations::Tool;
 use super::canvas_navbar::CanvasNavbar;
+use super::sidebar::Sidebar;
+use super::sidebar::storage::{get_active_or_first_class_id, increment_class_count};
+use super::annotations::store::save_polygon;
+use super::annotations::saved_canvas::{redraw_saved_annotations, invalidate_polygon_cache};
+use super::annotations::overlay_canvas::{schedule_overlay_redraw, get_overlay_canvas_context};
 use crate::dioxus_elements::input_data::MouseButton;
 use dioxus::prelude::*;
 use wasm_bindgen::{closure::Closure, JsCast};
 use web_sys::{window, CanvasRenderingContext2d, HtmlCanvasElement, HtmlElement, KeyboardEvent};
 
 const NAVBAR_H: f64 = 36.0; // canvas container sits below navbar
+
+// Helper for backwards compat - returns overlay context
+fn get_canvas_context() -> Option<CanvasRenderingContext2d> {
+    get_overlay_canvas_context()
+}
 
 #[component]
 pub fn CanvasPage(task_id: String) -> Element {
@@ -20,6 +30,7 @@ pub fn CanvasPage(task_id: String) -> Element {
     let mut selected_tool = use_signal(|| Tool::Select); // Default is Select (Arrow)
     let mut avatar_menu_open = use_signal(|| false);
     let mut show_grid_lines = use_signal(|| false);
+    let mut sidebar_open = use_signal(|| false);
     let mut is_panning: Signal<bool> = use_signal(|| false);
     let mut last_x: Signal<f64> = use_signal(|| 0.0);
     let mut last_y: Signal<f64> = use_signal(|| 0.0);
@@ -29,92 +40,84 @@ pub fn CanvasPage(task_id: String) -> Element {
     let dot_spacing_px: f64 = 12.0;
     let dot_radius_px: f64 = 1.0;
 
-    // Set canvas size with DPR for crisp rendering
+    // Clone for use inside closures without moving the original into handlers
+    let project_id_for_ann = project_id.clone();
+    // TODO: wire from route/selection
+    let block_id_for_ann = "block1".to_string();
+    let image_id_for_ann = "house1".to_string();
+    let mut classes_version = use_signal(|| 0_u64);
+    
+    // Note: preview_point is managed within polygon state, not as separate signal
+
+    // Redraw saved canvas when polygons change OR zoom/pan changes
+    // (rAF throttling in redraw_saved_annotations prevents jitter)
+    let pid_for_saved = project_id_for_ann.clone();
+    let block_for_saved = block_id_for_ann.clone();
+    let image_for_saved = image_id_for_ann.clone();
+    use_effect(move || {
+        let _ = classes_version(); // Watch for polygon save/delete
+        let _ = zoom(); // Watch zoom  
+        let _ = pan_x(); // Watch pan
+        let _ = pan_y();
+        
+        redraw_saved_annotations(&pid_for_saved, &block_for_saved, &image_for_saved, zoom(), pan_x(), pan_y());
+    });
+
+    // Set canvas size with DPR for crisp rendering (both canvases)
     use_effect(move || {
         if let Some(window) = window() {
             if let Some(document) = window.document() {
-                if let Some(canvas_el) = document.get_element_by_id("canvas-annotations") {
-                    if let Ok(canvas) = canvas_el.dyn_into::<HtmlCanvasElement>() {
-                        let css_w = window
-                            .inner_width()
-                            .ok()
-                            .and_then(|w| w.as_f64())
-                            .unwrap_or(1920.0);
-                        let css_h = window
-                            .inner_height()
-                            .ok()
-                            .and_then(|h| h.as_f64())
-                            .map(|h| h - 36.0)
-                            .unwrap_or(1080.0);
-                        let dpr = window.device_pixel_ratio();
+                let css_w = window
+                    .inner_width()
+                    .ok()
+                    .and_then(|w| w.as_f64())
+                    .unwrap_or(1920.0);
+                let css_h = window
+                    .inner_height()
+                    .ok()
+                    .and_then(|h| h.as_f64())
+                    .map(|h| h - 36.0)
+                    .unwrap_or(1080.0);
+                let dpr = window.device_pixel_ratio();
 
-                        // Set internal buffer size (with DPR for crisp rendering)
-                        canvas.set_width((css_w * dpr).round() as u32);
-                        canvas.set_height((css_h * dpr).round() as u32);
+                // Size both canvases
+                for canvas_id in ["canvas-saved", "canvas-overlay"] {
+                    if let Some(canvas_el) = document.get_element_by_id(canvas_id) {
+                        if let Ok(canvas) = canvas_el.dyn_into::<HtmlCanvasElement>() {
+                            // Set internal buffer size (with DPR for crisp rendering)
+                            canvas.set_width((css_w * dpr).round() as u32);
+                            canvas.set_height((css_h * dpr).round() as u32);
 
-                        // Set CSS display size
-                        let _ = canvas
-                            .style()
-                            .set_property("width", &format!("{}px", css_w));
-                        let _ = canvas
-                            .style()
-                            .set_property("height", &format!("{}px", css_h));
+                            // Set CSS display size
+                            let _ = canvas
+                                .style()
+                                .set_property("width", &format!("{}px", css_w));
+                            let _ = canvas
+                                .style()
+                                .set_property("height", &format!("{}px", css_h));
 
-                        // Scale the context by DPR so we can draw in CSS pixels
-                        if let Ok(Some(ctx_any)) = canvas.get_context("2d") {
-                            if let Ok(ctx) = ctx_any.dyn_into::<CanvasRenderingContext2d>() {
-                                let _ = ctx.set_transform(dpr, 0.0, 0.0, dpr, 0.0, 0.0);
+                            // Scale the context by DPR so we can draw in CSS pixels
+                            if let Ok(Some(ctx_any)) = canvas.get_context("2d") {
+                                if let Ok(ctx) = ctx_any.dyn_into::<CanvasRenderingContext2d>() {
+                                    let _ = ctx.set_transform(dpr, 0.0, 0.0, dpr, 0.0, 0.0);
+                                }
                             }
                         }
-
-                        tracing::info!(
-                            "Canvas sized: {}x{} CSS, buffer: {}x{}, DPR: {}",
-                            css_w,
-                            css_h,
-                            (css_w * dpr) as u32,
-                            (css_h * dpr) as u32,
-                            dpr
-                        );
                     }
                 }
+
+                tracing::info!(
+                    "Canvases sized: {}x{} CSS, buffer: {}x{}, DPR: {}",
+                    css_w,
+                    css_h,
+                    (css_w * dpr) as u32,
+                    (css_h * dpr) as u32,
+                    dpr
+                );
             }
         }
     });
 
-    // Redraw when polygon or bbox state changes (for undo/redo)
-    use_effect(move || {
-        let _ = polygon();
-        let _ = bbox();
-        
-        if let Some(ctx) = get_canvas_context() {
-            match selected_tool() {
-                Tool::Polygon => {
-                    if polygon().points.len() > 0 {
-                        super::annotations::polygon::redraw_polygon(
-                            &ctx,
-                            &polygon(),
-                            zoom(),
-                            pan_x(),
-                            pan_y(),
-                        );
-                    }
-                }
-                Tool::BoundingBox => {
-                    if bbox().start_point.is_some() {
-                        redraw_bbox(
-                            &ctx,
-                            &bbox(),
-                            zoom(),
-                            pan_x(),
-                            pan_y(),
-                        );
-                    }
-                }
-                _ => {}
-            }
-        }
-    });
-    
     // Clear annotations when switching tools
     use_effect(move || {
         if let Some(ctx) = get_canvas_context() {
@@ -162,12 +165,18 @@ pub fn CanvasPage(task_id: String) -> Element {
     });
 
     // Keyboard shortcuts handler
+    let pid_for_keys = project_id_for_ann.clone();
+    let pid_for_keys_val = pid_for_keys.clone();
+    let mut classes_version_keys = classes_version.clone();
     use_effect(move || {
         let win = match window() {
             Some(w) => w,
             None => return,
         };
 
+        let pid_value = pid_for_keys_val.clone();
+        let block_value = "block1".to_string();
+        let image_value = "house1".to_string();
         let closure = Closure::wrap(Box::new(move |event: KeyboardEvent| {
             let key = event.key();
             
@@ -177,29 +186,12 @@ pub fn CanvasPage(task_id: String) -> Element {
                     Tool::Polygon => {
                         if polygon().points.len() > 0 {
                             polygon.write().reset();
-                            if let Some(ctx) = get_canvas_context() {
-                                if let Some(canvas) = ctx.canvas() {
-                                    let win = window().expect("Should get window");
-                                    let dpr = win.device_pixel_ratio();
-                                    let css_w = canvas.width() as f64 / dpr;
-                                    let css_h = canvas.height() as f64 / dpr;
-                                    ctx.clear_rect(0.0, 0.0, css_w, css_h);
-                                }
-                            }
+                            // Overlay will auto-clear on next schedule
                         }
                     }
                     Tool::BoundingBox => {
                         if bbox().start_point.is_some() {
                             bbox.write().reset();
-                            if let Some(ctx) = get_canvas_context() {
-                                if let Some(canvas) = ctx.canvas() {
-                                    let win = window().expect("Should get window");
-                                    let dpr = win.device_pixel_ratio();
-                                    let css_w = canvas.width() as f64 / dpr;
-                                    let css_h = canvas.height() as f64 / dpr;
-                                    ctx.clear_rect(0.0, 0.0, css_w, css_h);
-                                }
-                            }
                         }
                     }
                     _ => {}
@@ -207,13 +199,35 @@ pub fn CanvasPage(task_id: String) -> Element {
                 return;
             }
 
-            // Handle tool shortcuts (p, b, c, a, h, t)
+            // Enter closes polygon and increments class count
+            if key == "Enter" {
+                if selected_tool() == Tool::Polygon {
+                    if polygon().points.len() >= 3 && !polygon().is_closed {
+                        polygon.write().close();
+                        // Save and reset current polygon
+                        let pid_local = pid_value.clone();
+                        let block_local = block_value.clone();
+                        let image_local = image_value.clone();
+                        if let Some(class_id) = get_active_or_first_class_id(&pid_value) {
+                            save_polygon(&pid_local, &block_local, &image_local, &polygon(), &class_id);
+                            increment_class_count(&pid_local, &class_id, 1);
+                            invalidate_polygon_cache(); // Force cache refresh
+                            classes_version_keys.set(classes_version_keys() + 1); // Triggers saved canvas redraw
+                        }
+                        polygon.write().reset();
+                    }
+                }
+                return;
+            }
+
+            // Handle tool shortcuts (p, b, c, a, h, \, t)
             match key.as_str() {
                 "p" => selected_tool.set(Tool::Polygon),
                 "b" => selected_tool.set(Tool::BoundingBox),
                 "c" => selected_tool.set(Tool::Comment),
                 "a" => selected_tool.set(Tool::Select),
                 "h" => selected_tool.set(Tool::Pan),
+                "\\" => sidebar_open.set(!sidebar_open()),
                 "t" => {
                     // Toggle theme
                     if let Some(win) = window() {
@@ -306,51 +320,17 @@ pub fn CanvasPage(task_id: String) -> Element {
         pan_x.set(new_pan_x);
         pan_y.set(new_pan_y);
         zoom.set(new);
-
-        // Redraw only the active tool's annotation
-        if let Some(ctx) = get_canvas_context() {
-            match selected_tool() {
-                Tool::Polygon => {
-                    if polygon().points.len() > 0 {
-                        super::annotations::polygon::redraw_polygon(
-                            &ctx,
-                            &polygon(),
-                            new,
-                            new_pan_x,
-                            new_pan_y,
-                        );
-                    }
-                }
-                Tool::BoundingBox => {
-                    if bbox().start_point.is_some() {
-                        redraw_bbox(
-                            &ctx,
-                            &bbox(),
-                            new,
-                            new_pan_x,
-                            new_pan_y,
-                        );
-                    }
-                }
-                Tool::Comment => {
-                    if comment().position.is_some() {
-                        redraw_comment(
-                            &ctx,
-                            &comment(),
-                            new,
-                            new_pan_x,
-                            new_pan_y,
-                        );
-                    }
-                }
-                Tool::Select | Tool::Pan => {
-                    // No active annotation to redraw
-                }
-            }
+        // Note: use_effect watching zoom/pan will redraw Canvas-A
+        // Overlay will update on next mousemove or we can schedule it
+        if polygon().points.len() > 0 {
+            schedule_overlay_redraw(polygon(), new, new_pan_x, new_pan_y);
         }
     };
 
     // start pan or add polygon vertex (NO world conversion)
+    let pid_for_down = project_id_for_ann.clone();
+    let block_for_down = block_id_for_ann.clone();
+    let image_for_down = image_id_for_ann.clone();
     let onmousedown = move |evt: Event<MouseData>| {
         let coords = evt.client_coordinates();
 
@@ -394,20 +374,22 @@ pub fn CanvasPage(task_id: String) -> Element {
                         if distance < 30.0 {
                             // Close the polygon
                             poly.close();
-                            on_polygon_click(
-                                world_x,
-                                world_y,
-                                &mut poly,
-                                &ctx,
-                                zoom(),
-                                pan_x(),
-                                pan_y(),
-                            );
+                            // Persist completed polygon and reset for a new one
+                            if let Some(class_id) = get_active_or_first_class_id(&pid_for_down) {
+                                save_polygon(&pid_for_down, &block_for_down, &image_for_down, &poly, &class_id);
+                                increment_class_count(&pid_for_down, &class_id, 1);
+                                invalidate_polygon_cache();
+                                classes_version.set(classes_version() + 1); // Triggers saved canvas redraw
+                            }
+                            poly.reset();
                             return;
                         }
                     }
                 }
                 on_polygon_click(world_x, world_y, &mut poly, &ctx, zoom(), pan_x(), pan_y());
+                // Drop mutable borrow before scheduling rAF redraw
+                drop(poly);
+                schedule_overlay_redraw(polygon(), zoom(), pan_x(), pan_y());
             }
         }
 
@@ -422,7 +404,14 @@ pub fn CanvasPage(task_id: String) -> Element {
 
             if let Some(ctx) = get_canvas_context() {
                 let mut bb = bbox.write();
+                let was_complete = bb.is_complete;
                 on_bbox_click(world_x, world_y, &mut bb, &ctx, zoom(), pan_x(), pan_y());
+                if !was_complete && bb.is_complete {
+                    if let Some(class_id) = get_active_or_first_class_id(&pid_for_down) {
+                        increment_class_count(&pid_for_down, &class_id, 1);
+                        classes_version.set(classes_version() + 1);
+                    }
+                }
             }
         }
     };
@@ -441,45 +430,10 @@ pub fn CanvasPage(task_id: String) -> Element {
             pan_y.set(new_pan_y);
             last_x.set(coords.x);
             last_y.set(coords.y);
-
-            // Redraw only the active tool's annotation
-            if let Some(ctx) = get_canvas_context() {
-                match selected_tool() {
-                    Tool::Polygon => {
-                        if polygon().points.len() > 0 {
-                            super::annotations::polygon::redraw_polygon(
-                                &ctx,
-                                &polygon(),
-                                zoom(),
-                                new_pan_x,
-                                new_pan_y,
-                            );
-                        }
-                    }
-                    Tool::BoundingBox => {
-                        if bbox().start_point.is_some() {
-                            redraw_bbox(
-                                &ctx,
-                                &bbox(),
-                                zoom(),
-                                new_pan_x,
-                                new_pan_y,
-                            );
-                        }
-                    }
-                    Tool::Comment => {
-                        if comment().position.is_some() {
-                            redraw_comment(
-                                &ctx,
-                                &comment(),
-                                zoom(),
-                                new_pan_x,
-                                new_pan_y,
-                            );
-                        }
-                    }
-                    Tool::Select | Tool::Pan => {}
-                }
+            // Note: use_effect watching pan will redraw Canvas-A
+            // Schedule overlay redraw for in-progress annotation
+            if polygon().points.len() > 0 {
+                schedule_overlay_redraw(polygon(), zoom(), new_pan_x, new_pan_y);
             }
             return;
         }
@@ -501,20 +455,13 @@ pub fn CanvasPage(task_id: String) -> Element {
 
                 polygon
                     .write()
-                    .set_preview(Some(super::annotations::polygon::Point {
+                    .set_preview(Some(Point {
                         x: world_x,
                         y: world_y,
                     }));
 
-                if let Some(ctx) = get_canvas_context() {
-                    super::annotations::polygon::redraw_polygon(
-                        &ctx,
-                        &polygon(),
-                        zoom(),
-                        pan_x(),
-                        pan_y(),
-                    );
-                }
+                // Schedule rAF-gated redraw (throttled to 60fps)
+                schedule_overlay_redraw(polygon(), zoom(), pan_x(), pan_y());
             }
         }
 
@@ -576,6 +523,7 @@ pub fn CanvasPage(task_id: String) -> Element {
                 selected_tool: selected_tool,
                 avatar_menu_open: avatar_menu_open,
                 show_grid_lines: show_grid_lines,
+                sidebar_open: sidebar_open,
                 polygon: polygon,
                 bbox: bbox
             }
@@ -631,15 +579,22 @@ pub fn CanvasPage(task_id: String) -> Element {
                 }
             }
 
-            // Annotation canvas - outside transform for crisp rendering
+            // Canvas-A: Saved annotations (background)
             canvas {
-                id: "canvas-annotations",
+                id: "canvas-saved",
+                class: "canvas-layer canvas-saved",
+                style: "background-color: transparent; position: absolute; pointer-events: none;",
+            }
+
+            // Canvas-B: In-progress overlay (foreground)
+            canvas {
+                id: "canvas-overlay",
                 class: if selected_tool().is_drawing_tool() {
-                    "canvas-layer canvas-annotations tool-active"
+                    "canvas-layer canvas-overlay tool-active"
                 } else {
-                    "canvas-layer canvas-annotations"
+                    "canvas-layer canvas-overlay"
                 },
-                style: "background-color: transparent;",
+                style: "background-color: transparent; position: absolute; pointer-events: none;",
             }
 
             // Custom crosshair cursor overlay
@@ -654,7 +609,11 @@ pub fn CanvasPage(task_id: String) -> Element {
                 }
 
             }
-        }
+            }
+
+            // Sidebar
+            Sidebar { task_id: task_id.clone(), project_id: project_id.clone(), sidebar_open: sidebar_open, classes_version: classes_version }
+
         }
     }
 }

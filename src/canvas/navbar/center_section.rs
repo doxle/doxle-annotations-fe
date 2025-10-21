@@ -40,10 +40,10 @@ pub fn CenterSection(
         div {
             class: "navbar-center",
 
-            // Image name
+            // House / Block name
             span {
                 class: "navbar-img-name",
-                "image_{task_id}.png"
+                "house1 / block1"
             }
 
             // Separator
