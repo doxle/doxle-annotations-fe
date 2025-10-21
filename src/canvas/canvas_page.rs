@@ -16,6 +16,37 @@ use web_sys::{window, CanvasRenderingContext2d, HtmlCanvasElement, HtmlElement, 
 
 const NAVBAR_H: f64 = 36.0; // canvas container sits below navbar
 
+// Compute the displayed image bounds in WORLD coordinates (after undoing pan/zoom).
+fn get_image_bounds_world(zoom: f64, pan_x: f64, pan_y: f64) -> Option<(f64, f64, f64, f64)> {
+    let win = window()?;
+    let doc = win.document()?;
+    let el = doc.query_selector(".canvas-image img").ok().flatten()?;
+    let rect = el.get_bounding_client_rect();
+    let left = (rect.left() - pan_x) / zoom;
+    let top = (rect.top() - NAVBAR_H - pan_y) / zoom;
+    let right = (rect.right() - pan_x) / zoom;
+    let bottom = (rect.bottom() - NAVBAR_H - pan_y) / zoom;
+    Some((left, top, right, bottom))
+}
+
+// Check if a viewport point lies inside the displayed image rect (SCREEN coordinates).
+fn point_inside_image(screen_x: f64, screen_y: f64) -> bool {
+    if let Some(win) = window() {
+        if let Some(doc) = win.document() {
+            if let Ok(Some(el)) = doc.query_selector(".canvas-image img") {
+                let r = el.get_bounding_client_rect();
+                return screen_x >= r.left()
+                    && screen_x <= r.right()
+                    && screen_y >= r.top()
+                    && screen_y <= r.bottom();
+            }
+        }
+    }
+    true // If we can't detect the image, allow input (fallback)
+}
+
+fn clamp_f64(v: f64, min: f64, max: f64) -> f64 { v.max(min).min(max) }
+
 // Helper for backwards compat - returns overlay context
 fn get_canvas_context() -> Option<CanvasRenderingContext2d> {
     get_overlay_canvas_context()
@@ -460,15 +491,26 @@ pub fn CanvasPage(task_id: String) -> Element {
         // Tool-based handling
         if selected_tool() == Tool::Polygon {
             // Convert screen coordinates to world coordinates
-            let screen_x = coords.x;
-            let screen_y = coords.y - NAVBAR_H;
+            let screen_x_vp = coords.x;           // viewport X
+            let screen_y_vp = coords.y;           // viewport Y
+            let screen_x = screen_x_vp;           // for X we don't offset by navbar
+            let screen_y = screen_y_vp - NAVBAR_H; // container-relative Y
+
+            // Require clicks to be inside the displayed image rect
+            if !point_inside_image(screen_x_vp, screen_y_vp) { return; }
 
             // Apply inverse transform: (screen - pan) / zoom
-            let world_x = (screen_x - pan_x()) / zoom();
-            let world_y = (screen_y - pan_y()) / zoom();
+            let mut world_x = (screen_x - pan_x()) / zoom();
+            let mut world_y = (screen_y - pan_y()) / zoom();
+
+            // Clamp to image bounds in world space
+            if let Some((l, t, r, b)) = get_image_bounds_world(zoom(), pan_x(), pan_y()) {
+                world_x = clamp_f64(world_x, l, r);
+                world_y = clamp_f64(world_y, t, b);
+            }
 
             if let Some(ctx) = get_canvas_context() {
-                // Check if clicking near first point to close
+                // Check if clicking near first point to close (only if inside image)
                 let mut poly = polygon.write();
                 if poly.points.len() >= 3 {
                     if let Some(first) = poly.points.first() {
@@ -505,12 +547,26 @@ pub fn CanvasPage(task_id: String) -> Element {
 
         if selected_tool() == Tool::BoundingBox {
             // Convert screen coordinates to world coordinates
-            let screen_x = coords.x;
-            let screen_y = coords.y - NAVBAR_H;
+            let screen_x_vp = coords.x;           // viewport X
+            let screen_y_vp = coords.y;           // viewport Y
+            let screen_x = screen_x_vp;
+            let screen_y = screen_y_vp - NAVBAR_H;
 
-            // Apply inverse transform: (screen - pan) / zoom
-            let world_x = (screen_x - pan_x()) / zoom();
-            let world_y = (screen_y - pan_y()) / zoom();
+            // Apply inverse transform
+            let mut world_x = (screen_x - pan_x()) / zoom();
+            let mut world_y = (screen_y - pan_y()) / zoom();
+
+            // Clamp to image bounds; also require first click to be inside image
+            if let Some((l, t, r, b)) = get_image_bounds_world(zoom(), pan_x(), pan_y()) {
+                if bbox().start_point.is_none() {
+                    // First click must be inside image
+                    if !point_inside_image(screen_x_vp, screen_y_vp) { return; }
+                }
+                world_x = clamp_f64(world_x, l, r);
+                world_y = clamp_f64(world_y, t, b);
+            } else {
+                // If we can't read image bounds and this is the first click, allow as before
+            }
 
             if let Some(ctx) = get_canvas_context() {
                 let mut bb = bbox.write();
@@ -572,11 +628,16 @@ pub fn CanvasPage(task_id: String) -> Element {
             cursor_y.set(coords.y - NAVBAR_H); // Match guide_y to align with canvas
 
             if polygon().points.len() > 0 && !polygon().is_closed {
-                // Convert screen to world coords for preview
+                // Convert screen to world coords for preview, clamped to image bounds
                 let screen_x = coords.x;
                 let screen_y = coords.y - NAVBAR_H;
-                let world_x = (screen_x - pan_x()) / zoom();
-                let world_y = (screen_y - pan_y()) / zoom();
+                let mut world_x = (screen_x - pan_x()) / zoom();
+                let mut world_y = (screen_y - pan_y()) / zoom();
+
+                if let Some((l, t, r, b)) = get_image_bounds_world(zoom(), pan_x(), pan_y()) {
+                    world_x = clamp_f64(world_x, l, r);
+                    world_y = clamp_f64(world_y, t, b);
+                }
 
                 polygon
                     .write()
@@ -599,11 +660,16 @@ pub fn CanvasPage(task_id: String) -> Element {
             cursor_y.set(coords.y - NAVBAR_H);
 
             if bbox().start_point.is_some() && !bbox().is_complete {
-                // Convert screen to world coords for preview
+                // Convert screen to world coords for preview and clamp to image
                 let screen_x = coords.x;
                 let screen_y = coords.y - NAVBAR_H;
-                let world_x = (screen_x - pan_x()) / zoom();
-                let world_y = (screen_y - pan_y()) / zoom();
+                let mut world_x = (screen_x - pan_x()) / zoom();
+                let mut world_y = (screen_y - pan_y()) / zoom();
+
+                if let Some((l, t, r, b)) = get_image_bounds_world(zoom(), pan_x(), pan_y()) {
+                    world_x = clamp_f64(world_x, l, r);
+                    world_y = clamp_f64(world_y, t, b);
+                }
 
                 bbox
                     .write()
