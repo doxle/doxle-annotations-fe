@@ -65,38 +65,34 @@ pub fn CanvasPage(task_id: String) -> Element {
 
     // Set canvas size with DPR for crisp rendering (both canvases)
     use_effect(move || {
-        if let Some(window) = window() {
-            if let Some(document) = window.document() {
-                let css_w = window
-                    .inner_width()
-                    .ok()
-                    .and_then(|w| w.as_f64())
-                    .unwrap_or(1920.0);
-                let css_h = window
-                    .inner_height()
-                    .ok()
-                    .and_then(|h| h.as_f64())
-                    .map(|h| h - 36.0)
-                    .unwrap_or(1080.0);
-                let dpr = window.device_pixel_ratio();
+        if let Some(win) = window() {
+            if let Some(document) = win.document() {
+                // Measure the actual canvas container instead of window to avoid rounding/clipping on the right edge
+                let (css_w, css_h) = if let Some(container) = document.get_element_by_id("canvas-container") {
+                    let rect = container.get_bounding_client_rect();
+                    (rect.width(), rect.height())
+                } else {
+                    // Fallback to window size if container not found
+                    (
+                        win.inner_width().ok().and_then(|w| w.as_f64()).unwrap_or(1920.0),
+                        win.inner_height().ok().and_then(|h| h.as_f64()).map(|h| h - NAVBAR_H).unwrap_or(1080.0),
+                    )
+                };
+                let dpr = win.device_pixel_ratio();
 
-                // Size both canvases
+                // Size both canvases to match container precisely
                 for canvas_id in ["canvas-saved", "canvas-overlay"] {
                     if let Some(canvas_el) = document.get_element_by_id(canvas_id) {
                         if let Ok(canvas) = canvas_el.dyn_into::<HtmlCanvasElement>() {
-                            // Set internal buffer size (with DPR for crisp rendering)
+                            // Internal device buffer
                             canvas.set_width((css_w * dpr).round() as u32);
                             canvas.set_height((css_h * dpr).round() as u32);
 
-                            // Set CSS display size
-                            let _ = canvas
-                                .style()
-                                .set_property("width", &format!("{}px", css_w));
-                            let _ = canvas
-                                .style()
-                                .set_property("height", &format!("{}px", css_h));
+                            // CSS display size
+                            let _ = canvas.style().set_property("width", &format!("{}px", css_w));
+                            let _ = canvas.style().set_property("height", &format!("{}px", css_h));
 
-                            // Scale the context by DPR so we can draw in CSS pixels
+                            // Scale context so drawing uses CSS pixels
                             if let Ok(Some(ctx_any)) = canvas.get_context("2d") {
                                 if let Ok(ctx) = ctx_any.dyn_into::<CanvasRenderingContext2d>() {
                                     let _ = ctx.set_transform(dpr, 0.0, 0.0, dpr, 0.0, 0.0);
@@ -107,7 +103,7 @@ pub fn CanvasPage(task_id: String) -> Element {
                 }
 
                 tracing::info!(
-                    "Canvases sized: {}x{} CSS, buffer: {}x{}, DPR: {}",
+                    "Canvases sized to container: {}x{} CSS, buffer: {}x{}, DPR: {}",
                     css_w,
                     css_h,
                     (css_w * dpr) as u32,
@@ -374,11 +370,33 @@ pub fn CanvasPage(task_id: String) -> Element {
 
     // --- Handlers ----
 
-    // cursor-centered-zoom
+    // cursor-centered-zoom and shift+wheel for panning
     let onwheel = move |evt: Event<WheelData>| {
         evt.prevent_default();
         let mouse = evt.client_coordinates();
-        let dy = evt.data.delta().strip_units().y;
+        let delta = evt.data.delta().strip_units();
+        
+        // Shift key held = pan (like CVAT)
+        if evt.modifiers().shift() {
+            let dx = delta.x;
+            let dy = delta.y;
+            let new_pan_x = pan_x() - dx;
+            let new_pan_y = pan_y() - dy;
+            pan_x.set(new_pan_x);
+            pan_y.set(new_pan_y);
+            
+            // Redraw overlays
+            schedule_overlay_redraw(polygon(), zoom(), new_pan_x, new_pan_y);
+            if bbox().start_point.is_some() && !bbox().is_complete {
+                if let Some(ctx) = get_canvas_context() {
+                    redraw_bbox(&ctx, &bbox(), zoom(), new_pan_x, new_pan_y);
+                }
+            }
+            return;
+        }
+        
+        // Normal zoom
+        let dy = delta.y;
         let factor = if dy < 0.0 { 1.2 } else { 0.8 };
         let old = zoom();
         let new = (old * factor as f64).clamp(0.3, 50.0);
@@ -425,6 +443,14 @@ pub fn CanvasPage(task_id: String) -> Element {
 
         // Pan tool with left mouse button -> pan
         if selected_tool() == Tool::Pan && evt.data.trigger_button() == Some(MouseButton::Primary) {
+            is_panning.set(true);
+            last_x.set(coords.x);
+            last_y.set(coords.y);
+            return;
+        }
+
+        // Select tool + left mouse button -> click-drag pan (trackpad-style)
+        if selected_tool() == Tool::Select && evt.data.trigger_button() == Some(MouseButton::Primary) {
             is_panning.set(true);
             last_x.set(coords.x);
             last_y.set(coords.y);
@@ -626,11 +652,12 @@ pub fn CanvasPage(task_id: String) -> Element {
                 polygon: polygon,
                 bbox: bbox
             }
-
             div{
                 //Canvas container (viewport has fixed dots)
+                id: "canvas-container",
                 class:container_class,
-                style:format_args!("
+                style:format_args!(
+                "
                 --dot-spacing: {}px;
                 --dot-radius: {}px;
                 --dot-size-scale: {};

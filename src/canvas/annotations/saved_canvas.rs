@@ -12,7 +12,7 @@ thread_local! {
     static CACHED_BBOXES: RefCell<Option<(String, String, String, Vec<SavedBBox>)>> = RefCell::new(None);
     static CACHED_CLASSES: RefCell<Option<(String, Vec<ClassItem>)>> = RefCell::new(None);
     static SAVED_RAF_PENDING: RefCell<bool> = RefCell::new(false);
-}
+    static SAVED_CTX: RefCell<Option<CanvasRenderingContext2d>> = RefCell::new(None);
 }
 
 pub fn get_saved_canvas_context() -> Option<CanvasRenderingContext2d> {

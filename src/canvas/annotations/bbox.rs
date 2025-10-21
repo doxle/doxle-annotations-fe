@@ -110,6 +110,8 @@ impl BBox {
 const POINT_STROKE: &str = "rgb(51, 66, 255)";
 const POINT_FILL: &str = "rgba(51, 66, 255, 0.4)";
 const POINT_RADIUS: f64 = 18.0;
+const ZOOMED_IN_RADIUS: f64 = 9.0;
+const ZOOMED_OUT_RADIUS: f64 = 3.0;
 const LINE_COLOR: &str = "rgb(51, 66, 255)";
 const LINE_WIDTH: f64 = 5.0;
 const FILL_COLOR: &str = "rgba(51, 66, 255, 0.5)";
@@ -200,7 +202,7 @@ pub fn redraw_bbox(
     // Draw in WORLD coordinates; transform handles screen mapping
     if let Some(start) = bbox.start_point {
         // Adjust radius to keep roughly constant on screen
-        let radius = POINT_RADIUS / zoom.max(0.0001);
+        let radius = (POINT_RADIUS / zoom).clamp(ZOOMED_OUT_RADIUS / zoom, ZOOMED_IN_RADIUS / zoom);
 
         // Draw start point
         draw_point(ctx, start, radius);
