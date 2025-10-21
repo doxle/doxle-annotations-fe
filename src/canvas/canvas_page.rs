@@ -186,12 +186,17 @@ pub fn CanvasPage(task_id: String) -> Element {
                     Tool::Polygon => {
                         if polygon().points.len() > 0 {
                             polygon.write().reset();
-                            // Overlay will auto-clear on next schedule
                         }
+                        // Clear overlay immediately
+                        schedule_overlay_redraw(polygon(), zoom(), pan_x(), pan_y());
                     }
                     Tool::BoundingBox => {
                         if bbox().start_point.is_some() {
                             bbox.write().reset();
+                        }
+                        // Clear overlay by redrawing (no start -> only clears)
+                        if let Some(ctx) = get_canvas_context() {
+                            redraw_bbox(&ctx, &bbox(), zoom(), pan_x(), pan_y());
                         }
                     }
                     _ => {}
@@ -215,6 +220,8 @@ pub fn CanvasPage(task_id: String) -> Element {
                             classes_version_keys.set(classes_version_keys() + 1); // Triggers saved canvas redraw
                         }
                         polygon.write().reset();
+                        // Clear overlay immediately after closing
+                        schedule_overlay_redraw(polygon(), zoom(), pan_x(), pan_y());
                     }
                 }
                 return;
@@ -321,10 +328,8 @@ pub fn CanvasPage(task_id: String) -> Element {
         pan_y.set(new_pan_y);
         zoom.set(new);
         // Note: use_effect watching zoom/pan will redraw Canvas-A
-        // Overlay will update on next mousemove or we can schedule it
-        if polygon().points.len() > 0 {
-            schedule_overlay_redraw(polygon(), new, new_pan_x, new_pan_y);
-        }
+        // Always schedule overlay redraw (will clear if empty)
+        schedule_overlay_redraw(polygon(), new, new_pan_x, new_pan_y);
     };
 
     // start pan or add polygon vertex (NO world conversion)
@@ -382,6 +387,9 @@ pub fn CanvasPage(task_id: String) -> Element {
                                 classes_version.set(classes_version() + 1); // Triggers saved canvas redraw
                             }
                             poly.reset();
+                            // Drop borrow before scheduling overlay redraw
+                            drop(poly);
+                            schedule_overlay_redraw(polygon(), zoom(), pan_x(), pan_y());
                             return;
                         }
                     }
@@ -431,10 +439,8 @@ pub fn CanvasPage(task_id: String) -> Element {
             last_x.set(coords.x);
             last_y.set(coords.y);
             // Note: use_effect watching pan will redraw Canvas-A
-            // Schedule overlay redraw for in-progress annotation
-            if polygon().points.len() > 0 {
-                schedule_overlay_redraw(polygon(), zoom(), new_pan_x, new_pan_y);
-            }
+            // Always schedule overlay redraw (will clear if empty)
+            schedule_overlay_redraw(polygon(), zoom(), new_pan_x, new_pan_y);
             return;
         }
 
