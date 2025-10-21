@@ -7,7 +7,7 @@ use super::canvas_navbar::CanvasNavbar;
 use super::sidebar::Sidebar;
 use super::sidebar::storage::{get_active_or_first_class_id, increment_class_count};
 use super::annotations::store::save_polygon;
-use super::annotations::saved_canvas::{redraw_saved_annotations, invalidate_polygon_cache};
+use super::annotations::saved_canvas::{redraw_saved_annotations, invalidate_polygon_cache, invalidate_bbox_cache};
 use super::annotations::overlay_canvas::{schedule_overlay_redraw, get_overlay_canvas_context};
 use crate::dioxus_elements::input_data::MouseButton;
 use dioxus::prelude::*;
@@ -227,13 +227,83 @@ pub fn CanvasPage(task_id: String) -> Element {
                 return;
             }
 
-            // Handle tool shortcuts (p, b, c, a, h, \, t)
+            // Handle tool shortcuts (p, b, c, a, h, \, t, f, n)
             match key.as_str() {
                 "p" => selected_tool.set(Tool::Polygon),
                 "b" => selected_tool.set(Tool::BoundingBox),
                 "c" => selected_tool.set(Tool::Comment),
                 "a" => selected_tool.set(Tool::Select),
                 "h" => selected_tool.set(Tool::Pan),
+                "f" => {
+                    // Finish current annotation
+                    match selected_tool() {
+                        Tool::Polygon => {
+                            if polygon().points.len() >= 3 && !polygon().is_closed {
+                                polygon.write().close();
+                                let pid_local = pid_value.clone();
+                                let block_local = block_value.clone();
+                                let image_local = image_value.clone();
+                                if let Some(class_id) = get_active_or_first_class_id(&pid_value) {
+                                    save_polygon(&pid_local, &block_local, &image_local, &polygon(), &class_id);
+                                    increment_class_count(&pid_local, &class_id, 1);
+                                    invalidate_polygon_cache();
+                                    classes_version_keys.set(classes_version_keys() + 1);
+                                }
+                                polygon.write().reset();
+                                schedule_overlay_redraw(polygon(), zoom(), pan_x(), pan_y());
+                            }
+                        }
+                        Tool::BoundingBox => {
+                            let mut bb = bbox.write();
+                            if bb.start_point.is_some() && !bb.is_complete {
+                                if let Some(preview) = bb.preview_point {
+                                    bb.set_end(preview);
+                                }
+                            }
+                            // If complete, persist and reset overlay
+                            if bb.start_point.is_some() && bb.end_point.is_some() {
+                                if let Some(class_id) = get_active_or_first_class_id(&pid_value) {
+                                    use super::annotations::store::{save_bbox, SavedPoint as SP};
+                                    let start = bb.start_point.unwrap();
+                                    let end = bb.end_point.unwrap();
+                                    save_bbox(&pid_value, &block_value, &image_value,
+                                             &SP { x: start.x, y: start.y },
+                                             &SP { x: end.x, y: end.y },
+                                             &class_id);
+                                    super::annotations::saved_canvas::invalidate_bbox_cache();
+                                    increment_class_count(&pid_value, &class_id, 1);
+                                    classes_version_keys.set(classes_version_keys() + 1);
+                                }
+                                bb.reset();
+                            }
+                            drop(bb);
+                            if let Some(ctx) = get_canvas_context() {
+                                redraw_bbox(&ctx, &bbox(), zoom(), pan_x(), pan_y());
+                            }
+                        }
+                        _ => {}
+                    }
+                }
+                "n" => {
+                    // Start a new annotation (reset current)
+                    match selected_tool() {
+                        Tool::Polygon => {
+                            if polygon().points.len() > 0 || polygon().is_closed {
+                                polygon.write().reset();
+                                schedule_overlay_redraw(polygon(), zoom(), pan_x(), pan_y());
+                            }
+                        }
+                        Tool::BoundingBox => {
+                            if bbox().start_point.is_some() {
+                                bbox.write().reset();
+                                if let Some(ctx) = get_canvas_context() {
+                                    redraw_bbox(&ctx, &bbox(), zoom(), pan_x(), pan_y());
+                                }
+                            }
+                        }
+                        _ => {}
+                    }
+                }
                 "\\" => sidebar_open.set(!sidebar_open()),
                 "t" => {
                     // Toggle theme
@@ -330,6 +400,12 @@ pub fn CanvasPage(task_id: String) -> Element {
         // Note: use_effect watching zoom/pan will redraw Canvas-A
         // Always schedule overlay redraw (will clear if empty)
         schedule_overlay_redraw(polygon(), new, new_pan_x, new_pan_y);
+        // If bbox in progress, redraw it as well
+        if bbox().start_point.is_some() && !bbox().is_complete {
+            if let Some(ctx) = get_canvas_context() {
+                redraw_bbox(&ctx, &bbox(), new, new_pan_x, new_pan_y);
+            }
+        }
     };
 
     // start pan or add polygon vertex (NO world conversion)
@@ -416,9 +492,20 @@ pub fn CanvasPage(task_id: String) -> Element {
                 on_bbox_click(world_x, world_y, &mut bb, &ctx, zoom(), pan_x(), pan_y());
                 if !was_complete && bb.is_complete {
                     if let Some(class_id) = get_active_or_first_class_id(&pid_for_down) {
+                        use super::annotations::store::{save_bbox, SavedPoint as SP};
+                        let start = bb.start_point.unwrap();
+                        let end = bb.end_point.unwrap();
+                        save_bbox(&pid_for_down, &block_for_down, &image_for_down,
+                                 &SP { x: start.x, y: start.y },
+                                 &SP { x: end.x, y: end.y },
+                                 &class_id);
+                        super::annotations::saved_canvas::invalidate_bbox_cache();
                         increment_class_count(&pid_for_down, &class_id, 1);
                         classes_version.set(classes_version() + 1);
                     }
+                    // Reset overlay and clear
+                    bb.reset();
+                    redraw_bbox(&ctx, &bb, zoom(), pan_x(), pan_y());
                 }
             }
         }
@@ -441,6 +528,12 @@ pub fn CanvasPage(task_id: String) -> Element {
             // Note: use_effect watching pan will redraw Canvas-A
             // Always schedule overlay redraw (will clear if empty)
             schedule_overlay_redraw(polygon(), zoom(), new_pan_x, new_pan_y);
+            // If bbox in progress, redraw it as well
+            if bbox().start_point.is_some() && !bbox().is_complete {
+                if let Some(ctx) = get_canvas_context() {
+                    redraw_bbox(&ctx, &bbox(), zoom(), new_pan_x, new_pan_y);
+                }
+            }
             return;
         }
 

@@ -125,13 +125,13 @@ fn clear_canvas(ctx: &CanvasRenderingContext2d) {
 }
 
 // Draw a point with 40% opacity fill
-fn draw_point(ctx: &CanvasRenderingContext2d, p: Point) {
+fn draw_point(ctx: &CanvasRenderingContext2d, p: Point, radius: f64) {
     ctx.set_fill_style(&JsValue::from_str(POINT_FILL));
     ctx.set_stroke_style(&JsValue::from_str(POINT_STROKE));
     ctx.set_line_width(2.0);
 
     ctx.begin_path();
-    let _ = ctx.arc(p.x, p.y, POINT_RADIUS, 0.0, std::f64::consts::PI * 2.0);
+    let _ = ctx.arc(p.x, p.y, radius, 0.0, std::f64::consts::PI * 2.0);
     ctx.fill();
     ctx.stroke();
 }
@@ -191,35 +191,32 @@ pub fn redraw_bbox(
 ) {
     clear_canvas(ctx);
 
-    // Transform start point to screen coordinates
+    // Apply combined DPR*zoom transform once
+    if let Some(win) = web_sys::window() {
+        let dpr = win.device_pixel_ratio();
+        let _ = ctx.set_transform(zoom * dpr, 0.0, 0.0, zoom * dpr, pan_x * dpr, pan_y * dpr);
+    }
+
+    // Draw in WORLD coordinates; transform handles screen mapping
     if let Some(start) = bbox.start_point {
-        let start_screen = Point {
-            x: start.x * zoom + pan_x,
-            y: start.y * zoom + pan_y,
-        };
+        // Adjust radius to keep roughly constant on screen
+        let radius = POINT_RADIUS / zoom.max(0.0001);
 
         // Draw start point
-        draw_point(ctx, start_screen);
+        draw_point(ctx, start, radius);
 
         if bbox.is_complete {
-            // Draw completed bounding box with fill
             if let Some(end) = bbox.end_point {
-                let end_screen = Point {
-                    x: end.x * zoom + pan_x,
-                    y: end.y * zoom + pan_y,
-                };
-                fill_bbox(ctx, start_screen, end_screen, false);
-                draw_point(ctx, end_screen);
+                fill_bbox(ctx, start, end, false);
+                draw_point(ctx, end, radius);
             }
         } else if let Some(preview) = bbox.preview_point {
-            // Draw preview box
-            let preview_screen = Point {
-                x: preview.x * zoom + pan_x,
-                y: preview.y * zoom + pan_y,
-            };
-            draw_bbox_outline(ctx, start_screen, preview_screen, true);
+            draw_bbox_outline(ctx, start, preview, true);
         }
     }
+
+    // Reset transform to identity to avoid leaking state
+    let _ = ctx.set_transform(1.0, 0.0, 0.0, 1.0, 0.0, 0.0);
 }
 
 // Handle bbox click
