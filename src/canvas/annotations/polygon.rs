@@ -83,9 +83,9 @@ pub const ZOOMED_OUT_RADIUS: f64 = 3.0; // Radius when zoomed out (small)
 pub const ENDPOINT_STROKE: &str = "rgb(0, 255, 0)";
 pub const ENDPOINT_FILL: &str = "rgba(0, 255, 0, 0.28)";
 pub const LINE_COLOR: &str = "rgb(51, 66, 255)";
-pub const LINE_WIDTH: f64 = 3.0;
+pub const LINE_WIDTH: f64 = 1.5;
 pub const FILL_COLOR: &str = "rgba(51, 66, 255, 0.35)";
-pub const PREVIEW_LINE_COLOR: &str = "rgba(51, 66, 255, 0.6)";
+pub const PREVIEW_LINE_COLOR: &str = "rgba(51, 66, 255, 1)";
 
 fn clear_canvas(ctx: &CanvasRenderingContext2d) {
     if let Some(canvas) = ctx.canvas() {
@@ -253,7 +253,10 @@ pub fn draw_polygon_overlay(
     let screen_points: Vec<Point> = poly
         .points
         .iter()
-        .map(|p| Point { x: p.x * zoom + pan_x, y: p.y * zoom + pan_y })
+        .map(|p| Point {
+            x: p.x * zoom + pan_x,
+            y: p.y * zoom + pan_y,
+        })
         .collect();
 
     if poly.is_closed {
@@ -262,7 +265,10 @@ pub fn draw_polygon_overlay(
         draw_polygon(ctx, &screen_points, false);
         if let Some(preview) = poly.preview_point {
             if let Some(last) = screen_points.last() {
-                let preview_screen = Point { x: preview.x * zoom + pan_x, y: preview.y * zoom + pan_y };
+                let preview_screen = Point {
+                    x: preview.x * zoom + pan_x,
+                    y: preview.y * zoom + pan_y,
+                };
                 draw_preview_line(ctx, *last, preview_screen);
                 if screen_points.len() >= 2 && can_close_polygon(poly, zoom, pan_x, pan_y) {
                     if let Some(first) = screen_points.first() {

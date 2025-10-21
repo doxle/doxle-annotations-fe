@@ -49,6 +49,39 @@ pub fn load_bboxes(project_id: &str, block_id: &str, image_id: &str) -> Vec<Save
     load_json(&bboxes_key(project_id, block_id, image_id)).unwrap_or_default()
 }
 
+// --- Update/Delete helpers for annotations ---
+pub fn update_polygon_class(project_id: &str, block_id: &str, image_id: &str, index: usize, new_class_id: &str) -> bool {
+    let mut all: Vec<SavedPolygon> = load_polygons(project_id, block_id, image_id);
+    if index >= all.len() { return false; }
+    all[index].class_id = new_class_id.to_string();
+    save_json(&polys_key(project_id, block_id, image_id), &all);
+    true
+}
+
+pub fn delete_polygon_at(project_id: &str, block_id: &str, image_id: &str, index: usize) -> bool {
+    let mut all: Vec<SavedPolygon> = load_polygons(project_id, block_id, image_id);
+    if index >= all.len() { return false; }
+    all.remove(index);
+    save_json(&polys_key(project_id, block_id, image_id), &all);
+    true
+}
+
+pub fn update_bbox_class(project_id: &str, block_id: &str, image_id: &str, index: usize, new_class_id: &str) -> bool {
+    let mut all: Vec<SavedBBox> = load_bboxes(project_id, block_id, image_id);
+    if index >= all.len() { return false; }
+    all[index].class_id = new_class_id.to_string();
+    save_json(&bboxes_key(project_id, block_id, image_id), &all);
+    true
+}
+
+pub fn delete_bbox_at(project_id: &str, block_id: &str, image_id: &str, index: usize) -> bool {
+    let mut all: Vec<SavedBBox> = load_bboxes(project_id, block_id, image_id);
+    if index >= all.len() { return false; }
+    all.remove(index);
+    save_json(&bboxes_key(project_id, block_id, image_id), &all);
+    true
+}
+
 fn hex_to_rgb(hex: &str) -> (u8, u8, u8) {
     let h = hex.trim_start_matches('#');
     if h.len() == 6 {

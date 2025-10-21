@@ -18,7 +18,7 @@ pub struct BBox {
     pub start_point: Option<Point>,
     pub end_point: Option<Point>,
     pub is_complete: bool,
-    pub preview_point: Option<Point>, // For live preview of box
+    pub preview_point: Option<Point>,  // For live preview of box
     pub undo_history: Vec<BBoxAction>, // Stack of undone actions
 }
 
@@ -113,9 +113,9 @@ const POINT_RADIUS: f64 = 18.0;
 const ZOOMED_IN_RADIUS: f64 = 9.0;
 const ZOOMED_OUT_RADIUS: f64 = 3.0;
 const LINE_COLOR: &str = "rgb(51, 66, 255)";
-const LINE_WIDTH: f64 = 5.0;
+const LINE_WIDTH: f64 = 1.5;
 const FILL_COLOR: &str = "rgba(51, 66, 255, 0.5)";
-const PREVIEW_LINE_COLOR: &str = "rgba(51, 66, 255, 0.6)";
+const PREVIEW_LINE_COLOR: &str = "rgba(51, 66, 255, 1)";
 const PREVIEW_FILL_COLOR: &str = "rgba(51, 66, 255, 0.3)";
 
 fn clear_canvas(ctx: &CanvasRenderingContext2d) {
@@ -184,13 +184,7 @@ fn fill_bbox(ctx: &CanvasRenderingContext2d, start: Point, end: Point, is_previe
     ctx.stroke();
 }
 
-pub fn redraw_bbox(
-    ctx: &CanvasRenderingContext2d,
-    bbox: &BBox,
-    zoom: f64,
-    pan_x: f64,
-    pan_y: f64,
-) {
+pub fn redraw_bbox(ctx: &CanvasRenderingContext2d, bbox: &BBox, zoom: f64, pan_x: f64, pan_y: f64) {
     clear_canvas(ctx);
 
     // Apply combined DPR*zoom transform once

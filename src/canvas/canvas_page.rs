@@ -5,10 +5,12 @@ use super::annotations::comment::Comment;
 use super::annotations::Tool;
 use super::canvas_navbar::CanvasNavbar;
 use super::sidebar::Sidebar;
-use super::sidebar::storage::{get_active_or_first_class_id, increment_class_count};
-use super::annotations::store::save_polygon;
+use super::sidebar::ClassItem;
+use super::sidebar::storage::{get_active_or_first_class_id, increment_class_count, load_json as load_json_any};
+use super::annotations::store::{save_polygon, load_polygons, load_bboxes, update_polygon_class, delete_polygon_at, update_bbox_class, delete_bbox_at};
 use super::annotations::saved_canvas::{redraw_saved_annotations, invalidate_polygon_cache, invalidate_bbox_cache};
 use super::annotations::overlay_canvas::{schedule_overlay_redraw, get_overlay_canvas_context};
+use super::annotations::{AnnotationMenu, AnnotationTarget};
 use crate::dioxus_elements::input_data::MouseButton;
 use dioxus::prelude::*;
 use wasm_bindgen::{closure::Closure, JsCast};
@@ -26,6 +28,8 @@ fn get_image_bounds_world(zoom: f64, pan_x: f64, pan_y: f64) -> Option<(f64, f64
     let top = (rect.top() - NAVBAR_H - pan_y) / zoom;
     let right = (rect.right() - pan_x) / zoom;
     let bottom = (rect.bottom() - NAVBAR_H - pan_y) / zoom;
+    tracing::info!("Image bounds - Screen rect: L={} T={} R={} B={}, World bounds: L={} T={} R={} B={}", 
+        rect.left(), rect.top(), rect.right(), rect.bottom(), left, top, right, bottom);
     Some((left, top, right, bottom))
 }
 
@@ -77,6 +81,12 @@ pub fn CanvasPage(task_id: String) -> Element {
     let block_id_for_ann = "block1".to_string();
     let image_id_for_ann = "house1".to_string();
     let mut classes_version = use_signal(|| 0_u64);
+
+    // --- Annotation menu state ---
+    let mut annotation_menu_open = use_signal(|| false);
+    let mut annotation_menu_x = use_signal(|| 0.0);
+    let mut annotation_menu_y = use_signal(|| 0.0);
+    let mut annotation_menu_target = use_signal(|| None as Option<AnnotationTarget>);
     
     // Note: preview_point is managed within polygon state, not as separate signal
 
@@ -86,10 +96,8 @@ pub fn CanvasPage(task_id: String) -> Element {
     let block_for_saved = block_id_for_ann.clone();
     let image_for_saved = image_id_for_ann.clone();
     use_effect(move || {
-        let _ = classes_version(); // Watch for polygon save/delete
-        let _ = zoom(); // Watch zoom  
-        let _ = pan_x(); // Watch pan
-        let _ = pan_y();
+        tracing::info!("use_effect REDRAW triggered - classes_version={}, zoom={}, pan_x={}, pan_y={}", 
+            classes_version(), zoom(), pan_x(), pan_y());
         
         redraw_saved_annotations(&pid_for_saved, &block_for_saved, &image_for_saved, zoom(), pan_x(), pan_y());
     });
@@ -249,6 +257,8 @@ pub fn CanvasPage(task_id: String) -> Element {
                         polygon.write().reset();
                         // Clear overlay immediately after closing
                         schedule_overlay_redraw(polygon(), zoom(), pan_x(), pan_y());
+                        // Auto-switch to Select (arrow) tool
+                        selected_tool.set(Tool::Select);
                     }
                 }
                 return;
@@ -278,6 +288,8 @@ pub fn CanvasPage(task_id: String) -> Element {
                                 }
                                 polygon.write().reset();
                                 schedule_overlay_redraw(polygon(), zoom(), pan_x(), pan_y());
+                                // Auto-switch to Select (arrow) tool
+                                selected_tool.set(Tool::Select);
                             }
                         }
                         Tool::BoundingBox => {
@@ -307,28 +319,25 @@ pub fn CanvasPage(task_id: String) -> Element {
                             if let Some(ctx) = get_canvas_context() {
                                 redraw_bbox(&ctx, &bbox(), zoom(), pan_x(), pan_y());
                             }
+                            // Auto-switch to Select (arrow) tool
+                            selected_tool.set(Tool::Select);
                         }
                         _ => {}
                     }
                 }
                 "n" => {
-                    // Start a new annotation (reset current)
-                    match selected_tool() {
-                        Tool::Polygon => {
-                            if polygon().points.len() > 0 || polygon().is_closed {
-                                polygon.write().reset();
-                                schedule_overlay_redraw(polygon(), zoom(), pan_x(), pan_y());
-                            }
+                    // Start a new polygon annotation
+                    selected_tool.set(Tool::Polygon);
+                    // Reset any in-progress annotation
+                    if polygon().points.len() > 0 || polygon().is_closed {
+                        polygon.write().reset();
+                        schedule_overlay_redraw(polygon(), zoom(), pan_x(), pan_y());
+                    }
+                    if bbox().start_point.is_some() {
+                        bbox.write().reset();
+                        if let Some(ctx) = get_canvas_context() {
+                            redraw_bbox(&ctx, &bbox(), zoom(), pan_x(), pan_y());
                         }
-                        Tool::BoundingBox => {
-                            if bbox().start_point.is_some() {
-                                bbox.write().reset();
-                                if let Some(ctx) = get_canvas_context() {
-                                    redraw_bbox(&ctx, &bbox(), zoom(), pan_x(), pan_y());
-                                }
-                            }
-                        }
-                        _ => {}
                     }
                 }
                 "\\" => sidebar_open.set(!sidebar_open()),
@@ -399,10 +408,36 @@ pub fn CanvasPage(task_id: String) -> Element {
         "canvas-container"
     };
 
+    // AnnotationMenu component will load classes itself
+
     // --- Handlers ----
 
+    // Hit test helpers (world coords)
+    fn point_in_poly(x: f64, y: f64, pts: &Vec<super::annotations::store::SavedPoint>) -> bool {
+        let mut inside = false;
+        let mut j = pts.len().wrapping_sub(1);
+        for i in 0..pts.len() {
+            let xi = pts[i].x; let yi = pts[i].y;
+            let xj = pts[j].x; let yj = pts[j].y;
+            let intersect = ((yi > y) != (yj > y)) && (x < (xj - xi) * (y - yi) / (yj - yi + 1e-9) + xi);
+            if intersect { inside = !inside; }
+            j = i;
+        }
+        inside
+    }
+    fn point_in_bbox(x: f64, y: f64, bb: &super::annotations::store::SavedBBox) -> bool {
+        let l = bb.start.x.min(bb.end.x);
+        let r = bb.start.x.max(bb.end.x);
+        let t = bb.start.y.min(bb.end.y);
+        let b = bb.start.y.max(bb.end.y);
+        x >= l && x <= r && y >= t && y <= b
+    }
+
+    // Annotation menu handlers moved into AnnotationMenu component
     // cursor-centered-zoom and shift+wheel for panning
     let onwheel = move |evt: Event<WheelData>| {
+        // Close any open annotation menu on scroll
+        if annotation_menu_open() { annotation_menu_open.set(false); }
         evt.prevent_default();
         let mouse = evt.client_coordinates();
         let delta = evt.data.delta().strip_units();
@@ -462,6 +497,8 @@ pub fn CanvasPage(task_id: String) -> Element {
     let block_for_down = block_id_for_ann.clone();
     let image_for_down = image_id_for_ann.clone();
     let onmousedown = move |evt: Event<MouseData>| {
+        // Close menu on any left click
+        if annotation_menu_open() && evt.data.trigger_button() == Some(MouseButton::Primary) { annotation_menu_open.set(false); }
         let coords = evt.client_coordinates();
 
         // middle mouse -> pan (keeping existing logic)
@@ -505,8 +542,10 @@ pub fn CanvasPage(task_id: String) -> Element {
 
             // Clamp to image bounds in world space
             if let Some((l, t, r, b)) = get_image_bounds_world(zoom(), pan_x(), pan_y()) {
+                tracing::info!("Before clamp: world_x={}, world_y={}", world_x, world_y);
                 world_x = clamp_f64(world_x, l, r);
                 world_y = clamp_f64(world_y, t, b);
+                tracing::info!("After clamp: world_x={}, world_y={}", world_x, world_y);
             }
 
             if let Some(ctx) = get_canvas_context() {
@@ -534,6 +573,8 @@ pub fn CanvasPage(task_id: String) -> Element {
                             // Drop borrow before scheduling overlay redraw
                             drop(poly);
                             schedule_overlay_redraw(polygon(), zoom(), pan_x(), pan_y());
+                            // Auto-switch to Select (arrow) tool
+                            selected_tool.set(Tool::Select);
                             return;
                         }
                     }
@@ -562,8 +603,10 @@ pub fn CanvasPage(task_id: String) -> Element {
                     // First click must be inside image
                     if !point_inside_image(screen_x_vp, screen_y_vp) { return; }
                 }
+                tracing::info!("BBox before clamp: world_x={}, world_y={}", world_x, world_y);
                 world_x = clamp_f64(world_x, l, r);
                 world_y = clamp_f64(world_y, t, b);
+                tracing::info!("BBox after clamp: world_x={}, world_y={}", world_x, world_y);
             } else {
                 // If we can't read image bounds and this is the first click, allow as before
             }
@@ -588,6 +631,8 @@ pub fn CanvasPage(task_id: String) -> Element {
                     // Reset overlay and clear
                     bb.reset();
                     redraw_bbox(&ctx, &bb, zoom(), pan_x(), pan_y());
+                    // Auto-switch to Select (arrow) tool
+                    selected_tool.set(Tool::Select);
                 }
             }
         }
@@ -595,6 +640,7 @@ pub fn CanvasPage(task_id: String) -> Element {
 
     // pan drag and preview line tracking
     let onmousemove = move |evt: Event<MouseData>| {
+        if annotation_menu_open() { return; } // freeze interactions under menu
         let coords = evt.client_coordinates();
 
         // Handle panning
@@ -693,11 +739,13 @@ pub fn CanvasPage(task_id: String) -> Element {
 
     //release pan
     let onmouseup = move |_evt: Event<MouseData>| {
+        if annotation_menu_open() { return; }
         is_panning.set(false);
     };
 
     //release pan
     let onmouseleave = move |_evt: Event<MouseData>| {
+        if annotation_menu_open() { return; }
         is_panning.set(false);
     };
     // -------------------------------------------------------------------------
@@ -754,6 +802,47 @@ pub fn CanvasPage(task_id: String) -> Element {
             onmouseup:onmouseup,
             onmousemove:onmousemove,
             onmouseleave:onmouseleave,
+            oncontextmenu: move |evt: Event<MouseData>| {
+                // Only intercept right-clicks inside the displayed image AND on an annotation
+                let coords = evt.client_coordinates();
+                let vp_x = coords.x;
+                let vp_y = coords.y;
+                if !point_inside_image(vp_x, vp_y) {
+                    // Outside the image: let the browser menu appear
+                    annotation_menu_open.set(false);
+                    return;
+                }
+
+                // Convert to world coordinates for hit testing
+                let screen_x = vp_x; let screen_y = vp_y - NAVBAR_H;
+                let world_x = (screen_x - pan_x()) / zoom();
+                let world_y = (screen_y - pan_y()) / zoom();
+
+                // Prefer BBoxes (drawn last), then Polys; iterate in reverse order
+                let mut found: Option<AnnotationTarget> = None;
+                let polys = load_polygons(&project_id_for_ann, &block_id_for_ann, &image_id_for_ann);
+                let bboxes = load_bboxes(&project_id_for_ann, &block_id_for_ann, &image_id_for_ann);
+                for (idx, bb) in bboxes.iter().enumerate().rev() {
+                    if point_in_bbox(world_x, world_y, bb) { found = Some(AnnotationTarget::BBox(idx)); break; }
+                }
+                if found.is_none() {
+                    for (idx, sp) in polys.iter().enumerate().rev() {
+                        if sp.points.len() >= 3 && point_in_poly(world_x, world_y, &sp.points) { found = Some(AnnotationTarget::Poly(idx)); break; }
+                    }
+                }
+
+                if let Some(kind) = found {
+                    // We own the annotation menu only when an annotation is under cursor
+                    evt.prevent_default();
+                    annotation_menu_target.set(Some(kind));
+                    annotation_menu_x.set(vp_x);
+                    annotation_menu_y.set(vp_y - NAVBAR_H);
+                    annotation_menu_open.set(true);
+                } else {
+                    // Inside image but no annotation: let browser menu appear
+                    annotation_menu_open.set(false);
+                }
+            },
 
             // Canvas world (zooms/pans) - only image layer
             div{
@@ -800,6 +889,23 @@ pub fn CanvasPage(task_id: String) -> Element {
                     }
                 }
 
+            }
+
+            // Annotation menu component
+            if annotation_menu_open() && annotation_menu_target().is_some() {
+                AnnotationMenu {
+                    open: annotation_menu_open,
+                    x: annotation_menu_x,
+                    y: annotation_menu_y,
+                    target: annotation_menu_target,
+                    project_id: project_id.clone(),
+                    block_id: block_id_for_ann.clone(),
+                    image_id: image_id_for_ann.clone(),
+                    zoom: zoom,
+                    pan_x: pan_x,
+                    pan_y: pan_y,
+                    classes_version: classes_version,
+                }
             }
             }
 

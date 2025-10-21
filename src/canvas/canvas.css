@@ -464,6 +464,168 @@ html.light .canvas-image img {
     backdrop-filter: blur(10px);
 }
 
+/* Annotation context menu */
+.annotation-context-menu {
+    position: absolute;
+    left: 0;
+    top: 0;
+    background: rgb(0, 0, 0);
+    border-radius: 4px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    padding: 4px 0;
+    min-width: 180px;
+    z-index: 10002;
+    pointer-events: auto;
+}
+
+/* Annotation dropdown menu */
+.annotation-dropdown-menu {
+    position: absolute;
+    left: 0;
+    top: 0;
+    background: rgb(0, 0, 0);
+    border-radius: 4px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    padding: 0;
+    min-width: 240px;
+    max-width: 300px;
+    z-index: 10002;
+    pointer-events: auto;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+}
+
+/* Menu header */
+.annotation-menu-header {
+    padding: 12px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    position: relative;
+    min-height: 40px;
+}
+
+/* Menu divider */
+.annotation-menu-divider {
+    height: 1px;
+    background: rgb(40, 40, 40);
+    margin: 0;
+}
+
+/* Legacy class name support */
+.annotation_menu {
+    position: absolute;
+    left: 0;
+    top: 0;
+    background: rgb(0, 0, 0);
+    border-radius: 4px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    padding: 0;
+    min-width: 240px;
+    max-width: 300px;
+    z-index: 10002;
+    pointer-events: auto;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+}
+
+.annotation-delete-btn {
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    padding: 4px;
+    line-height: 1;
+    opacity: 0.7;
+    transition: opacity 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.annotation-delete-btn img {
+    width: 20px;
+    height: 20px;
+    filter: brightness(0) invert(1);
+}
+
+.annotation-delete-btn:hover {
+    opacity: 1;
+}
+
+/* Scrollable class list container */
+.annotation-class-list {
+    width: 100%;
+    max-height: 200px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    padding: 8px 12px 12px 12px;
+}
+
+/* Thin scrollbar styling */
+.annotation-class-list::-webkit-scrollbar {
+    width: 6px;
+}
+
+.annotation-class-list::-webkit-scrollbar-track {
+    background: rgb(20, 20, 20);
+    border-radius: 3px;
+}
+
+.annotation-class-list::-webkit-scrollbar-thumb {
+    background: rgb(80, 80, 80);
+    border-radius: 3px;
+}
+
+.annotation-class-list::-webkit-scrollbar-thumb:hover {
+    background: rgb(100, 100, 100);
+}
+
+/* Individual class item */
+.annotation-class-item {
+    padding: 10px 8px;
+    background: transparent;
+    color: white;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    transition: background 0.15s;
+}
+
+.annotation-class-item:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+/* Color dot for each class */
+.class-color-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+/* Legacy select styling (if needed) */
+.annotation-class-select {
+    width: 100%;
+    padding: 8px;
+    background: rgb(30, 30, 30);
+    color: white;
+    border: 1px solid rgb(60, 60, 60);
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+.annotation-class-select:focus {
+    outline: none;
+    border-color: rgb(100, 100, 100);
+}
+
 .zoom-btn {
     width: 32px;
     height: 32px;
