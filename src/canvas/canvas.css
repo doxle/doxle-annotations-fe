@@ -229,7 +229,20 @@ html.dark .crosshair-cursor::after {
 /* Show guide lines after coordinates are set (via JS adding this class) */
 .canvas-container.polygon-tool-active.guides-active::before,
 .canvas-container.polygon-tool-active.guides-active::after {
-    opacity: 1;
+    opacity: 0.4; /* Fainter than crosshair */
+}
+
+/* Darker guide lines in light mode for better visibility */
+@media (prefers-color-scheme: light) {
+    .canvas-container.polygon-tool-active.guides-active::before,
+    .canvas-container.polygon-tool-active.guides-active::after {
+        opacity: 0.55;
+    }
+}
+
+html.light .canvas-container.polygon-tool-active.guides-active::before,
+html.light .canvas-container.polygon-tool-active.guides-active::after {
+    opacity: 0.55;
 }
 
 /* Vertical guide line */

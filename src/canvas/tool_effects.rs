@@ -1,9 +1,9 @@
-use super::annotations::shapes::BBox;
 use super::annotations::comment::Comment;
-use super::dom_cache::get_window;
 use super::annotations::overlay_canvas::get_overlay_canvas_context;
+use super::annotations::shapes::BBox;
 use super::annotations::shapes::Polygon;
 use super::annotations::Tool;
+use super::dom_cache::get_window;
 use dioxus::prelude::*;
 use web_sys::window;
 
@@ -15,6 +15,8 @@ pub fn clear_annotations_on_tool_switch(
     mut comment: Signal<Comment>,
 ) {
     if let Some(ctx) = get_overlay_canvas_context() {
+        // Reset preview state to avoid any dangling preview lines
+        clear_polygon_preview();
         // Clear canvas
         if let Some(canvas) = ctx.canvas() {
             let window = get_window().expect("Should get window");

@@ -1,13 +1,13 @@
-use super::annotations::shapes::BBox;
 use super::annotations::comment::Comment;
+use super::annotations::shapes::BBox;
 use super::annotations::shapes::Polygon;
 use super::annotations::Tool;
-use super::cursor_state::CursorState;
 use super::annotations::{AnnotationDropdown, AnnotationTarget};
 use super::canvas_navbar::CanvasNavbar;
+use super::cursor_state::CursorState;
+use super::image_utils::cache_image_world_bounds;
 use super::sidebar::Sidebar;
 use dioxus::prelude::*;
-use super::image_utils::cache_image_screen_bounds;
 
 #[component]
 pub fn CanvasPage(task_id: String) -> Element {
@@ -40,7 +40,7 @@ pub fn CanvasPage(task_id: String) -> Element {
     let mut annotation_dropdown_x = use_signal(|| 0.0);
     let mut annotation_dropdown_y = use_signal(|| 0.0);
     let mut annotation_dropdown_target = use_signal(|| None as Option<AnnotationTarget>);
-    
+
     // --- Hovered annotation state for delete on hover and visual feedback ---
     let mut hovered_annotation = use_signal(|| None as Option<AnnotationTarget>);
 
@@ -97,7 +97,6 @@ pub fn CanvasPage(task_id: String) -> Element {
     } else {
         "canvas-container"
     };
-
 
     rsx! {
         div { class: "top-edge-mask" }
@@ -190,8 +189,8 @@ pub fn CanvasPage(task_id: String) -> Element {
                         src: asset!("/assets/images/test.png") ,
                         onload:move|_|{
                             tracing::info!("Image loaded");
-                            // Cache image screen bounds
-                            cache_image_screen_bounds();
+                            // Cache image world bounds
+                            cache_image_world_bounds(zoom(), pan_x(), pan_y());
                         }
                     }
                 }
