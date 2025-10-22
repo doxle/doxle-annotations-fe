@@ -10,7 +10,6 @@ pub fn Tabs(active_tab: Signal<SidebarTab>) -> Element {
                 onclick: move |_| { active_tab.set(SidebarTab::Classes); },
                 "Classes"
             }
-            div { class: "sidebar-divider" }
             div {
                 class: if active_tab() == SidebarTab::Comments { "sidebar-tab active" } else { "sidebar-tab" },
                 onclick: move |_| { active_tab.set(SidebarTab::Comments); },

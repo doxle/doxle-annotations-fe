@@ -16,7 +16,7 @@ pub fn Sidebar(task_id: String, project_id: String, sidebar_open: Signal<bool>, 
     let mut active_tab = use_signal(|| SidebarTab::Classes);
 
     // Sidebar width with persistence
-    let mut width_px = use_signal(|| load_f32("sidebar_width_px").unwrap_or(360.0));
+    let mut width_px = use_signal(|| load_f32("sidebar_width_px").unwrap_or(259.0));
     let mut is_resizing = use_signal(|| false);
 
     let on_resize_mousedown = move |_e: Event<MouseData>| {

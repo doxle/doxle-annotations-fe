@@ -49,17 +49,6 @@ pub fn ClassesPanel(project_id: String, class_counter: Signal<u64>) -> Element {
         }
     });
 
-    let pid_for_add = project_id.clone();
-    let on_add = move |_| {
-        {
-            let mut v = classes.write();
-            let next_id = format!("class-{}", v.len() + 1);
-            v.push(ClassItem { id: next_id, name: "new-class".into(), color: "#00c2ff".into(), count: 0 });
-        }
-        let current = classes();
-        save_json(&storage_key(&pid_for_add), &current);
-    };
-
     rsx! {
         div { class: "classes-panel",
             div { class: "classes-list",
@@ -67,7 +56,6 @@ pub fn ClassesPanel(project_id: String, class_counter: Signal<u64>) -> Element {
                     ClassRow { project_id: project_id.clone(), class_item: class_item, classes: classes, active_class: active_class }
                 }
             }
-            button { class: "class-add", onclick: on_add, "+ Add Class" }
         }
     }
 }

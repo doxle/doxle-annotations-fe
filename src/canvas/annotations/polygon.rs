@@ -1,78 +1,7 @@
-use wasm_bindgen::{JsCast, JsValue};
+use wasm_bindgen::JsValue;
 use web_sys::{window, CanvasRenderingContext2d, HtmlCanvasElement};
 
-#[derive(Debug, Clone, Copy, PartialEq)]
-pub struct Point {
-    pub x: f64,
-    pub y: f64,
-}
-
-#[derive(Clone, Debug, PartialEq)]
-pub struct Polygon {
-    pub points: Vec<Point>,
-    pub is_closed: bool,
-    pub preview_point: Option<Point>, // For live preview line
-    pub undo_history: Vec<Point>,     // Stack of undone points
-}
-
-impl Polygon {
-    pub fn new() -> Self {
-        Self {
-            points: Vec::new(),
-            is_closed: false,
-            preview_point: None,
-            undo_history: Vec::new(),
-        }
-    }
-    pub fn add(&mut self, p: Point) {
-        self.points.push(p);
-        // Clear redo history when new action is taken
-        self.undo_history.clear();
-    }
-    pub fn close(&mut self) {
-        if self.points.len() >= 3 {
-            self.is_closed = true;
-            self.preview_point = None;
-        }
-    }
-    pub fn set_preview(&mut self, p: Option<Point>) {
-        self.preview_point = p;
-    }
-
-    pub fn undo(&mut self) -> bool {
-        if let Some(point) = self.points.pop() {
-            self.undo_history.push(point);
-            self.is_closed = false; // Reopen if was closed
-            true
-        } else {
-            false
-        }
-    }
-
-    pub fn redo(&mut self) -> bool {
-        if let Some(point) = self.undo_history.pop() {
-            self.points.push(point);
-            true
-        } else {
-            false
-        }
-    }
-
-    pub fn reset(&mut self) {
-        self.points.clear();
-        self.is_closed = false;
-        self.preview_point = None;
-        self.undo_history.clear();
-    }
-
-    pub fn can_undo(&self) -> bool {
-        !self.points.is_empty()
-    }
-
-    pub fn can_redo(&self) -> bool {
-        !self.undo_history.is_empty()
-    }
-}
+use super::shapes::{Point, Polygon};
 
 /* ---- styles (edit once here) ---- */
 pub const POINT_STROKE: &str = "rgb(51, 66, 255)";
@@ -83,7 +12,7 @@ pub const ZOOMED_OUT_RADIUS: f64 = 3.0; // Radius when zoomed out (small)
 pub const ENDPOINT_STROKE: &str = "rgb(0, 255, 0)";
 pub const ENDPOINT_FILL: &str = "rgba(0, 255, 0, 0.28)";
 pub const LINE_COLOR: &str = "rgb(51, 66, 255)";
-pub const LINE_WIDTH: f64 = 1.5;
+pub const LINE_WIDTH: f64 = 1.0;
 pub const FILL_COLOR: &str = "rgba(51, 66, 255, 0.35)";
 pub const PREVIEW_LINE_COLOR: &str = "rgba(51, 66, 255, 1)";
 
@@ -209,24 +138,7 @@ pub fn redraw_polygon(
         // Draw polyline connecting all points
         draw_polygon(ctx, &screen_points, false);
 
-        // Draw preview lines (CVAT-style)
-        if let Some(preview) = poly.preview_point {
-            if let Some(last) = screen_points.last() {
-                let preview_screen = Point {
-                    x: preview.x * zoom + pan_x,
-                    y: preview.y * zoom + pan_y,
-                };
-                // Draw line from last point to cursor
-                draw_preview_line(ctx, *last, preview_screen);
-
-                // Draw closing line only when near first point
-                if screen_points.len() >= 2 && can_close_polygon(poly, zoom, pan_x, pan_y) {
-                    if let Some(first) = screen_points.first() {
-                        draw_preview_line(ctx, preview_screen, *first);
-                    }
-                }
-            }
-        }
+        // Note: Preview is now handled via overlay_canvas.rs + thread_local
     }
 
     // Draw all points with zoom-adjusted radius
@@ -263,20 +175,7 @@ pub fn draw_polygon_overlay(
         fill_polygon(ctx, &screen_points);
     } else {
         draw_polygon(ctx, &screen_points, false);
-        if let Some(preview) = poly.preview_point {
-            if let Some(last) = screen_points.last() {
-                let preview_screen = Point {
-                    x: preview.x * zoom + pan_x,
-                    y: preview.y * zoom + pan_y,
-                };
-                draw_preview_line(ctx, *last, preview_screen);
-                if screen_points.len() >= 2 && can_close_polygon(poly, zoom, pan_x, pan_y) {
-                    if let Some(first) = screen_points.first() {
-                        draw_preview_line(ctx, preview_screen, *first);
-                    }
-                }
-            }
-        }
+        // Note: Preview is now handled via overlay_canvas.rs + thread_local
     }
 
     // draw points
@@ -296,25 +195,8 @@ fn can_close_polygon(poly: &Polygon, zoom: f64, pan_x: f64, pan_y: f64) -> bool 
         return false;
     }
 
-    if let (Some(first), Some(preview)) = (poly.points.first(), poly.preview_point) {
-        let first_screen = Point {
-            x: first.x * zoom + pan_x,
-            y: first.y * zoom + pan_y,
-        };
-        let preview_screen = Point {
-            x: preview.x * zoom + pan_x,
-            y: preview.y * zoom + pan_y,
-        };
-
-        let dx = preview_screen.x - first_screen.x;
-        let dy = preview_screen.y - first_screen.y;
-        let distance = (dx * dx + dy * dy).sqrt();
-
-        // Close if within 30px of first point
-        distance < 30.0
-    } else {
-        false
-    }
+    // Note: This function is unused - preview handled via overlay_canvas.rs
+    false
 }
 
 //redraw polygon every frame with on click
@@ -335,23 +217,4 @@ pub fn on_polygon_click(
     });
 }
 
-//Get the canvas element and its 2d context
-pub fn get_canvas_context() -> Option<CanvasRenderingContext2d> {
-    let window = window().expect("Should get window");
-    let document = window.document().expect("Should get document");
-    let canvas = document
-        .get_element_by_id("canvas-annotations")
-        .expect("Should get canvas-annotations");
-    let canvas = canvas
-        .dyn_into::<HtmlCanvasElement>()
-        .expect("Should get canvas element");
-    let context = canvas
-        .get_context("2d")
-        .ok()
-        .expect("Should get 2d context")
-        .expect("2d context");
-    let context: CanvasRenderingContext2d = context
-        .dyn_into::<CanvasRenderingContext2d>()
-        .expect("Should get canvas context");
-    Some(context)
-}
+// Note: This function is unused - use dom_cache::get_overlay_context() instead

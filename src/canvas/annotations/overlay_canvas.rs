@@ -1,36 +1,24 @@
-use wasm_bindgen::{closure::Closure, JsCast};
-use web_sys::{window, CanvasRenderingContext2d, HtmlCanvasElement};
 use std::cell::RefCell;
+use wasm_bindgen::{closure::Closure, JsCast};
+use web_sys::CanvasRenderingContext2d;
 
 use super::polygon::{
-    Polygon, Point, draw_polygon as draw_polyline, draw_preview_line, fill_polygon,
-    draw_point, draw_endpoint, POINT_RADIUS, ZOOMED_IN_RADIUS, ZOOMED_OUT_RADIUS
+    draw_endpoint, draw_point, draw_polygon as draw_polyline, draw_preview_line, fill_polygon,
+    POINT_RADIUS, ZOOMED_IN_RADIUS, ZOOMED_OUT_RADIUS,
 };
+use super::shapes::{Point, Polygon};
+use crate::canvas::dom_cache::{get_overlay_context, get_window};
 
 thread_local! {
     static RAF_PENDING: RefCell<bool> = RefCell::new(false);
     static LATEST_STATE: RefCell<Option<(Polygon, f64, f64, f64)>> = RefCell::new(None);
     static OVERLAY_CTX: RefCell<Option<CanvasRenderingContext2d>> = RefCell::new(None);
+    static PREVIEW_POINT: RefCell<Option<Point>> = RefCell::new(None);
 }
 
 pub fn get_overlay_canvas_context() -> Option<CanvasRenderingContext2d> {
-    // Return cached context if available
-    let cached = OVERLAY_CTX.with(|c| c.borrow().clone());
-    if cached.is_some() { return cached; }
-
-    let ctx = window()?
-        .document()?
-        .get_element_by_id("canvas-overlay")?
-        .dyn_into::<HtmlCanvasElement>()
-        .ok()?
-        .get_context("2d")
-        .ok()?
-        .and_then(|ctx| ctx.dyn_into::<CanvasRenderingContext2d>().ok());
-
-    if let Some(ref c) = ctx {
-        OVERLAY_CTX.with(|cell| *cell.borrow_mut() = Some(c.clone()));
-    }
-    ctx
+    // Use centralized dom_cache
+    get_overlay_context()
 }
 
 fn clear_overlay(ctx: &CanvasRenderingContext2d) {
@@ -44,19 +32,20 @@ fn render_overlay_once(poly: &Polygon, zoom: f64, pan_x: f64, pan_y: f64) {
     if let Some(ctx) = get_overlay_canvas_context() {
         clear_overlay(&ctx);
         // Get DPR and apply combined transform (DPR * zoom + pan)
-        let win = window().expect("Should get window");
+        let win = get_window().expect("Should get window");
         let dpr = win.device_pixel_ratio();
         // Apply transform once - combines DPR scaling with zoom/pan
         let _ = ctx.set_transform(zoom * dpr, 0.0, 0.0, zoom * dpr, pan_x * dpr, pan_y * dpr);
 
         // draw polygon as in-progress overlay (in world coords)
         let points: Vec<Point> = poly.points.clone();
-        
+
         if poly.is_closed {
             fill_polygon(&ctx, &points);
         } else {
             draw_polyline(&ctx, &points, false);
-            if let Some(preview) = poly.preview_point {
+            let preview = PREVIEW_POINT.with(|p| *p.borrow());
+            if let Some(preview) = preview {
                 if let Some(last) = points.last() {
                     draw_preview_line(&ctx, *last, preview);
                     if points.len() >= 2 {
@@ -75,11 +64,12 @@ fn render_overlay_once(poly: &Polygon, zoom: f64, pan_x: f64, pan_y: f64) {
         }
 
         // Draw points (scale radius inversely to zoom since we're in world coords)
-        let adjusted_radius = (POINT_RADIUS / zoom).clamp(ZOOMED_OUT_RADIUS / zoom, ZOOMED_IN_RADIUS / zoom);
+        let adjusted_radius =
+            (POINT_RADIUS / zoom).clamp(ZOOMED_OUT_RADIUS / zoom, ZOOMED_IN_RADIUS / zoom);
         for (i, &p) in points.iter().enumerate() {
             // Check if near first point for closing
             let can_close = if i == 0 && points.len() >= 3 {
-                if let Some(preview) = poly.preview_point {
+                if let Some(preview) = PREVIEW_POINT.with(|pp| *pp.borrow()) {
                     let dx = preview.x - p.x;
                     let dy = preview.y - p.y;
                     let distance = ((dx * dx + dy * dy).sqrt() * zoom); // Distance in screen pixels
@@ -131,8 +121,16 @@ pub fn schedule_overlay_redraw(poly: Polygon, zoom: f64, pan_x: f64, pan_y: f64)
         RAF_PENDING.with(|flag| *flag.borrow_mut() = false);
     }) as Box<dyn FnMut()>);
 
-    if let Some(win) = window() {
+    if let Some(win) = get_window() {
         let _ = win.request_animation_frame(closure.as_ref().unchecked_ref());
     }
     closure.forget();
+}
+
+pub fn set_polygon_preview(point: Option<Point>) {
+    PREVIEW_POINT.with(|p| *p.borrow_mut() = point);
+}
+
+pub fn clear_polygon_preview() {
+    PREVIEW_POINT.with(|p| *p.borrow_mut() = None);
 }

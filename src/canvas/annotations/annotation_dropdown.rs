@@ -1,4 +1,3 @@
-use super::saved_canvas::{invalidate_bbox_cache, invalidate_polygon_cache};
 use super::store::{
     delete_bbox_at, delete_polygon_at, load_bboxes, load_polygons, update_bbox_class,
     update_polygon_class,
@@ -79,7 +78,6 @@ pub fn AnnotationDropdown(
                         if update_polygon_class(&*pid, &*bid, &*iid, idx, &new_class_id) {
                             increment_class_count(&*pid, &new_class_id, 1);
                         }
-                        invalidate_polygon_cache();
                     }
                     AnnotationTarget::BBox(idx) => {
                         let bboxes = load_bboxes(&*pid, &*bid, &*iid);
@@ -89,7 +87,6 @@ pub fn AnnotationDropdown(
                         if update_bbox_class(&*pid, &*bid, &*iid, idx, &new_class_id) {
                             increment_class_count(&*pid, &new_class_id, 1);
                         }
-                        invalidate_bbox_cache();
                     }
                 }
 
@@ -128,8 +125,6 @@ pub fn AnnotationDropdown(
                         let deleted = delete_polygon_at(&*pid, &*bid, &*iid, idx);
                         tracing::info!("delete_polygon_at returned: {}", deleted);
 
-                        invalidate_polygon_cache();
-
                         let polys_after = load_polygons(&*pid, &*bid, &*iid);
                         tracing::info!("AFTER delete - Total polys: {}", polys_after.len());
                     }
@@ -147,13 +142,11 @@ pub fn AnnotationDropdown(
                         let deleted = delete_bbox_at(&*pid, &*bid, &*iid, idx);
                         tracing::info!("delete_bbox_at returned: {}", deleted);
 
-                        invalidate_bbox_cache();
-
                         let bboxes_after = load_bboxes(&*pid, &*bid, &*iid);
                         tracing::info!("AFTER delete - Total bboxes: {}", bboxes_after.len());
                     }
                 }
-                // Invalidation already done above, now trigger redraw via use_effect
+                // Trigger reactive redraw in canvas_effects via class_counter
                 class_counter.set(class_counter() + 1);
                 dropdown_open.set(false);
             }
@@ -241,7 +234,6 @@ pub fn AnnotationDropdown(
                                             if updated {
                                                 increment_class_count(&*pid, &class_id, 1);
                                             }
-                                            invalidate_polygon_cache();
 
                                             let polys_after = load_polygons(&*pid, &*bid, &*iid);
                                             tracing::info!("AFTER update - Poly[{}] class: {:?}", idx, polys_after.get(idx).map(|p| &p.class_id));
@@ -259,14 +251,13 @@ pub fn AnnotationDropdown(
                                             if updated {
                                                 increment_class_count(&*pid, &class_id, 1);
                                             }
-                                            invalidate_bbox_cache();
 
                                             let bboxes_after = load_bboxes(&*pid, &*bid, &*iid);
                                             tracing::info!("AFTER update - BBox[{}] class: {:?}", idx, bboxes_after.get(idx).map(|b| &b.class_id));
                                         }
-                                    }
-                                    // Invalidation already done above, now trigger redraw via use_effect
-                                    ver.set(ver() + 1);
+                                }
+                                // Trigger reactive redraw in canvas_effects via class_counter
+                                ver.set(ver() + 1);
                                     opn.set(false);
                                 }
                             },

@@ -1,6 +1,7 @@
 use serde::{Deserialize, Serialize};
 use crate::canvas::sidebar::storage::{load_json, save_json};
-use super::polygon::Polygon;
+use super::shapes::Polygon;
+use crate::canvas::dom_cache::get_window;
 use wasm_bindgen::JsValue;
 use web_sys::CanvasRenderingContext2d;
 
@@ -114,7 +115,7 @@ pub fn redraw_saved_polygons(
     let active: Option<String> = crate::canvas::sidebar::storage::load_json(&format!("active_class:{}", project_id)).unwrap_or(None);
 
     // Apply transform once
-    if let Some(win) = web_sys::window() { let dpr = win.device_pixel_ratio(); let _ = ctx.set_transform(zoom * dpr, 0.0, 0.0, zoom * dpr, pan_x * dpr, pan_y * dpr); }
+    if let Some(win) = get_window() { let dpr = win.device_pixel_ratio(); let _ = ctx.set_transform(zoom * dpr, 0.0, 0.0, zoom * dpr, pan_x * dpr, pan_y * dpr); }
 
     for sp in polys {
         let hex = classes.iter().find(|c| c.id == sp.class_id).map(|c| c.color.clone()).unwrap_or("#00C2FF".to_string());

@@ -1,110 +1,8 @@
 use wasm_bindgen::JsValue;
 use web_sys::CanvasRenderingContext2d;
 
-#[derive(Debug, Clone, Copy, PartialEq)]
-pub struct Point {
-    pub x: f64,
-    pub y: f64,
-}
-
-#[derive(Clone, Debug, PartialEq)]
-pub enum BBoxAction {
-    SetStart(Point),
-    SetEnd(Point),
-}
-
-#[derive(Clone, Debug, PartialEq)]
-pub struct BBox {
-    pub start_point: Option<Point>,
-    pub end_point: Option<Point>,
-    pub is_complete: bool,
-    pub preview_point: Option<Point>,  // For live preview of box
-    pub undo_history: Vec<BBoxAction>, // Stack of undone actions
-}
-
-impl BBox {
-    pub fn new() -> Self {
-        Self {
-            start_point: None,
-            end_point: None,
-            is_complete: false,
-            preview_point: None,
-            undo_history: Vec::new(),
-        }
-    }
-
-    pub fn set_start(&mut self, p: Point) {
-        self.start_point = Some(p);
-        self.is_complete = false;
-        // Clear redo history when new action is taken
-        self.undo_history.clear();
-    }
-
-    pub fn set_end(&mut self, p: Point) {
-        self.end_point = Some(p);
-        self.is_complete = true;
-        self.preview_point = None;
-        // Clear redo history when new action is taken
-        self.undo_history.clear();
-    }
-
-    pub fn set_preview(&mut self, p: Option<Point>) {
-        self.preview_point = p;
-    }
-
-    pub fn undo(&mut self) -> bool {
-        if self.end_point.is_some() {
-            // Undo end point
-            if let Some(end) = self.end_point.take() {
-                self.undo_history.push(BBoxAction::SetEnd(end));
-                self.is_complete = false;
-                return true;
-            }
-        } else if self.start_point.is_some() {
-            // Undo start point
-            if let Some(start) = self.start_point.take() {
-                self.undo_history.push(BBoxAction::SetStart(start));
-                return true;
-            }
-        }
-        false
-    }
-
-    pub fn redo(&mut self) -> bool {
-        if let Some(action) = self.undo_history.pop() {
-            match action {
-                BBoxAction::SetStart(p) => {
-                    self.start_point = Some(p);
-                    self.is_complete = false;
-                }
-                BBoxAction::SetEnd(p) => {
-                    self.end_point = Some(p);
-                    self.is_complete = true;
-                    self.preview_point = None;
-                }
-            }
-            true
-        } else {
-            false
-        }
-    }
-
-    pub fn reset(&mut self) {
-        self.start_point = None;
-        self.end_point = None;
-        self.is_complete = false;
-        self.preview_point = None;
-        self.undo_history.clear();
-    }
-
-    pub fn can_undo(&self) -> bool {
-        self.start_point.is_some()
-    }
-
-    pub fn can_redo(&self) -> bool {
-        !self.undo_history.is_empty()
-    }
-}
+use super::shapes::{BBox, Point};
+use crate::canvas::dom_cache::get_window;
 
 /* ---- styles (same as polygon) ---- */
 const POINT_STROKE: &str = "rgb(51, 66, 255)";
@@ -188,7 +86,7 @@ pub fn redraw_bbox(ctx: &CanvasRenderingContext2d, bbox: &BBox, zoom: f64, pan_x
     clear_canvas(ctx);
 
     // Apply combined DPR*zoom transform once
-    if let Some(win) = web_sys::window() {
+    if let Some(win) = get_window() {
         let dpr = win.device_pixel_ratio();
         let _ = ctx.set_transform(zoom * dpr, 0.0, 0.0, zoom * dpr, pan_x * dpr, pan_y * dpr);
     }
@@ -206,9 +104,8 @@ pub fn redraw_bbox(ctx: &CanvasRenderingContext2d, bbox: &BBox, zoom: f64, pan_x
                 fill_bbox(ctx, start, end, false);
                 draw_point(ctx, end, radius);
             }
-        } else if let Some(preview) = bbox.preview_point {
-            draw_bbox_outline(ctx, start, preview, true);
         }
+        // Note: Preview is now handled via mouse_handlers + thread_local
     }
 
     // Reset transform to identity to avoid leaking state

@@ -1,5 +1,4 @@
-use super::super::annotations::bbox::BBox;
-use super::super::annotations::polygon::Polygon;
+use super::super::annotations::shapes::{BBox, Polygon};
 use super::super::annotations::Tool;
 use dioxus::prelude::*;
 

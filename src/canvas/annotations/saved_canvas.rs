@@ -1,6 +1,8 @@
 use wasm_bindgen::JsCast;
-use web_sys::{window, CanvasRenderingContext2d, HtmlCanvasElement};
+use web_sys::CanvasRenderingContext2d;
 use std::cell::RefCell;
+
+use crate::canvas::dom_cache::{get_saved_context, get_window};
 
 use super::store::{load_polygons, load_bboxes, SavedPolygon, SavedBBox};
 use crate::canvas::sidebar::ClassItem;
@@ -16,23 +18,8 @@ thread_local! {
 }
 
 pub fn get_saved_canvas_context() -> Option<CanvasRenderingContext2d> {
-    // Return cached context if available
-    let cached = SAVED_CTX.with(|c| c.borrow().clone());
-    if cached.is_some() { return cached; }
-
-    let ctx = window()?
-        .document()?
-        .get_element_by_id("canvas-saved")?
-        .dyn_into::<HtmlCanvasElement>()
-        .ok()?
-        .get_context("2d")
-        .ok()?
-        .and_then(|ctx| ctx.dyn_into::<CanvasRenderingContext2d>().ok());
-
-    if let Some(ref c) = ctx {
-        SAVED_CTX.with(|cell| *cell.borrow_mut() = Some(c.clone()));
-    }
-    ctx
+    // Use centralized dom_cache
+    get_saved_context()
 }
 
 pub fn invalidate_polygon_cache() {
@@ -136,7 +123,7 @@ fn redraw_saved_now(
     let active: Option<String> = load_json(&format!("active_class:{}", project_id)).unwrap_or(None);
 
     // Get DPR and apply combined transform (DPR * zoom + pan)
-    let window = window().expect("Should get window");
+    let window = get_window().expect("Should get window");
     let dpr = window.device_pixel_ratio();
     // Apply transform ONCE - combines DPR scaling with zoom/pan
     let _ = ctx.set_transform(zoom * dpr, 0.0, 0.0, zoom * dpr, pan_x * dpr, pan_y * dpr);
@@ -241,7 +228,7 @@ pub fn redraw_saved_annotations(
         SAVED_RAF_PENDING.with(|flag| *flag.borrow_mut() = false);
     }) as Box<dyn FnMut()>);
 
-    if let Some(win) = window() {
+    if let Some(win) = get_window() {
         let _ = win.request_animation_frame(closure.as_ref().unchecked_ref());
     }
     closure.forget();

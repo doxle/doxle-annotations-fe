@@ -21,7 +21,8 @@
     --navbar-bg: rgb(51, 55, 61);
     --sidebar-bg: #ffffff;
     --sidebar-border: rgb(230, 230, 230);
-    --sidebar-text: #333333;
+    --sidebar-text: #000000;
+    --sidebar-row-hover: rgb(230, 230, 230);
 
     /* UI element colors */
     --primary-button-bg: #4f5bf8;
@@ -85,7 +86,8 @@
         --navbar-bg: rgb(21, 21, 21);
         --sidebar-bg: rgb(30, 30, 30);
         --sidebar-border: rgb(60, 60, 60);
-        --sidebar-text: #e5e5e5;
+        --sidebar-text: #ffffff;
+        --sidebar-row-hover: rgb(50, 50, 50);
 
         /* UI element colors (dark mode) */
         --primary-button-bg: #4f5bf8;
@@ -149,7 +151,8 @@ html.dark {
     --navbar-bg: rgb(21, 21, 21);
     --sidebar-bg: rgb(30, 30, 30);
     --sidebar-border: rgb(60, 60, 60);
-    --sidebar-text: #e5e5e5;
+    --sidebar-text: #ffffff;
+    --sidebar-row-hover: rgb(50, 50, 50);
 
     /* UI element colors (dark mode) */
     --primary-button-bg: #4f5bf8;
@@ -212,7 +215,8 @@ html.light {
     --navbar-bg: rgb(51, 55, 61);
     --sidebar-bg: #ffffff;
     --sidebar-border: rgb(230, 230, 230);
-    --sidebar-text: #333333;
+    --sidebar-text: #000000;
+    --sidebar-row-hover: rgb(230, 230, 230);
 
     /* UI element colors */
     --primary-button-bg: #4f5bf8;

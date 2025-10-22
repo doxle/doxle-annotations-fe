@@ -1,5 +1,4 @@
-use super::annotations::bbox::BBox;
-use super::annotations::polygon::Polygon;
+use super::annotations::shapes::{BBox, Polygon};
 use super::annotations::Tool;
 use super::navbar::{LeftSection, CenterSection, RightSection};
 use dioxus::prelude::*;
