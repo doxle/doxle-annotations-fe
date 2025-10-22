@@ -1,36 +1,98 @@
-use super::annotations::polygon::on_polygon_click;
-use super::annotations::polygon::{Polygon, Point};
 use super::annotations::bbox::{on_bbox_click, redraw_bbox, BBox};
 use super::annotations::comment::Comment;
+use super::annotations::overlay_canvas::{get_overlay_canvas_context, schedule_overlay_redraw};
+use super::annotations::polygon::on_polygon_click;
+use super::annotations::polygon::{Point, Polygon};
+use super::annotations::saved_canvas::{
+    invalidate_bbox_cache, invalidate_polygon_cache, redraw_saved_annotations,
+};
+use super::annotations::store::{
+    delete_bbox_at, delete_polygon_at, load_bboxes, load_polygons, save_polygon, update_bbox_class,
+    update_polygon_class,
+};
 use super::annotations::Tool;
+use super::annotations::{AnnotationDropdown, AnnotationTarget};
 use super::canvas_navbar::CanvasNavbar;
-use super::sidebar::Sidebar;
+use super::sidebar::storage::{
+    get_active_or_first_class_id, increment_class_count, load_json as load_json_any,
+};
 use super::sidebar::ClassItem;
-use super::sidebar::storage::{get_active_or_first_class_id, increment_class_count, load_json as load_json_any};
-use super::annotations::store::{save_polygon, load_polygons, load_bboxes, update_polygon_class, delete_polygon_at, update_bbox_class, delete_bbox_at};
-use super::annotations::saved_canvas::{redraw_saved_annotations, invalidate_polygon_cache, invalidate_bbox_cache};
-use super::annotations::overlay_canvas::{schedule_overlay_redraw, get_overlay_canvas_context};
-use super::annotations::{AnnotationMenu, AnnotationTarget};
+use super::sidebar::Sidebar;
 use crate::dioxus_elements::input_data::MouseButton;
 use dioxus::prelude::*;
 use wasm_bindgen::{closure::Closure, JsCast};
 use web_sys::{window, CanvasRenderingContext2d, HtmlCanvasElement, HtmlElement, KeyboardEvent};
 
 const NAVBAR_H: f64 = 36.0; // canvas container sits below navbar
+static IMAGE_SCREEN_BOUNDS: std::sync::RwLock<Option<(f64, f64, f64, f64)>> =
+    std::sync::RwLock::new(None);
 
-// Compute the displayed image bounds in WORLD coordinates (after undoing pan/zoom).
+// Get image bounds in WORLD coordinates using cached screen bounds + zoom/pan
 fn get_image_bounds_world(zoom: f64, pan_x: f64, pan_y: f64) -> Option<(f64, f64, f64, f64)> {
+    //Try to read from cache
+    let (screen_left, screen_top, screen_right, screen_bottom) = {
+        if let Ok(cache) = IMAGE_SCREEN_BOUNDS.read() {
+            // tracing::info!("[CACHE READ] Value: {:?}", *cache);
+            if let Some(bounds) = *cache {
+                // tracing::info!("[CACHE HIT] Using cached bounds");
+                bounds //Found Cache
+            } else {
+                // Cache miss - fallback to DOM query
+                // tracing::info!("[CACHE MISS] Cache is None, querying DOM");
+                let win = window()?;
+                let doc = win.document()?;
+                let el = doc.query_selector(".canvas-image img").ok().flatten()?;
+                let rect = el.get_bounding_client_rect();
+                let left = (rect.left() - pan_x) / zoom;
+                let top = (rect.top() - NAVBAR_H - pan_y) / zoom;
+                let right = (rect.right() - pan_x) / zoom;
+                let bottom = (rect.bottom() - NAVBAR_H - pan_y) / zoom;
+                return Some((left, top, right, bottom));
+            }
+        } else {
+            tracing::info!("[CACHE ERROR] Failed to acquire read lock");
+            return None;
+        }
+    };
+
+    // Convert cached screen bounds to world coordinates using current zoom/pan
+    let left = (screen_left - pan_x) / zoom;
+    let top = (screen_top - pan_y) / zoom;
+    let right = (screen_right - pan_x) / zoom;
+    let bottom = (screen_bottom - pan_y) / zoom;
+    // tracing::info!(
+    //     "[BOUNDS] World: L={} T={} R={} B={} (zoom={}, pan_x={}, pan_y={})",
+    //     left,
+    //     top,
+    //     right,
+    //     bottom,
+    //     zoom,
+    //     pan_x,
+    //     pan_y
+    // );
+    Some((left, top, right, bottom))
+}
+
+// this is called on every click so we need to cache the image screen bounds
+fn cache_image_screen_bounds() -> Option<()> {
     let win = window()?;
     let doc = win.document()?;
     let el = doc.query_selector(".canvas-image img").ok().flatten()?;
     let rect = el.get_bounding_client_rect();
-    let left = (rect.left() - pan_x) / zoom;
-    let top = (rect.top() - NAVBAR_H - pan_y) / zoom;
-    let right = (rect.right() - pan_x) / zoom;
-    let bottom = (rect.bottom() - NAVBAR_H - pan_y) / zoom;
-    tracing::info!("Image bounds - Screen rect: L={} T={} R={} B={}, World bounds: L={} T={} R={} B={}", 
-        rect.left(), rect.top(), rect.right(), rect.bottom(), left, top, right, bottom);
-    Some((left, top, right, bottom))
+    let left = rect.left();
+    let top = rect.top() - NAVBAR_H;
+    let right = rect.right();
+    let bottom = rect.bottom() - NAVBAR_H;
+    *IMAGE_SCREEN_BOUNDS.write().unwrap() = Some((left, top, right, bottom));
+
+    tracing::info!(
+        "Image screen bounds cached {}, {}, {}, {}",
+        left,
+        top,
+        right,
+        bottom
+    );
+    Some(())
 }
 
 // Check if a viewport point lies inside the displayed image rect (SCREEN coordinates).
@@ -49,7 +111,9 @@ fn point_inside_image(screen_x: f64, screen_y: f64) -> bool {
     true // If we can't detect the image, allow input (fallback)
 }
 
-fn clamp_f64(v: f64, min: f64, max: f64) -> f64 { v.max(min).min(max) }
+fn clamp_f64(v: f64, min: f64, max: f64) -> f64 {
+    v.max(min).min(max)
+}
 
 // Helper for backwards compat - returns overlay context
 fn get_canvas_context() -> Option<CanvasRenderingContext2d> {
@@ -63,7 +127,7 @@ pub fn CanvasPage(task_id: String) -> Element {
     let mut pan_x = use_signal(|| 0.0);
     let mut pan_y = use_signal(|| 0.0);
     let mut selected_tool = use_signal(|| Tool::Select); // Default is Select (Arrow)
-    let mut avatar_menu_open = use_signal(|| false);
+    let mut avatar_dropdown_open = use_signal(|| false);
     let mut show_grid_lines = use_signal(|| false);
     let mut sidebar_open = use_signal(|| false);
     let mut is_panning: Signal<bool> = use_signal(|| false);
@@ -80,14 +144,14 @@ pub fn CanvasPage(task_id: String) -> Element {
     // TODO: wire from route/selection
     let block_id_for_ann = "block1".to_string();
     let image_id_for_ann = "house1".to_string();
-    let mut classes_version = use_signal(|| 0_u64);
+    let mut class_counter = use_signal(|| 0_u64);
 
-    // --- Annotation menu state ---
-    let mut annotation_menu_open = use_signal(|| false);
-    let mut annotation_menu_x = use_signal(|| 0.0);
-    let mut annotation_menu_y = use_signal(|| 0.0);
-    let mut annotation_menu_target = use_signal(|| None as Option<AnnotationTarget>);
-    
+    // --- Annotation dropdown state ---
+    let mut annotation_dropdown_open = use_signal(|| false);
+    let mut annotation_dropdown_x = use_signal(|| 0.0);
+    let mut annotation_dropdown_y = use_signal(|| 0.0);
+    let mut annotation_dropdown_target = use_signal(|| None as Option<AnnotationTarget>);
+
     // Note: preview_point is managed within polygon state, not as separate signal
 
     // Redraw saved canvas when polygons change OR zoom/pan changes
@@ -95,28 +159,43 @@ pub fn CanvasPage(task_id: String) -> Element {
     let pid_for_saved = project_id_for_ann.clone();
     let block_for_saved = block_id_for_ann.clone();
     let image_for_saved = image_id_for_ann.clone();
+    let class_counter_for_saved = class_counter.clone();
+
     use_effect(move || {
-        tracing::info!("use_effect REDRAW triggered - classes_version={}, zoom={}, pan_x={}, pan_y={}", 
-            classes_version(), zoom(), pan_x(), pan_y());
-        
-        redraw_saved_annotations(&pid_for_saved, &block_for_saved, &image_for_saved, zoom(), pan_x(), pan_y());
+        let _ = class_counter_for_saved(); // depend on class version to redraw after add/delete/reassig
+        redraw_saved_annotations(
+            &pid_for_saved,
+            &block_for_saved,
+            &image_for_saved,
+            zoom(),
+            pan_x(),
+            pan_y(),
+        );
     });
 
-    // Set canvas size with DPR for crisp rendering (both canvases)
+    // Set canvas size with DPR for crisp rendering (both canvases) + cache image bounds
     use_effect(move || {
         if let Some(win) = window() {
             if let Some(document) = win.document() {
                 // Measure the actual canvas container instead of window to avoid rounding/clipping on the right edge
-                let (css_w, css_h) = if let Some(container) = document.get_element_by_id("canvas-container") {
-                    let rect = container.get_bounding_client_rect();
-                    (rect.width(), rect.height())
-                } else {
-                    // Fallback to window size if container not found
-                    (
-                        win.inner_width().ok().and_then(|w| w.as_f64()).unwrap_or(1920.0),
-                        win.inner_height().ok().and_then(|h| h.as_f64()).map(|h| h - NAVBAR_H).unwrap_or(1080.0),
-                    )
-                };
+                let (css_w, css_h) =
+                    if let Some(container) = document.get_element_by_id("canvas-container") {
+                        let rect = container.get_bounding_client_rect();
+                        (rect.width(), rect.height())
+                    } else {
+                        // Fallback to window size if container not found
+                        (
+                            win.inner_width()
+                                .ok()
+                                .and_then(|w| w.as_f64())
+                                .unwrap_or(1920.0),
+                            win.inner_height()
+                                .ok()
+                                .and_then(|h| h.as_f64())
+                                .map(|h| h - NAVBAR_H)
+                                .unwrap_or(1080.0),
+                        )
+                    };
                 let dpr = win.device_pixel_ratio();
 
                 // Size both canvases to match container precisely
@@ -128,8 +207,12 @@ pub fn CanvasPage(task_id: String) -> Element {
                             canvas.set_height((css_h * dpr).round() as u32);
 
                             // CSS display size
-                            let _ = canvas.style().set_property("width", &format!("{}px", css_w));
-                            let _ = canvas.style().set_property("height", &format!("{}px", css_h));
+                            let _ = canvas
+                                .style()
+                                .set_property("width", &format!("{}px", css_w));
+                            let _ = canvas
+                                .style()
+                                .set_property("height", &format!("{}px", css_h));
 
                             // Scale context so drawing uses CSS pixels
                             if let Ok(Some(ctx_any)) = canvas.get_context("2d") {
@@ -140,15 +223,6 @@ pub fn CanvasPage(task_id: String) -> Element {
                         }
                     }
                 }
-
-                tracing::info!(
-                    "Canvases sized to container: {}x{} CSS, buffer: {}x{}, DPR: {}",
-                    css_w,
-                    css_h,
-                    (css_w * dpr) as u32,
-                    (css_h * dpr) as u32,
-                    dpr
-                );
             }
         }
     });
@@ -202,7 +276,7 @@ pub fn CanvasPage(task_id: String) -> Element {
     // Keyboard shortcuts handler
     let pid_for_keys = project_id_for_ann.clone();
     let pid_for_keys_val = pid_for_keys.clone();
-    let mut classes_version_keys = classes_version.clone();
+    let mut class_counter_keys = class_counter.clone();
     use_effect(move || {
         let win = match window() {
             Some(w) => w,
@@ -214,7 +288,7 @@ pub fn CanvasPage(task_id: String) -> Element {
         let image_value = "house1".to_string();
         let closure = Closure::wrap(Box::new(move |event: KeyboardEvent| {
             let key = event.key();
-            
+
             // Handle ESC key - clear annotations when drawing
             if key == "Escape" {
                 match selected_tool() {
@@ -249,10 +323,16 @@ pub fn CanvasPage(task_id: String) -> Element {
                         let block_local = block_value.clone();
                         let image_local = image_value.clone();
                         if let Some(class_id) = get_active_or_first_class_id(&pid_value) {
-                            save_polygon(&pid_local, &block_local, &image_local, &polygon(), &class_id);
+                            save_polygon(
+                                &pid_local,
+                                &block_local,
+                                &image_local,
+                                &polygon(),
+                                &class_id,
+                            );
                             increment_class_count(&pid_local, &class_id, 1);
                             invalidate_polygon_cache(); // Force cache refresh
-                            classes_version_keys.set(classes_version_keys() + 1); // Triggers saved canvas redraw
+                            class_counter_keys.set(class_counter_keys() + 1); // Triggers saved canvas redraw
                         }
                         polygon.write().reset();
                         // Clear overlay immediately after closing
@@ -281,10 +361,16 @@ pub fn CanvasPage(task_id: String) -> Element {
                                 let block_local = block_value.clone();
                                 let image_local = image_value.clone();
                                 if let Some(class_id) = get_active_or_first_class_id(&pid_value) {
-                                    save_polygon(&pid_local, &block_local, &image_local, &polygon(), &class_id);
+                                    save_polygon(
+                                        &pid_local,
+                                        &block_local,
+                                        &image_local,
+                                        &polygon(),
+                                        &class_id,
+                                    );
                                     increment_class_count(&pid_local, &class_id, 1);
                                     invalidate_polygon_cache();
-                                    classes_version_keys.set(classes_version_keys() + 1);
+                                    class_counter_keys.set(class_counter_keys() + 1);
                                 }
                                 polygon.write().reset();
                                 schedule_overlay_redraw(polygon(), zoom(), pan_x(), pan_y());
@@ -305,13 +391,20 @@ pub fn CanvasPage(task_id: String) -> Element {
                                     use super::annotations::store::{save_bbox, SavedPoint as SP};
                                     let start = bb.start_point.unwrap();
                                     let end = bb.end_point.unwrap();
-                                    save_bbox(&pid_value, &block_value, &image_value,
-                                             &SP { x: start.x, y: start.y },
-                                             &SP { x: end.x, y: end.y },
-                                             &class_id);
+                                    save_bbox(
+                                        &pid_value,
+                                        &block_value,
+                                        &image_value,
+                                        &SP {
+                                            x: start.x,
+                                            y: start.y,
+                                        },
+                                        &SP { x: end.x, y: end.y },
+                                        &class_id,
+                                    );
                                     super::annotations::saved_canvas::invalidate_bbox_cache();
                                     increment_class_count(&pid_value, &class_id, 1);
-                                    classes_version_keys.set(classes_version_keys() + 1);
+                                    class_counter_keys.set(class_counter_keys() + 1);
                                 }
                                 bb.reset();
                             }
@@ -353,7 +446,8 @@ pub fn CanvasPage(task_id: String) -> Element {
                                     } else if current_class.contains("light") {
                                         html_el.set_class_name("dark");
                                     } else {
-                                        let prefers_dark = win.match_media("(prefers-color-scheme: dark)")
+                                        let prefers_dark = win
+                                            .match_media("(prefers-color-scheme: dark)")
                                             .ok()
                                             .flatten()
                                             .map(|m| m.matches())
@@ -373,8 +467,7 @@ pub fn CanvasPage(task_id: String) -> Element {
             }
         }) as Box<dyn FnMut(_)>);
 
-        let _ = win
-            .add_event_listener_with_callback("keydown", closure.as_ref().unchecked_ref());
+        let _ = win.add_event_listener_with_callback("keydown", closure.as_ref().unchecked_ref());
 
         // Keep closure alive
         closure.forget();
@@ -417,10 +510,15 @@ pub fn CanvasPage(task_id: String) -> Element {
         let mut inside = false;
         let mut j = pts.len().wrapping_sub(1);
         for i in 0..pts.len() {
-            let xi = pts[i].x; let yi = pts[i].y;
-            let xj = pts[j].x; let yj = pts[j].y;
-            let intersect = ((yi > y) != (yj > y)) && (x < (xj - xi) * (y - yi) / (yj - yi + 1e-9) + xi);
-            if intersect { inside = !inside; }
+            let xi = pts[i].x;
+            let yi = pts[i].y;
+            let xj = pts[j].x;
+            let yj = pts[j].y;
+            let intersect =
+                ((yi > y) != (yj > y)) && (x < (xj - xi) * (y - yi) / (yj - yi + 1e-9) + xi);
+            if intersect {
+                inside = !inside;
+            }
             j = i;
         }
         inside
@@ -433,15 +531,19 @@ pub fn CanvasPage(task_id: String) -> Element {
         x >= l && x <= r && y >= t && y <= b
     }
 
-    // Annotation menu handlers moved into AnnotationMenu component
+    // Annotation dropdown handlers moved into AnnotationDropdown component
     // cursor-centered-zoom and shift+wheel for panning
     let onwheel = move |evt: Event<WheelData>| {
-        // Close any open annotation menu on scroll
-        if annotation_menu_open() { annotation_menu_open.set(false); }
-        evt.prevent_default();
+        //evt.prevent_default(); - handled by css
+
+        // Close any open annotation dropdown on scroll
+        if annotation_dropdown_open() {
+            annotation_dropdown_open.set(false);
+        }
+
         let mouse = evt.client_coordinates();
         let delta = evt.data.delta().strip_units();
-        
+
         // Shift key held = pan (like CVAT)
         if evt.modifiers().shift() {
             let dx = delta.x;
@@ -450,7 +552,7 @@ pub fn CanvasPage(task_id: String) -> Element {
             let new_pan_y = pan_y() - dy;
             pan_x.set(new_pan_x);
             pan_y.set(new_pan_y);
-            
+
             // Redraw overlays
             schedule_overlay_redraw(polygon(), zoom(), new_pan_x, new_pan_y);
             if bbox().start_point.is_some() && !bbox().is_complete {
@@ -460,7 +562,7 @@ pub fn CanvasPage(task_id: String) -> Element {
             }
             return;
         }
-        
+
         // Normal zoom
         let dy = delta.y;
         let factor = if dy < 0.0 { 1.2 } else { 0.8 };
@@ -497,8 +599,10 @@ pub fn CanvasPage(task_id: String) -> Element {
     let block_for_down = block_id_for_ann.clone();
     let image_for_down = image_id_for_ann.clone();
     let onmousedown = move |evt: Event<MouseData>| {
-        // Close menu on any left click
-        if annotation_menu_open() && evt.data.trigger_button() == Some(MouseButton::Primary) { annotation_menu_open.set(false); }
+        // Close dropdown on any left click
+        if annotation_dropdown_open() && evt.data.trigger_button() == Some(MouseButton::Primary) {
+            annotation_dropdown_open.set(false);
+        }
         let coords = evt.client_coordinates();
 
         // middle mouse -> pan (keeping existing logic)
@@ -518,7 +622,9 @@ pub fn CanvasPage(task_id: String) -> Element {
         }
 
         // Select tool + left mouse button -> click-drag pan (trackpad-style)
-        if selected_tool() == Tool::Select && evt.data.trigger_button() == Some(MouseButton::Primary) {
+        if selected_tool() == Tool::Select
+            && evt.data.trigger_button() == Some(MouseButton::Primary)
+        {
             is_panning.set(true);
             last_x.set(coords.x);
             last_y.set(coords.y);
@@ -528,13 +634,15 @@ pub fn CanvasPage(task_id: String) -> Element {
         // Tool-based handling
         if selected_tool() == Tool::Polygon {
             // Convert screen coordinates to world coordinates
-            let screen_x_vp = coords.x;           // viewport X
-            let screen_y_vp = coords.y;           // viewport Y
-            let screen_x = screen_x_vp;           // for X we don't offset by navbar
+            let screen_x_vp = coords.x; // viewport X
+            let screen_y_vp = coords.y; // viewport Y
+            let screen_x = screen_x_vp; // for X we don't offset by navbar
             let screen_y = screen_y_vp - NAVBAR_H; // container-relative Y
 
             // Require clicks to be inside the displayed image rect
-            if !point_inside_image(screen_x_vp, screen_y_vp) { return; }
+            if !point_inside_image(screen_x_vp, screen_y_vp) {
+                return;
+            }
 
             // Apply inverse transform: (screen - pan) / zoom
             let mut world_x = (screen_x - pan_x()) / zoom();
@@ -542,10 +650,8 @@ pub fn CanvasPage(task_id: String) -> Element {
 
             // Clamp to image bounds in world space
             if let Some((l, t, r, b)) = get_image_bounds_world(zoom(), pan_x(), pan_y()) {
-                tracing::info!("Before clamp: world_x={}, world_y={}", world_x, world_y);
                 world_x = clamp_f64(world_x, l, r);
                 world_y = clamp_f64(world_y, t, b);
-                tracing::info!("After clamp: world_x={}, world_y={}", world_x, world_y);
             }
 
             if let Some(ctx) = get_canvas_context() {
@@ -564,10 +670,16 @@ pub fn CanvasPage(task_id: String) -> Element {
                             poly.close();
                             // Persist completed polygon and reset for a new one
                             if let Some(class_id) = get_active_or_first_class_id(&pid_for_down) {
-                                save_polygon(&pid_for_down, &block_for_down, &image_for_down, &poly, &class_id);
+                                save_polygon(
+                                    &pid_for_down,
+                                    &block_for_down,
+                                    &image_for_down,
+                                    &poly,
+                                    &class_id,
+                                );
                                 increment_class_count(&pid_for_down, &class_id, 1);
                                 invalidate_polygon_cache();
-                                classes_version.set(classes_version() + 1); // Triggers saved canvas redraw
+                                class_counter.set(class_counter() + 1); // Triggers saved canvas redraw
                             }
                             poly.reset();
                             // Drop borrow before scheduling overlay redraw
@@ -588,8 +700,8 @@ pub fn CanvasPage(task_id: String) -> Element {
 
         if selected_tool() == Tool::BoundingBox {
             // Convert screen coordinates to world coordinates
-            let screen_x_vp = coords.x;           // viewport X
-            let screen_y_vp = coords.y;           // viewport Y
+            let screen_x_vp = coords.x; // viewport X
+            let screen_y_vp = coords.y; // viewport Y
             let screen_x = screen_x_vp;
             let screen_y = screen_y_vp - NAVBAR_H;
 
@@ -601,12 +713,12 @@ pub fn CanvasPage(task_id: String) -> Element {
             if let Some((l, t, r, b)) = get_image_bounds_world(zoom(), pan_x(), pan_y()) {
                 if bbox().start_point.is_none() {
                     // First click must be inside image
-                    if !point_inside_image(screen_x_vp, screen_y_vp) { return; }
+                    if !point_inside_image(screen_x_vp, screen_y_vp) {
+                        return;
+                    }
                 }
-                tracing::info!("BBox before clamp: world_x={}, world_y={}", world_x, world_y);
                 world_x = clamp_f64(world_x, l, r);
                 world_y = clamp_f64(world_y, t, b);
-                tracing::info!("BBox after clamp: world_x={}, world_y={}", world_x, world_y);
             } else {
                 // If we can't read image bounds and this is the first click, allow as before
             }
@@ -620,13 +732,20 @@ pub fn CanvasPage(task_id: String) -> Element {
                         use super::annotations::store::{save_bbox, SavedPoint as SP};
                         let start = bb.start_point.unwrap();
                         let end = bb.end_point.unwrap();
-                        save_bbox(&pid_for_down, &block_for_down, &image_for_down,
-                                 &SP { x: start.x, y: start.y },
-                                 &SP { x: end.x, y: end.y },
-                                 &class_id);
+                        save_bbox(
+                            &pid_for_down,
+                            &block_for_down,
+                            &image_for_down,
+                            &SP {
+                                x: start.x,
+                                y: start.y,
+                            },
+                            &SP { x: end.x, y: end.y },
+                            &class_id,
+                        );
                         super::annotations::saved_canvas::invalidate_bbox_cache();
                         increment_class_count(&pid_for_down, &class_id, 1);
-                        classes_version.set(classes_version() + 1);
+                        class_counter.set(class_counter() + 1);
                     }
                     // Reset overlay and clear
                     bb.reset();
@@ -640,7 +759,9 @@ pub fn CanvasPage(task_id: String) -> Element {
 
     // pan drag and preview line tracking
     let onmousemove = move |evt: Event<MouseData>| {
-        if annotation_menu_open() { return; } // freeze interactions under menu
+        if annotation_dropdown_open() {
+            return;
+        } // freeze interactions under dropdown
         let coords = evt.client_coordinates();
 
         // Handle panning
@@ -685,12 +806,10 @@ pub fn CanvasPage(task_id: String) -> Element {
                     world_y = clamp_f64(world_y, t, b);
                 }
 
-                polygon
-                    .write()
-                    .set_preview(Some(Point {
-                        x: world_x,
-                        y: world_y,
-                    }));
+                polygon.write().set_preview(Some(Point {
+                    x: world_x,
+                    y: world_y,
+                }));
 
                 // Schedule rAF-gated redraw (throttled to 60fps)
                 schedule_overlay_redraw(polygon(), zoom(), pan_x(), pan_y());
@@ -717,21 +836,14 @@ pub fn CanvasPage(task_id: String) -> Element {
                     world_y = clamp_f64(world_y, t, b);
                 }
 
-                bbox
-                    .write()
+                bbox.write()
                     .set_preview(Some(super::annotations::bbox::Point {
                         x: world_x,
                         y: world_y,
                     }));
 
                 if let Some(ctx) = get_canvas_context() {
-                    redraw_bbox(
-                        &ctx,
-                        &bbox(),
-                        zoom(),
-                        pan_x(),
-                        pan_y(),
-                    );
+                    redraw_bbox(&ctx, &bbox(), zoom(), pan_x(), pan_y());
                 }
             }
         }
@@ -739,13 +851,17 @@ pub fn CanvasPage(task_id: String) -> Element {
 
     //release pan
     let onmouseup = move |_evt: Event<MouseData>| {
-        if annotation_menu_open() { return; }
+        if annotation_dropdown_open() {
+            return;
+        }
         is_panning.set(false);
     };
 
     //release pan
     let onmouseleave = move |_evt: Event<MouseData>| {
-        if annotation_menu_open() { return; }
+        if annotation_dropdown_open() {
+            return;
+        }
         is_panning.set(false);
     };
     // -------------------------------------------------------------------------
@@ -760,7 +876,7 @@ pub fn CanvasPage(task_id: String) -> Element {
                 task_id: task_id.clone(),
                 project_id: project_id.clone(),
                 selected_tool: selected_tool,
-                avatar_menu_open: avatar_menu_open,
+                avatar_dropdown_open: avatar_dropdown_open,
                 show_grid_lines: show_grid_lines,
                 sidebar_open: sidebar_open,
                 polygon: polygon,
@@ -780,6 +896,8 @@ pub fn CanvasPage(task_id: String) -> Element {
                 --dot-offset-y: {}px;
                 --guide-x: {}px;
                 --guide-y: {}px;
+                overscroll-behavior: contain;
+                touch-action: none;
             ",
                 dot_spacing_px,
                 dot_radius_px,
@@ -792,8 +910,8 @@ pub fn CanvasPage(task_id: String) -> Element {
             ),
 
             onclick: move |_evt| {
-                if avatar_menu_open() {
-                    avatar_menu_open.set(false);
+                if avatar_dropdown_open() {
+                    avatar_dropdown_open.set(false);
                 }
                 // Don't stop propagation - let mousedown handle it
             },
@@ -809,7 +927,7 @@ pub fn CanvasPage(task_id: String) -> Element {
                 let vp_y = coords.y;
                 if !point_inside_image(vp_x, vp_y) {
                     // Outside the image: let the browser menu appear
-                    annotation_menu_open.set(false);
+                    annotation_dropdown_open.set(false);
                     return;
                 }
 
@@ -832,15 +950,15 @@ pub fn CanvasPage(task_id: String) -> Element {
                 }
 
                 if let Some(kind) = found {
-                    // We own the annotation menu only when an annotation is under cursor
+                    // We own the annotation dropdown only when an annotation is under cursor
                     evt.prevent_default();
-                    annotation_menu_target.set(Some(kind));
-                    annotation_menu_x.set(vp_x);
-                    annotation_menu_y.set(vp_y - NAVBAR_H);
-                    annotation_menu_open.set(true);
+                    annotation_dropdown_target.set(Some(kind));
+                    annotation_dropdown_x.set(vp_x);
+                    annotation_dropdown_y.set(vp_y - NAVBAR_H);
+                    annotation_dropdown_open.set(true);
                 } else {
                     // Inside image but no annotation: let browser menu appear
-                    annotation_menu_open.set(false);
+                    annotation_dropdown_open.set(false);
                 }
             },
 
@@ -856,7 +974,14 @@ pub fn CanvasPage(task_id: String) -> Element {
                 // Background image layer only
                 div {
                     class: "canvas-layer canvas-image",
-                    img { src: asset!("/assets/images/test.png") }
+                    img {
+                        src: asset!("/assets/images/test.png") ,
+                        onload:move|_|{
+                            tracing::info!("Image loaded");
+                            // Cache image screen bounds
+                            cache_image_screen_bounds();
+                        }
+                    }
                 }
             }
 
@@ -891,26 +1016,26 @@ pub fn CanvasPage(task_id: String) -> Element {
 
             }
 
-            // Annotation menu component
-            if annotation_menu_open() && annotation_menu_target().is_some() {
-                AnnotationMenu {
-                    open: annotation_menu_open,
-                    x: annotation_menu_x,
-                    y: annotation_menu_y,
-                    target: annotation_menu_target,
+            // Annotation dropdown component
+            if annotation_dropdown_open() && annotation_dropdown_target().is_some() {
+                AnnotationDropdown {
+                    open: annotation_dropdown_open,
+                    x: annotation_dropdown_x,
+                    y: annotation_dropdown_y,
+                    target: annotation_dropdown_target,
                     project_id: project_id.clone(),
                     block_id: block_id_for_ann.clone(),
                     image_id: image_id_for_ann.clone(),
                     zoom: zoom,
                     pan_x: pan_x,
                     pan_y: pan_y,
-                    classes_version: classes_version,
+                    class_counter: class_counter,
                 }
             }
             }
 
             // Sidebar
-            Sidebar { task_id: task_id.clone(), project_id: project_id.clone(), sidebar_open: sidebar_open, classes_version: classes_version }
+            Sidebar { task_id: task_id.clone(), project_id: project_id.clone(), sidebar_open: sidebar_open, class_counter: class_counter }
 
         }
     }

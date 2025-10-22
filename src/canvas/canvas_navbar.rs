@@ -9,7 +9,7 @@ pub fn CanvasNavbar(
     task_id: String,
     project_id: String,
     selected_tool: Signal<Tool>,
-    avatar_menu_open: Signal<bool>,
+    avatar_dropdown_open: Signal<bool>,
     show_grid_lines: Signal<bool>,
     sidebar_open: Signal<bool>,
     polygon: Signal<Polygon>,
@@ -23,8 +23,8 @@ pub fn CanvasNavbar(
             onclick: move |e| {
                 tracing::info!("🎯 NAVBAR CLICKED!");
                 e.stop_propagation();
-                if avatar_menu_open() {
-                    avatar_menu_open.set(false);
+                if avatar_dropdown_open() {
+                    avatar_dropdown_open.set(false);
                 }
             },
 
@@ -43,7 +43,7 @@ pub fn CanvasNavbar(
 
             // Right section
             RightSection {
-                avatar_menu_open: avatar_menu_open,
+                avatar_dropdown_open: avatar_dropdown_open,
                 show_grid_lines: show_grid_lines,
                 sidebar_open: sidebar_open
             }

@@ -1,9 +1,9 @@
-use super::avatar_menu::AvatarMenu;
+use super::avatar_dropdown::AvatarDropdown;
 use dioxus::prelude::*;
 
 #[component]
 pub fn RightSection(
-    avatar_menu_open: Signal<bool>,
+    avatar_dropdown_open: Signal<bool>,
     show_grid_lines: Signal<bool>,
     sidebar_open: Signal<bool>,
 ) -> Element {
@@ -19,13 +19,13 @@ pub fn RightSection(
                 title: "User",
                 onclick: move |e| {
                     e.stop_propagation();
-                    avatar_menu_open.set(!avatar_menu_open());
+                    avatar_dropdown_open.set(!avatar_dropdown_open());
                 },
                 "S"  // TODO: Get from user data
 
-                // Dropdown menu component
-                AvatarMenu {
-                    is_open: avatar_menu_open,
+                // Dropdown component
+                AvatarDropdown {
+                    is_open: avatar_dropdown_open,
                     show_grid_lines: show_grid_lines
                 }
             }

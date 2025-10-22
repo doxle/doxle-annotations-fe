@@ -6,7 +6,7 @@ mod home;
 mod projects;
 mod shared;
 
-use shared::{THEME, apply_theme_class, load_theme_preference};
+use shared::{apply_theme_class, load_theme_preference, THEME};
 
 // Font assets
 const HELVETICA_REGULAR: Asset = asset!("/assets/fonts/HelveticaNeue.woff2");
@@ -40,7 +40,7 @@ const CANVAS_NAVBAR_CSS: &str = include_str!("canvas/canvas_navbar.css");
 const NAVBAR_LEFT_CSS: &str = include_str!("canvas/navbar/left_section.css");
 const NAVBAR_CENTER_CSS: &str = include_str!("canvas/navbar/center_section.css");
 const NAVBAR_RIGHT_CSS: &str = include_str!("canvas/navbar/right_section.css");
-const AVATAR_MENU_CSS: &str = include_str!("canvas/navbar/avatar_menu.css");
+const AVATAR_MENU_CSS: &str = include_str!("canvas/navbar/avatar_dropdown.css");
 const SIDEBAR_CSS: &str = include_str!("canvas/sidebar/sidebar.css");
 
 fn main() {

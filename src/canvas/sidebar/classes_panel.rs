@@ -22,7 +22,7 @@ fn default_classes() -> Vec<ClassItem> {
 }
 
 #[component]
-pub fn ClassesPanel(project_id: String, classes_version: Signal<u64>) -> Element {
+pub fn ClassesPanel(project_id: String, class_counter: Signal<u64>) -> Element {
     // Initialize defaults into storage if missing
     let existing = load_json::<Vec<ClassItem>>(&storage_key(&project_id));
     let mut classes = use_signal(|| existing.clone().unwrap_or_else(default_classes));
@@ -43,7 +43,7 @@ pub fn ClassesPanel(project_id: String, classes_version: Signal<u64>) -> Element
     // Refresh from storage when version changes (e.g., counts updated elsewhere)
     let pid_for_effect = project_id.clone();
     use_effect(move || {
-        let _ = classes_version();
+        let _ = class_counter();
         if let Some(updated) = load_json::<Vec<ClassItem>>(&storage_key(&pid_for_effect)) {
             classes.set(updated);
         }

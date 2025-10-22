@@ -3,7 +3,7 @@ use wasm_bindgen::JsCast;
 use web_sys::{window, HtmlElement};
 
 #[component]
-pub fn AvatarMenu(is_open: Signal<bool>, show_grid_lines: Signal<bool>) -> Element {
+pub fn AvatarDropdown(is_open: Signal<bool>, show_grid_lines: Signal<bool>) -> Element {
     let toggle_theme = move |_| {
         if let Some(window) = window() {
             if let Some(document) = window.document() {

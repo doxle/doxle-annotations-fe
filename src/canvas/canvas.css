@@ -496,8 +496,8 @@ html.light .canvas-image img {
     align-items: stretch;
 }
 
-/* Menu header */
-.annotation-menu-header {
+/* Dropdown header */
+.annotation-dropdown-header {
     padding: 12px 16px;
     display: flex;
     align-items: center;
@@ -506,29 +506,11 @@ html.light .canvas-image img {
     min-height: 40px;
 }
 
-/* Menu divider */
-.annotation-menu-divider {
+/* Dropdown divider */
+.annotation-dropdown-divider {
     height: 1px;
     background: rgb(40, 40, 40);
     margin: 0;
-}
-
-/* Legacy class name support */
-.annotation_menu {
-    position: absolute;
-    left: 0;
-    top: 0;
-    background: rgb(0, 0, 0);
-    border-radius: 4px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-    padding: 0;
-    min-width: 240px;
-    max-width: 300px;
-    z-index: 10002;
-    pointer-events: auto;
-    display: flex;
-    flex-direction: column;
-    align-items: stretch;
 }
 
 .annotation-delete-btn {

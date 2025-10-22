@@ -250,5 +250,4 @@ pub fn on_bbox_click(
 
     // Immediate visual feedback on the overlay canvas
     redraw_bbox(ctx, bbox, zoom, pan_x, pan_y);
-    redraw_bbox(ctx, bbox, zoom, pan_x, pan_y);
 }
