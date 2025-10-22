@@ -1,5 +1,7 @@
 use super::annotations::bbox::redraw_bbox;
 use super::annotations::shapes::BBox;
+use super::annotations::edit_state::{is_editing, cancel_edit};
+use super::annotations::overlay_canvas::schedule_edit_redraw;
 use super::dom_cache::{get_window, get_document};
 use super::annotations::overlay_canvas::{get_overlay_canvas_context, schedule_overlay_redraw};
 use super::annotations::shapes::Polygon;
@@ -9,7 +11,7 @@ use super::annotations::Tool;
 use super::sidebar::storage::{get_active_or_first_class_id, increment_class_count};
 use dioxus::prelude::*;
 use wasm_bindgen::{closure::Closure, JsCast};
-use web_sys::{window, HtmlElement, KeyboardEvent};
+use web_sys::{HtmlElement, KeyboardEvent};
 
 fn get_canvas_context() -> Option<web_sys::CanvasRenderingContext2d> {
     get_overlay_canvas_context()
@@ -42,8 +44,34 @@ pub fn setup_keyboard_shortcuts(
         let closure = Closure::wrap(Box::new(move |event: KeyboardEvent| {
             let key = event.key();
 
-            // Handle Delete/Backspace key - delete hovered annotation
+            // Handle Delete/Backspace key - delete selected (if editing) or hovered annotation
             if key == "Delete" || key == "Backspace" {
+                // First check if we're editing something
+                if is_editing() {
+                    use super::annotations::edit_state::{get_edit_target, clear_edit, EditTarget};
+                    if let Some(target) = get_edit_target() {
+                        match target {
+                            EditTarget::Polygon { index, class_id, .. } => {
+                                super::sidebar::storage::increment_class_count(&pid_value, &class_id, -1);
+                                delete_polygon_at(&pid_value, &block_value, &image_value, index);
+                            }
+                            EditTarget::BBox { index, class_id, .. } => {
+                                super::sidebar::storage::increment_class_count(&pid_value, &class_id, -1);
+                                delete_bbox_at(&pid_value, &block_value, &image_value, index);
+                            }
+                        }
+                        clear_edit();
+                        schedule_edit_redraw(zoom(), pan_x(), pan_y());
+                        // Invalidate saved canvas cache
+                        use super::annotations::saved_canvas::{invalidate_polygon_cache, invalidate_bbox_cache};
+                        invalidate_polygon_cache();
+                        invalidate_bbox_cache();
+                        class_counter.set(class_counter() + 1);
+                        return;
+                    }
+                }
+                
+                // Otherwise delete hovered annotation
                 if let Some(target) = hovered_annotation() {
                     match target {
                         AnnotationTarget::Poly(idx) => {
@@ -67,8 +95,17 @@ pub fn setup_keyboard_shortcuts(
                 return;
             }
             
-            // Handle ESC key - clear annotations when drawing
+            // Handle ESC key - cancel edit mode or clear annotations when drawing
             if key == "Escape" {
+                // Check if we're in edit mode first
+                if is_editing() {
+                    cancel_edit();
+                    schedule_edit_redraw(zoom(), pan_x(), pan_y());
+                    class_counter.set(class_counter() + 1); // Trigger saved canvas redraw
+                    return;
+                }
+                
+                // Clear in-progress annotations
                 match selected_tool() {
                     Tool::Polygon => {
                         if polygon().points.len() > 0 {
@@ -120,11 +157,38 @@ pub fn setup_keyboard_shortcuts(
 
             // Handle tool shortcuts (p, b, c, a, h, \, t, f, n)
             match key.as_str() {
-                "p" => selected_tool.set(Tool::Polygon),
-                "b" => selected_tool.set(Tool::BoundingBox),
-                "c" => selected_tool.set(Tool::Comment),
-                "a" => selected_tool.set(Tool::Select),
-                "h" => selected_tool.set(Tool::Pan),
+                "p" => {
+                    // Exit edit mode when switching to drawing tool
+                    if is_editing() {
+                        use super::annotations::edit_state::clear_edit;
+                        clear_edit();
+                        schedule_edit_redraw(zoom(), pan_x(), pan_y());
+                        class_counter.set(class_counter() + 1);
+                    }
+                    selected_tool.set(Tool::Polygon);
+                }
+                "b" => {
+                    // Exit edit mode when switching to drawing tool
+                    if is_editing() {
+                        use super::annotations::edit_state::clear_edit;
+                        clear_edit();
+                        schedule_edit_redraw(zoom(), pan_x(), pan_y());
+                        class_counter.set(class_counter() + 1);
+                    }
+                    selected_tool.set(Tool::BoundingBox);
+                }
+                "c" => {
+                    // Exit edit mode when switching to drawing tool
+                    if is_editing() {
+                        use super::annotations::edit_state::clear_edit;
+                        clear_edit();
+                        schedule_edit_redraw(zoom(), pan_x(), pan_y());
+                        class_counter.set(class_counter() + 1);
+                    }
+                    selected_tool.set(Tool::Comment);
+                }
+                "a" => selected_tool.set(Tool::Select),  // Keep edit mode
+                "h" => selected_tool.set(Tool::Pan),     // Keep edit mode
                 "f" => {
                     // Finish current annotation
                     match selected_tool() {
@@ -186,6 +250,13 @@ pub fn setup_keyboard_shortcuts(
                     }
                 }
                 "n" => {
+                    // Exit edit mode when starting new annotation
+                    if is_editing() {
+                        use super::annotations::edit_state::clear_edit;
+                        clear_edit();
+                        schedule_edit_redraw(zoom(), pan_x(), pan_y());
+                        class_counter.set(class_counter() + 1);
+                    }
                     // Start a new polygon annotation
                     selected_tool.set(Tool::Polygon);
                     // Reset any in-progress annotation

@@ -5,6 +5,7 @@ use std::cell::RefCell;
 use crate::canvas::dom_cache::{get_saved_context, get_window};
 
 use super::store::{load_polygons, load_bboxes, SavedPolygon, SavedBBox};
+use super::edit_state::{is_editing, get_edit_target, EditTarget};
 use crate::canvas::sidebar::ClassItem;
 use crate::canvas::sidebar::storage::load_json;
 
@@ -40,7 +41,7 @@ pub fn invalidate_bbox_cache() {
     });
 }
 
-fn get_cached_polygons(project_id: &str, block_id: &str, image_id: &str) -> Vec<SavedPolygon> {
+pub fn get_cached_polygons(project_id: &str, block_id: &str, image_id: &str) -> Vec<SavedPolygon> {
     CACHED_POLYGONS.with(|cache| {
         let mut cache_mut = cache.borrow_mut();
         if let Some((pid, bid, iid, polys)) = cache_mut.as_ref() {
@@ -72,7 +73,7 @@ fn get_cached_classes(project_id: &str) -> Vec<ClassItem> {
     })
 }
 
-fn get_cached_bboxes(project_id: &str, block_id: &str, image_id: &str) -> Vec<SavedBBox> {
+pub fn get_cached_bboxes(project_id: &str, block_id: &str, image_id: &str) -> Vec<SavedBBox> {
     CACHED_BBOXES.with(|cache| {
         let mut cache_mut = cache.borrow_mut();
         if let Some((pid, bid, iid, bboxes)) = cache_mut.as_ref() {
@@ -127,8 +128,33 @@ fn redraw_saved_now(
     let dpr = window.device_pixel_ratio();
     // Apply transform ONCE - combines DPR scaling with zoom/pan
     let _ = ctx.set_transform(zoom * dpr, 0.0, 0.0, zoom * dpr, pan_x * dpr, pan_y * dpr);
+    
+    // Check if we're editing something
+    let editing_poly_idx = if is_editing() {
+        match get_edit_target() {
+            Some(EditTarget::Polygon { index, .. }) => Some(index),
+            _ => None,
+        }
+    } else {
+        None
+    };
+    
+    let editing_bbox_idx = if is_editing() {
+        match get_edit_target() {
+            Some(EditTarget::BBox { index, .. }) => Some(index),
+            _ => None,
+        }
+    } else {
+        None
+    };
 
-    for sp in polys {
+    for (idx, sp) in polys.iter().enumerate() {
+        // Skip if this is the one being edited
+        if let Some(edit_idx) = editing_poly_idx {
+            if idx == edit_idx {
+                continue;
+            }
+        }
         // Get class color
         let hex = classes
             .iter()
@@ -161,7 +187,13 @@ fn redraw_saved_now(
 
     // Also draw saved BBoxes
     let bboxes = get_cached_bboxes(project_id, block_id, image_id);
-    for bb in bboxes {
+    for (idx, bb) in bboxes.iter().enumerate() {
+        // Skip if this is the one being edited
+        if let Some(edit_idx) = editing_bbox_idx {
+            if idx == edit_idx {
+                continue;
+            }
+        }
         let hex = classes
             .iter()
             .find(|c| c.id == bb.class_id)

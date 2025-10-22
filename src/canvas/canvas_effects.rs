@@ -18,7 +18,7 @@ pub fn setup_annotation_redraw_effect(
     pan_y: Signal<f64>,
 ) {
     use_effect(move || {
-        // Invalidate caches BEFORE reading class_counter to ensure fresh state
+        // Invalidate caches when data changes (class_counter only triggered on add/delete/modify)
         invalidate_polygon_cache();
         invalidate_bbox_cache();
         let _ = class_counter(); // depend on class version to redraw after add/delete/reassign

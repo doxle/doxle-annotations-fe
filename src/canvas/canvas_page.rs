@@ -76,14 +76,9 @@ pub fn CanvasPage(task_id: String) -> Element {
     // Cursor state for custom crosshair
     let cursor_state = CursorState::new();
 
-    let container_class = if is_panning() {
-        if show_grid_lines() && selected_tool().is_drawing_tool() {
-            "canvas-container is-panning polygon-tool-active"
-        } else if show_grid_lines() {
-            "canvas-container is-panning polygon-tool-active"
-        } else {
-            "canvas-container is-panning"
-        }
+    // Don't change class for Select tool panning to avoid flicker
+    let container_class = if is_panning() && selected_tool() == Tool::Pan {
+        "canvas-container is-panning pan-tool-active"
     } else if selected_tool() == Tool::Comment {
         "canvas-container comment-tool-active"
     } else if selected_tool() == Tool::Polygon || selected_tool() == Tool::BoundingBox {
@@ -159,9 +154,12 @@ pub fn CanvasPage(task_id: String) -> Element {
                     hovered_annotation, pid.clone(), bid.clone(), iid.clone(),
                 );
             }},
-            onmouseup: move |evt: Event<MouseData>| {
-                super::mouse_handlers::handle_mouseup(&evt, annotation_dropdown_open, is_panning);
-            },
+            onmouseup: {let pid = project_id_for_ann.clone(); let bid = block_id_for_ann.clone(); let iid = image_id_for_ann.clone(); move |evt: Event<MouseData>| {
+                super::mouse_handlers::handle_mouseup(
+                    &evt, annotation_dropdown_open, is_panning, class_counter,
+                    pid.clone(), bid.clone(), iid.clone(), zoom, pan_x, pan_y
+                );
+            }},
             onmouseleave: move |evt: Event<MouseData>| {
                 super::mouse_handlers::handle_mouseleave(&evt, annotation_dropdown_open, is_panning);
             },

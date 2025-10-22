@@ -7,7 +7,9 @@ use super::polygon::{
     POINT_RADIUS, ZOOMED_IN_RADIUS, ZOOMED_OUT_RADIUS,
 };
 use super::shapes::{Point, Polygon};
-use crate::canvas::dom_cache::{get_overlay_context, get_window};
+use super::edit_draw::draw_edit_overlay;
+use super::edit_state::is_editing;
+use crate::canvas::dom_cache::{get_overlay_context, get_window, get_document};
 
 thread_local! {
     static RAF_PENDING: RefCell<bool> = RefCell::new(false);
@@ -133,4 +135,60 @@ pub fn set_polygon_preview(point: Option<Point>) {
 
 pub fn clear_polygon_preview() {
     PREVIEW_POINT.with(|p| *p.borrow_mut() = None);
+}
+
+/// Schedule redraw for edit mode
+pub fn schedule_edit_redraw(zoom: f64, pan_x: f64, pan_y: f64) {
+    let should_schedule = RAF_PENDING.with(|flag| {
+        let mut pending = flag.borrow_mut();
+        if *pending {
+            false
+        } else {
+            *pending = true;
+            true
+        }
+    });
+    
+    if !should_schedule {
+        return;
+    }
+    
+    let closure = Closure::wrap(Box::new(move || {
+        if let Some(ctx) = get_overlay_canvas_context() {
+            // Clear canvas
+            if let Some(canvas) = ctx.canvas() {
+                let _ = ctx.set_transform(1.0, 0.0, 0.0, 1.0, 0.0, 0.0);
+                ctx.clear_rect(0.0, 0.0, canvas.width() as f64, canvas.height() as f64);
+            }
+            
+            // Apply transform
+            if let Some(win) = get_window() {
+                let dpr = win.device_pixel_ratio();
+                let _ = ctx.set_transform(zoom * dpr, 0.0, 0.0, zoom * dpr, pan_x * dpr, pan_y * dpr);
+            }
+            
+            // Check theme for dark mode
+            let is_dark = if let Some(doc) = get_document() {
+                if let Some(html) = doc.document_element() {
+                    html.class_name().contains("dark")
+                } else {
+                    false
+                }
+            } else {
+                false
+            };
+            
+            // Draw edit overlay
+            draw_edit_overlay(&ctx, zoom, is_dark);
+            
+            // Reset transform
+            let _ = ctx.set_transform(1.0, 0.0, 0.0, 1.0, 0.0, 0.0);
+        }
+        RAF_PENDING.with(|flag| *flag.borrow_mut() = false);
+    }) as Box<dyn FnMut()>);
+    
+    if let Some(win) = get_window() {
+        let _ = win.request_animation_frame(closure.as_ref().unchecked_ref());
+    }
+    closure.forget();
 }

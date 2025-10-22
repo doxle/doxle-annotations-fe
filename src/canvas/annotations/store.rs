@@ -1,7 +1,10 @@
 use serde::{Deserialize, Serialize};
-use crate::canvas::sidebar::storage::{load_json, save_json};
+use crate::canvas::sidebar::storage::{load_json, save_json as save_json_internal};
 use super::shapes::Polygon;
 use crate::canvas::dom_cache::get_window;
+
+// Re-export save_json for edit_commit
+pub use crate::canvas::sidebar::storage::save_json;
 use wasm_bindgen::JsValue;
 use web_sys::CanvasRenderingContext2d;
 
@@ -21,11 +24,11 @@ pub struct SavedBBox {
     pub end: SavedPoint,
 }
 
-fn polys_key(project_id: &str, block_id: &str, image_id: &str) -> String {
+pub fn polys_key(project_id: &str, block_id: &str, image_id: &str) -> String {
     format!("ann:{}:{}:{}:polys", project_id, block_id, image_id)
 }
 
-fn bboxes_key(project_id: &str, block_id: &str, image_id: &str) -> String {
+pub fn bboxes_key(project_id: &str, block_id: &str, image_id: &str) -> String {
     format!("ann:{}:{}:{}:bboxes", project_id, block_id, image_id)
 }
 

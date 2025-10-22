@@ -1,10 +1,13 @@
 use super::annotations::bbox::{on_bbox_click, redraw_bbox};
+use super::annotations::edit_hit_test::{hit_test_node, hit_test_edge, hit_test_bbox_corner};
+use super::annotations::edit_state::{start_edit, start_drag, end_drag, clear_edit, is_editing, get_edit_target, update_drag, EditTarget};
 use super::annotations::overlay_canvas::{
-    clear_polygon_preview, schedule_overlay_redraw, set_polygon_preview,
+    clear_polygon_preview, schedule_overlay_redraw, set_polygon_preview, schedule_edit_redraw,
 };
 use super::annotations::polygon::on_polygon_click;
 use super::annotations::shapes::{BBox, Point, Polygon};
-use super::annotations::store::{load_bboxes, load_polygons, save_polygon};
+use super::annotations::store::{save_polygon};
+use super::annotations::saved_canvas::{get_cached_polygons, get_cached_bboxes};
 use super::annotations::{AnnotationTarget, Tool};
 use super::cursor_state::CursorState;
 use super::dom_cache::get_canvas_container;
@@ -46,10 +49,14 @@ pub fn handle_wheel(
         pan_y.set(new_pan_y);
 
         // Redraw overlays
-        schedule_overlay_redraw(polygon(), zoom(), new_pan_x, new_pan_y);
-        if bbox().start_point.is_some() && !bbox().is_complete {
-            if let Some(ctx) = get_canvas_context() {
-                redraw_bbox(&ctx, &bbox(), zoom(), new_pan_x, new_pan_y);
+        if is_editing() {
+            schedule_edit_redraw(zoom(), new_pan_x, new_pan_y);
+        } else {
+            schedule_overlay_redraw(polygon(), zoom(), new_pan_x, new_pan_y);
+            if bbox().start_point.is_some() && !bbox().is_complete {
+                if let Some(ctx) = get_canvas_context() {
+                    redraw_bbox(&ctx, &bbox(), zoom(), new_pan_x, new_pan_y);
+                }
             }
         }
         return;
@@ -76,12 +83,18 @@ pub fn handle_wheel(
     pan_y.set(new_pan_y);
     zoom.set(new);
     // Note: use_effect watching zoom/pan will redraw Canvas-A
-    // Always schedule overlay redraw (will clear if empty)
-    schedule_overlay_redraw(polygon(), new, new_pan_x, new_pan_y);
-    // If bbox in progress, redraw it as well
-    if bbox().start_point.is_some() && !bbox().is_complete {
-        if let Some(ctx) = get_canvas_context() {
-            redraw_bbox(&ctx, &bbox(), new, new_pan_x, new_pan_y);
+    
+    // Redraw appropriate overlay
+    if is_editing() {
+        schedule_edit_redraw(new, new_pan_x, new_pan_y);
+    } else {
+        // Always schedule overlay redraw (will clear if empty)
+        schedule_overlay_redraw(polygon(), new, new_pan_x, new_pan_y);
+        // If bbox in progress, redraw it as well
+        if bbox().start_point.is_some() && !bbox().is_complete {
+            if let Some(ctx) = get_canvas_context() {
+                redraw_bbox(&ctx, &bbox(), new, new_pan_x, new_pan_y);
+            }
         }
     }
 }
@@ -125,11 +138,113 @@ pub fn handle_mousedown(
         return;
     }
 
-    // Select tool + left mouse button -> click-drag pan (trackpad-style)
+    // Select tool + left mouse button
     if selected_tool() == Tool::Select && evt.data.trigger_button() == Some(MouseButton::Primary) {
-        is_panning.set(true);
-        last_x.set(coords.x);
-        last_y.set(coords.y);
+        let screen_x = coords.x;
+        let screen_y = coords.y - NAVBAR_H;
+        let world_x = (screen_x - pan_x()) / zoom();
+        let world_y = (screen_y - pan_y()) / zoom();
+        
+        // If already editing, check for node/edge hits first
+        if is_editing() {
+            if let Some(target) = get_edit_target() {
+                let hit_annotation = match target {
+                    EditTarget::Polygon { points, .. } => {
+                        // Check node hit
+                        if let Some(node_idx) = hit_test_node(Point::new(world_x, world_y), &points, zoom()) {
+                            start_drag(Some(node_idx), Point::new(world_x, world_y));
+                            return;
+                        }
+                        // Check edge hit (drag entire shape)
+                        hit_test_edge(Point::new(world_x, world_y), &points, zoom(), true).is_some()
+                    }
+                    EditTarget::BBox { start, end, .. } => {
+                        // Check corner hit
+                        if let Some(corner_idx) = hit_test_bbox_corner(Point::new(world_x, world_y), start, end, zoom()) {
+                            // Map corner to start/end (0=start, 2=end for diagonal corners)
+                            let node_idx = if corner_idx == 0 || corner_idx == 3 { 0 } else { 1 };
+                            start_drag(Some(node_idx), Point::new(world_x, world_y));
+                            return;
+                        }
+                        // Check if clicking inside bbox
+                        world_x >= start.x.min(end.x) && world_x <= start.x.max(end.x) &&
+                        world_y >= start.y.min(end.y) && world_y <= start.y.max(end.y)
+                    }
+                };
+                
+                if hit_annotation {
+                    // Start dragging the whole shape
+                    start_drag(None, Point::new(world_x, world_y));
+                    return;
+                } else {
+                    // Clicked outside the edited annotation - exit edit mode
+                    clear_edit();
+                    // Clear overlay
+                    schedule_edit_redraw(zoom(), pan_x(), pan_y());
+                    // Redraw saved canvas directly without signal
+                    use super::annotations::saved_canvas::redraw_saved_annotations;
+                    redraw_saved_annotations(&project_id, &block_id, &image_id, zoom(), pan_x(), pan_y());
+                    // Start panning
+                    is_panning.set(true);
+                    last_x.set(coords.x);
+                    last_y.set(coords.y);
+                    return;
+                }
+            }
+        }
+        
+        // Only check for annotations if we were editing (need to exit) or might select something
+        // Skip expensive localStorage reads if just panning around
+        if is_editing() {
+            // We were editing, clicking outside should exit
+            clear_edit();
+            schedule_edit_redraw(zoom(), pan_x(), pan_y());
+            // Redraw saved canvas directly
+            use super::annotations::saved_canvas::redraw_saved_annotations;
+            redraw_saved_annotations(&project_id, &block_id, &image_id, zoom(), pan_x(), pan_y());
+            // Start panning
+            is_panning.set(true);
+            last_x.set(coords.x);
+            last_y.set(coords.y);
+            } else {
+                // Not editing - check if clicking on annotation to select
+                // Use cached versions to avoid localStorage reads on every click
+                let saved_polys = get_cached_polygons(&project_id, &block_id, &image_id);
+                let saved_bboxes = get_cached_bboxes(&project_id, &block_id, &image_id);
+                
+                let mut found: Option<AnnotationTarget> = None;
+            
+            // Prefer bboxes over polygons
+            for (idx, bb) in saved_bboxes.iter().enumerate().rev() {
+                if point_in_bbox(world_x, world_y, bb) {
+                    found = Some(AnnotationTarget::BBox(idx));
+                    break;
+                }
+            }
+            
+            if found.is_none() {
+                for (idx, sp) in saved_polys.iter().enumerate().rev() {
+                    if sp.points.len() >= 3 && point_in_poly(world_x, world_y, &sp.points) {
+                        found = Some(AnnotationTarget::Poly(idx));
+                        break;
+                    }
+                }
+            }
+            
+            if let Some(target) = found {
+                // Enter edit mode
+                start_edit(target, &saved_polys, &saved_bboxes);
+                schedule_edit_redraw(zoom(), pan_x(), pan_y());
+                // Redraw saved canvas directly to hide selected annotation (no data change, no counter)
+                use super::annotations::saved_canvas::redraw_saved_annotations;
+                redraw_saved_annotations(&project_id, &block_id, &image_id, zoom(), pan_x(), pan_y());
+            } else {
+                // No annotation clicked, just pan
+                is_panning.set(true);
+                last_x.set(coords.x);
+                last_y.set(coords.y);
+            }
+        }
         return;
     }
 
@@ -276,6 +391,22 @@ pub fn handle_mousemove(
         return;
     } // freeze interactions under dropdown
     let coords = evt.client_coordinates();
+    
+    // Handle edit mode dragging (fast path - no signals!)
+    if is_editing() {
+        use super::annotations::edit_state::is_dragging;
+        if is_dragging() {
+            let screen_x = coords.x;
+            let screen_y = coords.y - NAVBAR_H;
+            let world_x = (screen_x - pan_x()) / zoom();
+            let world_y = (screen_y - pan_y()) / zoom();
+            
+            if update_drag(Point::new(world_x, world_y)) {
+                schedule_edit_redraw(zoom(), pan_x(), pan_y());
+            }
+            return;
+        }
+    }
 
     // Handle panning
     if is_panning() {
@@ -288,12 +419,18 @@ pub fn handle_mousemove(
         last_x.set(coords.x);
         last_y.set(coords.y);
         // Note: use_effect watching pan will redraw Canvas-A
-        // Always schedule overlay redraw (will clear if empty)
-        schedule_overlay_redraw(polygon(), zoom(), new_pan_x, new_pan_y);
-        // If bbox in progress, redraw it as well
-        if bbox().start_point.is_some() && !bbox().is_complete {
-            if let Some(ctx) = get_canvas_context() {
-                redraw_bbox(&ctx, &bbox(), zoom(), new_pan_x, new_pan_y);
+        
+        // Redraw edit overlay if editing
+        if is_editing() {
+            schedule_edit_redraw(zoom(), new_pan_x, new_pan_y);
+        } else {
+            // Always schedule overlay redraw (will clear if empty)
+            schedule_overlay_redraw(polygon(), zoom(), new_pan_x, new_pan_y);
+            // If bbox in progress, redraw it as well
+            if bbox().start_point.is_some() && !bbox().is_complete {
+                if let Some(ctx) = get_canvas_context() {
+                    redraw_bbox(&ctx, &bbox(), zoom(), new_pan_x, new_pan_y);
+                }
             }
         }
         return;
@@ -390,8 +527,8 @@ pub fn handle_mousemove(
 
         // Check annotations (prefer bboxes, then polygons)
         let mut found: Option<AnnotationTarget> = None;
-        let polys = load_polygons(&project_id, &block_id, &image_id);
-        let bboxes = load_bboxes(&project_id, &block_id, &image_id);
+        let polys = get_cached_polygons(&project_id, &block_id, &image_id);
+        let bboxes = get_cached_bboxes(&project_id, &block_id, &image_id);
 
         for (idx, bb) in bboxes.iter().enumerate().rev() {
             if point_in_bbox(world_x, world_y, bb) {
@@ -419,9 +556,33 @@ pub fn handle_mouseup(
     _evt: &Event<MouseData>,
     annotation_dropdown_open: Signal<bool>,
     mut is_panning: Signal<bool>,
+    mut class_counter: Signal<u64>,
+    project_id: String,
+    block_id: String,
+    image_id: String,
+    zoom: Signal<f64>,
+    pan_x: Signal<f64>,
+    pan_y: Signal<f64>,
 ) {
     if annotation_dropdown_open() {
         return;
+    }
+    
+    // End drag but stay in edit mode
+    use super::annotations::edit_state::is_dragging;
+    use super::annotations::edit_commit::commit_edit;
+    if is_dragging() {
+        end_drag();
+        // Commit changes but DON'T clear edit mode - stay selected for further editing
+        if commit_edit(&project_id, &block_id, &image_id) {
+            // Keep edit mode active, just refresh the display
+            schedule_edit_redraw(zoom(), pan_x(), pan_y());
+            // Invalidate saved canvas cache
+            use super::annotations::saved_canvas::{invalidate_polygon_cache, invalidate_bbox_cache};
+            invalidate_polygon_cache();
+            invalidate_bbox_cache();
+            class_counter.set(class_counter() + 1);
+        }
     }
     is_panning.set(false);
 }
@@ -468,8 +629,8 @@ pub fn handle_annotation_dropdown(
 
     // Prefer BBoxes (drawn last), then Polys; iterate in reverse order
     let mut found: Option<AnnotationTarget> = None;
-    let polys = load_polygons(&project_id, &block_id, &image_id);
-    let bboxes = load_bboxes(&project_id, &block_id, &image_id);
+    let polys = get_cached_polygons(&project_id, &block_id, &image_id);
+    let bboxes = get_cached_bboxes(&project_id, &block_id, &image_id);
     for (idx, bb) in bboxes.iter().enumerate().rev() {
         if point_in_bbox(world_x, world_y, bb) {
             found = Some(AnnotationTarget::BBox(idx));
