@@ -160,19 +160,19 @@
 
 /* Force show correct logos for home page */
 .logo-light {
-    display: none !important;
+    display: block !important;
 }
 
 .logo-dark {
-    display: block !important;
+    display: none !important;
 }
 
 .dark .logo-light {
-    display: block !important;
+    display: none !important;
 }
 
 .dark .logo-dark {
-    display: none !important;
+    display: block !important;
 }
 
 .logo-img:hover {
