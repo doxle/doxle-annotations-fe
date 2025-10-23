@@ -50,6 +50,12 @@ pub fn HomePage() -> Element {
                 transform: translate3d(0,0,0);
                 pointer-events: none;
                 backface-visibility: hidden;
+            }}
+            .interactive-dot {{
+                width: 4px;
+                height: 4px;
+                background-color: rgba(149, 128, 255, 0.5);
+                transition: opacity 0.3s ease;
             }}"
         }
         div {

@@ -28,7 +28,7 @@
 
   // Overlay CSS for animating the entire hero text block with a single stripe
   function injectOverlayCSS(){
-var css = "\n.home-sheen-overlay { position: absolute; pointer-events: none; overflow: visible; z-index: 11; }\n.home-sheen-stripe { position: absolute; top: 0; left: var(--stripe-left, 0px); height: 100%; background: linear-gradient(120deg, transparent 30%, var(--shimmer-color) 50%, transparent 70%); transform: translateX(0); opacity: 0; will-change: transform, opacity; animation: overlaySheen 4.2s ease-in-out infinite; }\n@keyframes overlaySheen { 0% { transform: translateX(0); opacity: 0; } 6% { opacity: 0.9; } 86% { transform: translateX(var(--travel, 0px)); opacity: 1; } 100% { transform: translateX(var(--travel, 0px)); opacity: 0; } }\n";
+var css = "\n.home-sheen-overlay { position: absolute; pointer-events: none; overflow: visible; z-index: 11; }\n.home-sheen-stripe { position: absolute; top: 0; left: var(--stripe-left, 0px); height: 100%; background: linear-gradient(120deg, transparent 30%, var(--shimmer-color) 50%, transparent 70%); transform: translateX(0); opacity: 0; will-change: transform, opacity; animation: overlaySheen 8s ease-in-out infinite; animation-play-state: running; }\n.home-sheen-stripe.paused { animation-play-state: paused; }\n@keyframes overlaySheen { 0% { transform: translateX(0); opacity: 0; } 3% { opacity: 0.9; } 43% { transform: translateX(var(--travel, 0px)); opacity: 1; } 50% { transform: translateX(var(--travel, 0px)); opacity: 0; } 100% { transform: translateX(var(--travel, 0px)); opacity: 0; } }\n";
     var style = document.getElementById('home-overlay-sheen-style');
     if (!style) {
       style = document.createElement('style');
@@ -98,8 +98,8 @@ var css = "\n.home-sheen-overlay { position: absolute; pointer-events: none; ove
     var stripeWidth = Math.round(width * 0.6);
     stripe.style.width = stripeWidth + 'px';
     stripe.style.setProperty('--travel', width + 'px');
-    // Slightly longer wait before next animation by increasing duration
-    stripe.style.animationDuration = '5.2s';
+    // Longer animation duration for better performance
+    stripe.style.animationDuration = '8s';
 
     // Start the stripe just before the BUILD word
     var startPx = 0 - Math.round(stripeWidth * 0.3);
@@ -178,5 +178,22 @@ var css = "\n.home-sheen-overlay { position: absolute; pointer-events: none; ove
     window.__homeSheenObserver = obs;
   }
 
-  ready(function(){ injectOverlayCSS(); applyOverlaySheen(); startOverlayObserver(); window.addEventListener('resize', applyOverlaySheen, { passive: true }); });
+  // Handle tab visibility for performance
+  function handleVisibility(){
+    var stripe = document.querySelector('.home-sheen-stripe');
+    if (!stripe) return;
+    if (document.hidden) {
+      stripe.classList.add('paused');
+    } else {
+      stripe.classList.remove('paused');
+    }
+  }
+
+  ready(function(){ 
+    injectOverlayCSS(); 
+    applyOverlaySheen(); 
+    startOverlayObserver(); 
+    window.addEventListener('resize', applyOverlaySheen, { passive: true }); 
+    document.addEventListener('visibilitychange', handleVisibility, { passive: true });
+  });
 })();
