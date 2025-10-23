@@ -63,8 +63,27 @@ fn App() -> Element {
         }
     });
 
-    // Watch THEME signal and apply to HTML element
+    // Watch THEME signal and apply to HTML element (force light on home page)
     use_effect(move || {
+        #[cfg(target_arch = "wasm32")]
+        {
+            if let Some(win) = web_sys::window() {
+                if let Ok(path) = win.location().pathname() {
+                    if path == "/" {
+                        if let Some(document) = win.document() {
+                            if let Some(html) = document.document_element() {
+                                use wasm_bindgen::JsCast;
+                                use web_sys::HtmlElement;
+                                if let Ok(html_el) = html.dyn_into::<HtmlElement>() {
+                                    html_el.set_class_name("light");
+                                }
+                            }
+                        }
+                        return;
+                    }
+                }
+            }
+        }
         let theme = *THEME.read();
         apply_theme_class(theme);
     });
@@ -77,6 +96,7 @@ fn App() -> Element {
                 document::Meta { name: "viewport", content: "width=device-width, initial-scale=1, viewport-fit=cover" }
                 document::Meta { name: "apple-mobile-web-app-capable", content: "yes" }
                 document::Meta { name: "apple-mobile-web-app-status-bar-style", content: "black-translucent" }
+                document::Meta { name: "theme-color", content: "#ffffff" }
 
                 // Base styles
                 document::Link { rel: "stylesheet", href: TAILWIND_CSS }
@@ -100,6 +120,14 @@ fn App() -> Element {
                     {
                         r#"
 (function(){
+    // Skip theme detection on home page (always light)
+    if(window.location.pathname === '/') {
+        var html = document.documentElement;
+        html.classList.remove('dark');
+        html.classList.add('light');
+        return;
+    }
+
     var html=document.documentElement;
     var darkModeQuery=window.matchMedia('(prefers-color-scheme: dark)');
 

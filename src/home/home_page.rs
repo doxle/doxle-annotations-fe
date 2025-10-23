@@ -35,6 +35,10 @@ pub fn HomePage() -> Element {
     });
 
     rsx! {
+        // Force light background on the root to prevent tab-switch flicker
+        document::Style {
+            r"html, body {{ background: #ffffff !important; background-color: #ffffff !important; color-scheme: light !important; }}"
+        }
         document::Style {
             r".dot {{
                 position: absolute;
