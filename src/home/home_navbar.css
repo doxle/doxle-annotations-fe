@@ -9,7 +9,7 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 20px 40px;
+    padding: 32px 40px 20px 40px; /* Added 12px to top padding */
     background: transparent;
 }
 
@@ -43,12 +43,12 @@
     border: none;
     font-family: Helvetica, Arial, sans-serif;
     cursor: pointer;
-    color: var(--text-primary);
+    color: #333333 !important; /* Force text-primary */
     transition: opacity 0.2s;
 }
 
 .say-hello-btn {
-    background: var(--primary-button-bg);
+    background: #4f5bf8 !important; /* Force primary-button-bg */
     font-weight: 300 !important;
     width: 140px;
     height: 60px;
@@ -56,7 +56,7 @@
     border: none;
     font-family: Helvetica, Arial, sans-serif;
     cursor: pointer;
-    color: var(--primary-button-text);
+    color: #ffffff !important; /* Force primary-button-text */
     padding: 10px 24px;
     border-radius: 0px;
     transition: background 0.2s;
@@ -139,7 +139,7 @@
 }
 
 .say-hello-btn:hover {
-    background: var(--primary-button-hover);
+    background: rgba(79, 91, 248, 0.9) !important; /* primary-button-hover */
 }
 
 .nav-btn:hover:not(.active) {
@@ -158,23 +158,21 @@
     transition: filter 0.2s;
 }
 
-/* Show light logo in light theme, dark logo in dark theme */
+/* Force show correct logos for home page */
 .logo-light {
-    display: block;
+    display: none !important;
 }
 
 .logo-dark {
-    display: none;
+    display: block !important;
 }
 
-@media (prefers-color-scheme: dark) {
-    .logo-light {
-        display: none;
-    }
-    
-    .logo-dark {
-        display: block;
-    }
+.dark .logo-light {
+    display: block !important;
+}
+
+.dark .logo-dark {
+    display: none !important;
 }
 
 .logo-img:hover {

@@ -10,7 +10,7 @@
     width: 100%;
     min-height: 100vh;
     font-family: HelveticaNeue, Helvetica, Arial, sans-serif;
-    background-color: var(--bg-primary);
+    background-color: #ffffff !important; /* Force white background */
     overflow: hidden;
 }
 
@@ -38,7 +38,7 @@
     font-size: clamp(65px, 8vw, 90px);
     font-weight: 400;
     line-height: 1;
-    color: var(--accent-blue);
+    color: #3342ff !important; /* Force accent blue */
     margin: 0;
 }
 
@@ -46,7 +46,7 @@
     font-size: clamp(65px, 8vw, 90px);
     font-weight: 400;
     line-height: 1;
-    color: var(--accent-blue);
+    color: #3342ff !important; /* Force accent blue */
     margin: 0 0 24px 0;
 }
 
@@ -57,7 +57,7 @@
     line-height: 20px;
     font-size: clamp(18px, 2.5vw, 18px);
     margin: 0px 0 32px 0;
-    color: var(--text-primary);
+    color: #333333 !important; /* Force text-primary */
     text-align: left;
 }
 
@@ -68,8 +68,8 @@
     align-items: center;
     justify-content: space-between;
     padding: 0 20px;
-    background-color: var(--button-secondary-bg);
-    color: var(--button-secondary-text);
+    background-color: #000 !important; /* button-secondary-bg */
+    color: #fff !important; /* button-secondary-text */
     border-radius: 0px;
     border: none;
     transition:
@@ -83,8 +83,8 @@
 }
 
 .home-button:hover {
-    background-color: var(--accent-blue);
-    color: var(--text-primary);
+    background-color: #3342ff !important; /* accent-blue on hover */
+    color: #ffffff !important; /* White text on hover */
 }
 
 .home-button-text {
@@ -97,22 +97,22 @@
     display: block;
 }
 
+/* Force show correct upload button logos */
+/* Note: floorplan-light.svg is BLACK, floorplan-dark.svg is WHITE */
 .upload-logo-light {
-    display: none;
+    display: none !important; /* This is the BLACK logo */
 }
 
 .upload-logo-dark {
-    display: block;
+    display: block !important; /* This is the WHITE logo */
 }
 
-@media (prefers-color-scheme: dark) {
-    .upload-logo-light {
-        display: block;
-    }
+.home-button:hover .upload-logo-light {
+    display: none !important;
+}
 
-    .upload-logo-dark {
-        display: none;
-    }
+.home-button:hover .upload-logo-dark {
+    display: block !important; /* Keep WHITE logo on hover */
 }
 
 /* Dot animation styles */

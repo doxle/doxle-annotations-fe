@@ -4,16 +4,12 @@ use dioxus::prelude::*;
 const LOGO_LIGHT: Asset = asset!("/assets/icons/floorplan-light.svg");
 const LOGO_DARK: Asset = asset!("/assets/icons/floorplan-dark.svg");
 const DOTS_JS: &str = include_str!("../../js/dot-animation.js");
-const SHEEN_JS: &str = include_str!(concat!(
-    env!("CARGO_MANIFEST_DIR"),
-    "/js/home-text-sheen.js"
-));
+const TYPEWRITER_JS: &str = include_str!("../../js/typewriter.js");
 
 
 #[component]
 pub fn HomePage() -> Element {
-
-    // Inject dot animation JS and shimmer JS on mount so the browser executes them exactly once
+    // Inject animation scripts
     use_effect(move || {
         #[cfg(target_arch = "wasm32")]
         {
@@ -28,11 +24,11 @@ pub fn HomePage() -> Element {
                 let _ = document.head().unwrap().append_child(&script);
             }
 
-            if document.get_element_by_id("home-sheen-script").is_none() {
+            if document.get_element_by_id("typewriter-script").is_none() {
                 let script = document.create_element("script").unwrap();
-                script.set_id("home-sheen-script");
+                script.set_id("typewriter-script");
                 script.set_attribute("type", "text/javascript").ok();
-                script.set_text_content(Some(SHEEN_JS));
+                script.set_text_content(Some(TYPEWRITER_JS));
                 let _ = document.head().unwrap().append_child(&script);
             }
         }
@@ -50,12 +46,6 @@ pub fn HomePage() -> Element {
                 transform: translate3d(0,0,0);
                 pointer-events: none;
                 backface-visibility: hidden;
-            }}
-            .interactive-dot {{
-                width: 4px;
-                height: 4px;
-                background-color: rgba(149, 128, 255, 0.5);
-                transition: opacity 0.3s ease;
             }}"
         }
         div {
