@@ -7,6 +7,7 @@ pub mod annotations;
 pub mod websocket;
 pub mod classes;
 pub mod uploads;
+pub mod cloudfront;
 
 // Re-exports for convenience
 pub use auth::{authenticate, signup, store_token, get_token, clear_token};

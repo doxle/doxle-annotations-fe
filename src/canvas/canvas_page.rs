@@ -88,11 +88,11 @@ pub fn CanvasPage(block_id: String) -> Element {
     let image_id_for_ann = current_image
         .as_ref()
         .map(|img| img.image_id.clone())
-        .unwrap_or_else(|| "house1".to_string());
+        .unwrap_or_default();
     let current_image_url = current_image
         .as_ref()
         .map(|img| img.url.clone())
-        .unwrap_or_else(|| asset!("/assets/images/test.png").to_string());
+        .unwrap_or_default();
     // Clones for event handlers to avoid move conflicts
     let current_image_url_load = current_image_url.clone();
     let current_image_url_error = current_image_url.clone();
@@ -241,19 +241,25 @@ pub fn CanvasPage(block_id: String) -> Element {
                 ),
 
                 // Background image layer only
-                div {
-                    class: "canvas-layer canvas-image",
-                    img {
-                        src: "{current_image_url}",
-                        alt: "Canvas image",
-                        draggable: "false",
-                        onload:move|_|{
-                            tracing::info!("🖼️ Image loaded: {}", current_image_url_load);
-                            // Cache image world bounds
-                            cache_image_world_bounds(zoom(), pan_x(), pan_y());
-                        },
-                        onerror:move|_|{
-                            tracing::error!("🛑 Image failed to load: {}", current_image_url_error);
+                if !current_image_url.is_empty() {
+                    div {
+                        class: "canvas-layer canvas-image",
+                        img {
+                            key: "{image_id_for_ann}",
+                            src: "{current_image_url}",
+                            alt: "Canvas image",
+                            draggable: "false",
+                            decoding: "async",
+                            fetchpriority: "high",
+                            crossorigin: "use-credentials",
+                            onload:move|_|{
+                                tracing::info!("🖼️ Image loaded: {}", current_image_url_load);
+                                // Cache image world bounds
+                                cache_image_world_bounds(zoom(), pan_x(), pan_y());
+                            },
+                            onerror:move|_|{
+                                tracing::error!("🛑 Image failed to load: {}", current_image_url_error);
+                            }
                         }
                     }
                 }

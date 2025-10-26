@@ -28,7 +28,10 @@ pub fn LoginPage() -> Element {
                     // Step 2: Store token
                     api::store_token(&auth_result.id_token);
                     
-                    // Step 3: Check if user profile exists in DynamoDB
+                    // Step 3: Request CloudFront signed cookies (ignore errors in local dev)
+                    let _ = crate::api::cloudfront::set_cloudfront_cookies(api::client::API_BASE_URL, &auth_result.id_token).await;
+
+                    // Step 4: Check if user profile exists in DynamoDB
                     match client::get_current_user().await {
                         Ok(_user) => {
                             // Success! Redirect to projects
