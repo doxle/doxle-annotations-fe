@@ -25,9 +25,9 @@
     --sidebar-row-hover: rgb(230, 230, 230);
 
     /* UI element colors */
-    --primary-button-bg: #4f5bf8;
+    --primary-button-bg: #000000;
     --primary-button-text: #ffffff;
-    --primary-button-hover: rgba(79, 91, 248, 0.9);
+    --primary-button-hover: #333333;
 
     /* Hover and focus colors */
     --hover-blue: rgb(99, 138, 255);

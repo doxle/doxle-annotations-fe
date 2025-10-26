@@ -39,13 +39,13 @@
     box-sizing: border-box;
     outline: none;
     color: #000;
-    font-weight: 500;
-    font-family: 'HelveticaNeue-Medium', Helvetica, Arial, sans-serif;
+    font-weight: 400;
+    font-family: Helvetica, Arial, sans-serif;
 }
 
 .login-input::placeholder {
     color: #999;
-    font-weight: 400;
+    font-weight: 300;
     font-family: Helvetica, Arial, sans-serif;
 }
 

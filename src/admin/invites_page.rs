@@ -79,10 +79,22 @@ pub fn AdminInvitesPage() -> Element {
     let copy_invite_link = move |invite_code: String| {
         let link = format!("http://localhost:8080/signup?code={}", invite_code);
         
-        if let Some(window) = web_sys::window() {
-            if let Some(navigator) = window.navigator().clipboard() {
-                let _ = navigator.write_text(&link);
+        #[cfg(target_arch = "wasm32")]
+        {
+            use wasm_bindgen::prelude::*;
+            
+            #[wasm_bindgen(inline_js = r#"
+                export function copyToClipboard(text) {
+                    if (navigator.clipboard && navigator.clipboard.writeText) {
+                        navigator.clipboard.writeText(text).catch(err => console.error('Copy failed:', err));
+                    }
+                }
+            "#)]
+            extern "C" {
+                fn copyToClipboard(text: &str);
             }
+            
+            copyToClipboard(&link);
         }
     };
 

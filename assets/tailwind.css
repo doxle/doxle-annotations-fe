@@ -203,17 +203,11 @@
   .hidden {
     display: none;
   }
-  .inline {
-    display: inline;
-  }
   .table {
     display: table;
   }
   .min-h-screen {
     min-height: 100vh;
-  }
-  .flex-shrink {
-    flex-shrink: 1;
   }
   .grow {
     flex-grow: 1;
