@@ -1,30 +1,7 @@
 use crate::Route;
-use crate::home::api::{cognito, client};
+use crate::api::{self, client};
 use crate::shared::loading::LoadingPage;
 use dioxus::prelude::*;
-
-const SIGNIN_CSS: &str = r#"
-    .signin-email-input,
-    .signin-password-input {
-        color: #000;
-        font-weight: 500;
-        font-family: 'HelveticaNeue-Medium', Helvetica, Arial, sans-serif;
-    }
-    .signin-email-input::placeholder,
-    .signin-password-input::placeholder {
-        color: #999;
-        font-weight: 400;
-        font-family: Helvetica, Arial, sans-serif;
-    }
-"#;
-const AUTOFOCUS_JS: &str = r#"
-    setTimeout(function() {
-        var emailInput = document.querySelector('.signin-email-input');
-        if (emailInput) {
-            emailInput.focus();
-        }
-    }, 100);
-"#;
 
 #[component]
 pub fn LoginPage() -> Element {
@@ -36,31 +13,6 @@ pub fn LoginPage() -> Element {
     let mut is_loading = use_signal(|| false);
     let nav = navigator();
 
-    // Inject Signin CSS and autofocus script once to avoid Dioxus Document prop-change warnings
-    use_effect(move || {
-        #[cfg(target_arch = "wasm32")]
-        {
-            let window = web_sys::window().unwrap();
-            let document = window.document().unwrap();
-
-            if document.get_element_by_id("signin-style").is_none() {
-                let style = document.create_element("style").unwrap();
-                style.set_id("signin-style");
-                style.set_attribute("type", "text/css").ok();
-                style.set_text_content(Some(SIGNIN_CSS));
-                let _ = document.head().unwrap().append_child(&style);
-            }
-
-            if document.get_element_by_id("signin-autofocus").is_none() {
-                let script = document.create_element("script").unwrap();
-                script.set_id("signin-autofocus");
-                script.set_attribute("type", "text/javascript").ok();
-                script.set_text_content(Some(AUTOFOCUS_JS));
-                let _ = document.head().unwrap().append_child(&script);
-            }
-        }
-    });
-
     let handle_submit = move |evt: Event<FormData>| {
         evt.prevent_default();
         let email_value = email();
@@ -71,19 +23,21 @@ pub fn LoginPage() -> Element {
             error_message.set(None);
             
             // Step 1: Authenticate with Cognito
-            match cognito::authenticate(&email_value, &password_value).await {
+            match api::authenticate(&email_value, &password_value).await {
                 Ok(auth_result) => {
                     // Step 2: Store token
-                    cognito::store_token(&auth_result.id_token);
+                    api::store_token(&auth_result.id_token);
                     
-                    // Step 3: Lazy initialize user profile in DynamoDB
-                    match client::get_or_create_user(&email_value).await {
+                    // Step 3: Check if user profile exists in DynamoDB
+                    match client::get_current_user().await {
                         Ok(_user) => {
                             // Success! Redirect to projects
                             nav.push(Route::ProjectsPage {});
                         }
                         Err(e) => {
-                            error_message.set(Some(format!("Failed to initialize profile: {}", e)));
+                            tracing::warn!("User profile not found: {}", e);
+                            // TODO: Redirect to onboarding/profile creation page
+                            error_message.set(Some("Please complete your profile setup".to_string()));
                             is_loading.set(false);
                         }
                     }
@@ -158,10 +112,14 @@ pub fn LoginPage() -> Element {
                     }
                     div {
                         class: "login-links",
+                        span {
+                            class: "login-text-secondary",
+                            "Don't have an account? "
+                        }
                         a {
                             class: "login-link",
-                            onclick: move |_| { /* TODO: Implement login via link */ },
-                            "Log in via link"
+                            onclick: move |_| { nav.push(Route::SignupPage {}); },
+                            "Sign up"
                         }
                         span {
                             class: "login-divider",

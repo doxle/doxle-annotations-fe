@@ -51,6 +51,44 @@
     --avatar-bg: #3b82f6;
     --avatar-text: #ffffff;
 
+    /* Project page colors */
+    --project-title-color: #000000;
+    --project-card-bg: #ffffff;
+    --project-card-image-bg: rgb(230, 230, 230);
+    --project-card-divider: #e5e5e5;
+    --project-button-bg: rgb(11, 153, 245);
+    
+    /* Block card colors */
+    --block-card-bg: rgb(230, 230, 230);
+    
+    /* App Sidebar colors */
+    --app-sidebar-bg: #ffffff;
+    --app-sidebar-border: rgb(230, 230, 230);
+    --app-sidebar-text: #000000;
+    --app-sidebar-text-secondary: #333333;
+    --app-sidebar-text-tertiary: #999999;
+    --app-sidebar-avatar-bg: rgb(255, 204, 0);
+    --app-sidebar-avatar-text: #000000;
+    --app-sidebar-divider: rgb(230, 230, 230);
+    --app-sidebar-nav-hover: rgba(0, 0, 0, 0.04);
+    --app-sidebar-nav-active-bg: rgba(59, 130, 246, 0.1);
+    --app-sidebar-nav-active-text: #3b82f6;
+
+    /* Project dropdown colors */
+    --project-dropdown-bg: rgb(30, 30, 30);
+    --project-dropdown-text: #ffffff;
+    --project-dropdown-hover-bg: rgb(68, 151, 248);
+
+    /* Modal colors */
+    --modal-overlay-bg: rgba(0, 0, 0, 0.5);
+    --modal-bg: #ffffff;
+    --modal-border: #e5e5e5;
+    --modal-text: #000000;
+    --modal-input-bg: #ffffff;
+    --modal-input-border: #d1d5db;
+    --modal-button-secondary-bg: #f3f4f6;
+    --modal-button-secondary-text: #374151;
+
     /* Navbar element colors */
     --navbar-text-bright: rgba(255, 255, 255, 0.9);
     --navbar-separator: rgba(255, 255, 255, 0.2);
@@ -63,73 +101,7 @@
     --annotation-stroke-width: 2;
 }
 
-/* Dark theme via media query OR .dark class on html */
-@media (prefers-color-scheme: dark) {
-    :root {
-        /* Dark theme colors */
-        --bg-primary: #1a1a1a;
-        --bg-secondary: rgb(27, 27, 27);
-        --bg-card: #252525;
-        --bg-card-hover: #2f2f2f;
-        --text-primary: #e5e5e5;
-        --text-secondary: #b0b0b0;
-        --text-tertiary: #808080;
-        --border-color: #404040;
-        --shadow: rgba(0, 0, 0, 0.3);
-        --shadow-hover: rgba(0, 0, 0, 0.5);
-        --accent-blue: #3342ff;
-        --accent-red: #ff4444;
-        --button-secondary-bg: #fff;
-        --button-secondary-text: #000;
-        --shimmer-color: rgba(20, 16, 37, 0.75);
-        --dot-color: rgb(70, 70, 90);
-        --navbar-bg: rgb(21, 21, 21);
-        --sidebar-bg: rgb(30, 30, 30);
-        --sidebar-border: rgb(60, 60, 60);
-        --sidebar-text: #ffffff;
-        --sidebar-row-hover: rgb(50, 50, 50);
-
-        /* UI element colors (dark mode) */
-        --primary-button-bg: #4f5bf8;
-        --primary-button-text: #ffffff;
-        --primary-button-hover: rgba(79, 91, 248, 0.9);
-
-        /* Hover and focus colors (dark mode) */
-        --hover-blue: rgb(99, 138, 255);
-        --focus-blue: #4f5bf8;
-        --outline-blue: rgba(51, 66, 255, 0.4);
-
-        /* Error colors (dark mode) */
-        --error-bg: rgba(255, 68, 68, 0.1);
-        --error-border: rgba(255, 68, 68, 0.3);
-        --error-text: #ff6b6b;
-
-        /* Zoom controls (dark mode) */
-        --zoom-control-bg: rgba(0, 0, 0, 0.7);
-        --zoom-control-text: #ffffff;
-        --zoom-button-bg: rgba(255, 255, 255, 0.1);
-        --zoom-button-border: rgba(255, 255, 255, 0.2);
-        --zoom-button-hover-bg: rgba(255, 255, 255, 0.2);
-        --zoom-button-hover-border: rgba(255, 255, 255, 0.3);
-
-        /* Avatar colors (dark mode) */
-        --avatar-bg: #3b82f6;
-        --avatar-text: #ffffff;
-
-        /* Navbar element colors (dark mode) */
-        --navbar-text-bright: rgba(255, 255, 255, 0.9);
-        --navbar-separator: rgba(255, 255, 255, 0.2);
-        --navbar-tool-active: rgba(255, 255, 255, 0.15);
-        --tooltip-bg: #000000;
-
-        /* Annotation colors (dark mode) */
-        --annotation-point-fill: rgba(51, 66, 255, 0.3);
-        --annotation-point-stroke: rgb(51, 66, 255);
-        --annotation-stroke-width: 2;
-    }
-}
-
-/* Manual dark theme override */
+/* Manual dark theme override via .dark class only */
 html.dark {
     /* Dark theme colors */
     --bg-primary: #1a1a1a;
@@ -181,6 +153,44 @@ html.dark {
     --avatar-bg: #3b82f6;
     --avatar-text: #ffffff;
 
+    /* Project page colors (dark mode) */
+    --project-title-color: #ffffff;
+    --project-card-bg: #252525;
+    --project-card-image-bg: rgb(60, 60, 60);
+    --project-card-divider: #404040;
+    --project-button-bg: rgb(11, 153, 245);
+    
+    /* Block card colors (dark mode) */
+    --block-card-bg: rgb(60, 60, 60);
+    
+    /* App Sidebar colors (dark mode) */
+    --app-sidebar-bg: rgb(30, 30, 30);
+    --app-sidebar-border: rgb(60, 60, 60);
+    --app-sidebar-text: #ffffff;
+    --app-sidebar-text-secondary: #e5e5e5;
+    --app-sidebar-text-tertiary: #808080;
+    --app-sidebar-avatar-bg: rgb(255, 204, 0);
+    --app-sidebar-avatar-text: #000000;
+    --app-sidebar-divider: rgb(60, 60, 60);
+    --app-sidebar-nav-hover: rgba(255, 255, 255, 0.04);
+    --app-sidebar-nav-active-bg: rgba(59, 130, 246, 0.2);
+    --app-sidebar-nav-active-text: #60a5fa;
+
+    /* Project dropdown colors (dark mode) */
+    --project-dropdown-bg: rgb(21, 21, 21);
+    --project-dropdown-text: #ffffff;
+    --project-dropdown-hover-bg: rgb(68, 151, 248);
+
+    /* Modal colors (dark mode) */
+    --modal-overlay-bg: rgba(0, 0, 0, 0.7);
+    --modal-bg: #1f2937;
+    --modal-border: #374151;
+    --modal-text: #ffffff;
+    --modal-input-bg: #374151;
+    --modal-input-border: #4b5563;
+    --modal-button-secondary-bg: #374151;
+    --modal-button-secondary-text: #e5e7eb;
+
     /* Navbar element colors (dark mode) */
     --navbar-text-bright: rgba(255, 255, 255, 0.9);
     --navbar-separator: rgba(255, 255, 255, 0.2);
@@ -188,70 +198,6 @@ html.dark {
     --tooltip-bg: #000000;
 
     /* Annotation colors (dark mode) */
-    --annotation-point-fill: rgba(51, 66, 255, 0.3);
-    --annotation-point-stroke: rgb(51, 66, 255);
-    --annotation-stroke-width: 2;
-}
-
-/* Manual light theme override */
-html.light {
-    /* Light theme colors (default) */
-    --bg-primary: #ffffff;
-    --bg-secondary: rgb(245, 245, 245);
-    --bg-card: #ffffff;
-    --bg-card-hover: rgb(247, 247, 247);
-    --text-primary: #333333;
-    --text-secondary: #666666;
-    --text-tertiary: #999999;
-    --border-color: #e5e5e5;
-    --shadow: rgba(0, 0, 0, 0.05);
-    --shadow-hover: rgba(0, 0, 0, 0.1);
-    --accent-blue: #3342ff;
-    --accent-red: #ff4444;
-    --button-secondary-bg: #000;
-    --button-secondary-text: #fff;
-    --shimmer-color: rgba(255, 255, 255, 0.75);
-    --dot-color: rgb(180, 180, 180);
-    --navbar-bg: rgb(51, 55, 61);
-    --sidebar-bg: #ffffff;
-    --sidebar-border: rgb(230, 230, 230);
-    --sidebar-text: #000000;
-    --sidebar-row-hover: rgb(230, 230, 230);
-
-    /* UI element colors */
-    --primary-button-bg: #4f5bf8;
-    --primary-button-text: #ffffff;
-    --primary-button-hover: rgba(79, 91, 248, 0.9);
-
-    /* Hover and focus colors */
-    --hover-blue: rgb(99, 138, 255);
-    --focus-blue: #4f5bf8;
-    --outline-blue: rgba(51, 66, 255, 0.4);
-
-    /* Error colors */
-    --error-bg: #fee;
-    --error-border: #fcc;
-    --error-text: #c33;
-
-    /* Zoom controls */
-    --zoom-control-bg: rgba(0, 0, 0, 0.7);
-    --zoom-control-text: #ffffff;
-    --zoom-button-bg: rgba(255, 255, 255, 0.1);
-    --zoom-button-border: rgba(255, 255, 255, 0.2);
-    --zoom-button-hover-bg: rgba(255, 255, 255, 0.2);
-    --zoom-button-hover-border: rgba(255, 255, 255, 0.3);
-
-    /* Avatar colors */
-    --avatar-bg: #3b82f6;
-    --avatar-text: #ffffff;
-
-    /* Navbar element colors */
-    --navbar-text-bright: rgba(255, 255, 255, 0.9);
-    --navbar-separator: rgba(255, 255, 255, 0.2);
-    --navbar-tool-active: rgba(255, 255, 255, 0.15);
-    --tooltip-bg: rgb(51, 55, 61);
-
-    /* Annotation colors */
     --annotation-point-fill: rgba(51, 66, 255, 0.3);
     --annotation-point-stroke: rgb(51, 66, 255);
     --annotation-stroke-width: 2;

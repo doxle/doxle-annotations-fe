@@ -45,7 +45,7 @@ impl Theme {
 }
 
 // Global theme signal
-pub const THEME: GlobalSignal<Theme> = Signal::global(|| Theme::System);
+pub const THEME: GlobalSignal<Theme> = Signal::global(|| Theme::Light);
 
 // Check system preference
 #[cfg(target_arch = "wasm32")]

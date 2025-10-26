@@ -1,12 +1,15 @@
 use dioxus::prelude::*;
 
+mod admin;
+mod api;
 mod blocks;
 mod canvas;
 mod home;
 mod projects;
 mod shared;
+mod state;
 
-use shared::{apply_theme_class, load_theme_preference, THEME};
+use shared::{apply_theme_class, load_theme_preference, setup_global_keyboard_shortcuts, THEME};
 
 // Font assets
 const HELVETICA_REGULAR: Asset = asset!("/assets/fonts/HelveticaNeue.woff2");
@@ -33,8 +36,11 @@ const FONTS_CSS_TEMPLATE: &str = include_str!("font.css");
 const THEME_CSS: &str = include_str!("theme.css");
 const HOME_CSS: &str = include_str!("home/home.css");
 const LOGIN_CSS: &str = include_str!("home/login.css");
+const SIGNUP_CSS: &str = include_str!("home/signup.css");
 const PROJECTS_CSS: &str = include_str!("projects/projects.css");
 const BLOCK_CSS: &str = include_str!("blocks/blocks.css");
+const ADD_PROJECT_CSS: &str = include_str!("projects/add_project.css");
+const ADD_BLOCK_CSS: &str = include_str!("blocks/add_block.css");
 const CANVAS_CSS: &str = include_str!("canvas/canvas.css");
 const CANVAS_NAVBAR_CSS: &str = include_str!("canvas/canvas_navbar.css");
 const NAVBAR_LEFT_CSS: &str = include_str!("canvas/navbar/left_section.css");
@@ -42,6 +48,10 @@ const NAVBAR_CENTER_CSS: &str = include_str!("canvas/navbar/center_section.css")
 const NAVBAR_RIGHT_CSS: &str = include_str!("canvas/navbar/right_section.css");
 const AVATAR_MENU_CSS: &str = include_str!("canvas/navbar/avatar_dropdown.css");
 const SIDEBAR_CSS: &str = include_str!("canvas/sidebar/sidebar.css");
+const APP_SIDEBAR_CSS: &str = include_str!("shared/app_sidebar/app_sidebar.css");
+const PROJECT_DROPDOWN_CSS: &str = include_str!("projects/project_dropdown.css");
+const BLOCK_DROPDOWN_CSS: &str = include_str!("blocks/block_dropdown.css");
+const ADMIN_INVITES_CSS: &str = include_str!("admin/invites.css");
 
 fn main() {
     // Initialize tracing and filter out noisy warnings
@@ -62,6 +72,9 @@ fn App() -> Element {
             *THEME.write() = saved_theme;
         }
     });
+
+    // Setup global keyboard shortcuts (works on all pages)
+    setup_global_keyboard_shortcuts();
 
     // Watch THEME signal and apply to HTML element (force light on home page)
     use_effect(move || {
@@ -104,8 +117,11 @@ fn App() -> Element {
                 document::Style { {THEME_CSS} }
                 document::Style { {HOME_CSS} }
                 document::Style { {LOGIN_CSS} }
+                document::Style { {SIGNUP_CSS} }
                 document::Style { {PROJECTS_CSS} }
+                document::Style { {ADD_PROJECT_CSS} }
                 document::Style { {BLOCK_CSS} }
+                document::Style { {ADD_BLOCK_CSS} }
                 document::Style { {CANVAS_CSS} }
                 document::Style { {CANVAS_NAVBAR_CSS} }
                 document::Style { {NAVBAR_LEFT_CSS} }
@@ -113,34 +129,19 @@ fn App() -> Element {
                 document::Style { {NAVBAR_RIGHT_CSS} }
                 document::Style { {AVATAR_MENU_CSS} }
                 document::Style { {SIDEBAR_CSS} }
+                document::Style { {APP_SIDEBAR_CSS} }
+                document::Style { {PROJECT_DROPDOWN_CSS} }
+                document::Style { {BLOCK_DROPDOWN_CSS} }
+                document::Style { {ADMIN_INVITES_CSS} }
 
-                // Ensure html has an initial theme class matching system preference
-                // and listen for system theme changes
+                // Force light theme always
                 script {
                     {
                         r#"
 (function(){
-    // Skip theme detection on home page (always light)
-    if(window.location.pathname === '/') {
-        var html = document.documentElement;
-        html.classList.remove('dark');
-        html.classList.add('light');
-        return;
-    }
-
-    var html=document.documentElement;
-    var darkModeQuery=window.matchMedia('(prefers-color-scheme: dark)');
-
-    function updateTheme(e){
-        html.classList.remove('dark','light');
-        html.classList.add(e.matches?'dark':'light');
-    }
-
-    // Set initial theme
-    html.classList.add(darkModeQuery.matches?'dark':'light');
-
-    // Listen for system theme changes
-    darkModeQuery.addEventListener('change',updateTheme);
+    var html = document.documentElement;
+    html.classList.remove('dark');
+    html.classList.add('light');
 })();
                         "#
                     }
@@ -171,6 +172,8 @@ enum Route {
     OurStoryPage {},
     #[route("/login")]
     LoginPage {},
+    #[route("/signup")]
+    SignupPage {},
     #[route("/join")]
     JoinPage {},
     #[route("/upload")]
@@ -185,13 +188,16 @@ enum Route {
     BlocksPage { project_id: String },
     #[route("/canvas/:task_id")]
     CanvasPage { task_id: String },
+    #[route("/admin/invites")]
+    AdminInvitesPage {},
 }
 
 // Page imports
+use admin::AdminInvitesPage;
 use blocks::BlocksPage;
 use canvas::CanvasPage;
 use home::upload::UploadPage;
-use home::{HomePage, JoinPage, LoginPage, Navbar, OurStoryPage, SayHelloPage};
+use home::{HomePage, JoinPage, LoginPage, SignupPage, Navbar, OurStoryPage, SayHelloPage};
 use projects::ProjectsPage;
 
 #[component]

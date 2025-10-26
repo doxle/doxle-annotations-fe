@@ -11,6 +11,8 @@ use dioxus::prelude::*;
 
 #[component]
 pub fn CanvasPage(task_id: String) -> Element {
+    use crate::state::{IMAGES, CURRENT_IMAGE_INDEX, load_block_images, prev_image, next_image, get_current_image, get_current_block_id, get_current_block_name};
+    
     let project_id = "1".to_string(); // TODO: Parse from task_id or pass as separate param
     let mut zoom = use_signal(|| 1.0);
     let mut pan_x = use_signal(|| 0.0);
@@ -30,10 +32,37 @@ pub fn CanvasPage(task_id: String) -> Element {
 
     // Clone for use inside closures without moving the original into handlers
     let project_id_for_ann = project_id.clone();
-    // TODO: wire from route/selection
-    let block_id_for_ann = "block1".to_string();
-    let image_id_for_ann = "house1".to_string();
+    // Use dynamic block ID from global state, fallback to task_id if not set
+    let block_id_for_ann = get_current_block_id().unwrap_or_else(|| task_id.clone());
+    let block_name = get_current_block_name().unwrap_or_else(|| "Unknown".to_string());
+    tracing::info!("🏠 Canvas page loaded - Block: '{}' (ID: {})", block_name, block_id_for_ann);
     let mut class_counter = use_signal(|| 0_u64);
+    
+    // Load images on mount
+    use_hook(|| {
+        let block_id = block_id_for_ann.clone();
+        let name = block_name.clone();
+        spawn(async move {
+            tracing::info!("📷 Loading images for block '{}' ({})", name, block_id);
+            load_block_images(&block_id).await;
+            let images = IMAGES.read();
+            tracing::info!("📷 Images loaded for '{}': {} image(s)", name, images.len());
+            for (idx, img) in images.iter().enumerate() {
+                tracing::info!("   📷 [{}] {} - {}", idx + 1, img.image_id, img.url);
+            }
+        });
+    });
+    
+    // Get current image or use fallback
+    let current_image = get_current_image();
+    let image_id_for_ann = current_image
+        .as_ref()
+        .map(|img| img.image_id.clone())
+        .unwrap_or_else(|| "house1".to_string());
+    let current_image_url = current_image
+        .as_ref()
+        .map(|img| img.url.clone())
+        .unwrap_or_else(|| asset!("/assets/images/test.png").to_string());
 
     // --- Annotation dropdown state ---
     let mut annotation_dropdown_open = use_signal(|| false);
@@ -107,7 +136,11 @@ pub fn CanvasPage(task_id: String) -> Element {
                 show_grid_lines: show_grid_lines,
                 sidebar_open: sidebar_open,
                 polygon: polygon,
-                bbox: bbox
+                bbox: bbox,
+                current_image_index: *CURRENT_IMAGE_INDEX.read(),
+                total_images: IMAGES.read().len(),
+                on_prev_image: move |_| prev_image(),
+                on_next_image: move |_| next_image()
             }
             div{
                 //Canvas container (viewport has fixed dots)
@@ -184,7 +217,7 @@ pub fn CanvasPage(task_id: String) -> Element {
                 div {
                     class: "canvas-layer canvas-image",
                     img {
-                        src: asset!("/assets/images/test.png") ,
+                        src: "{current_image_url}",
                         onload:move|_|{
                             tracing::info!("Image loaded");
                             // Cache image world bounds

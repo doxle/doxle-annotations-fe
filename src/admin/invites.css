@@ -1,0 +1,242 @@
+/* Admin Invites Page Styles */
+
+.admin-container {
+    min-height: 100vh;
+    background: var(--bg-primary);
+    padding: 60px 40px;
+    font-family: Helvetica, Arial, sans-serif;
+}
+
+.admin-content {
+    max-width: 600px;
+    margin: 0 auto;
+}
+
+.admin-title {
+    font-size: 32px;
+    font-weight: 300;
+    color: var(--text-primary);
+    margin-bottom: 12px;
+    font-family: Helvetica, Arial, sans-serif;
+}
+
+.admin-description {
+    font-size: 15px;
+    color: var(--text-secondary);
+    margin-bottom: 40px;
+    line-height: 1.5;
+    font-family: Helvetica, Arial, sans-serif;
+}
+
+.admin-form {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    padding: 32px;
+    margin-bottom: 32px;
+}
+
+.admin-field {
+    margin-bottom: 24px;
+}
+
+.admin-field:last-child {
+    margin-bottom: 0;
+}
+
+.admin-label {
+    display: block;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-primary);
+    margin-bottom: 8px;
+    font-family: 'HelveticaNeue-Medium', Helvetica, Arial, sans-serif;
+}
+
+.admin-input {
+    width: 100%;
+    height: 50px;
+    padding: 12px 16px;
+    background: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    font-size: 15px;
+    color: var(--text-primary);
+    box-sizing: border-box;
+    outline: none;
+    font-family: Helvetica, Arial, sans-serif;
+    transition: border-color 0.2s;
+}
+
+.admin-input:focus {
+    border-color: var(--focus-blue);
+}
+
+.admin-input:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.admin-input::placeholder {
+    color: var(--text-tertiary);
+}
+
+.admin-submit-button {
+    width: 100%;
+    height: 50px;
+    margin-top: 24px;
+    padding: 14px 24px;
+    background: var(--primary-button-bg);
+    color: var(--primary-button-text);
+    border: none;
+    font-size: 15px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.2s;
+    font-family: 'HelveticaNeue-Medium', Helvetica, Arial, sans-serif;
+}
+
+.admin-submit-button:hover:not(:disabled) {
+    background: var(--primary-button-hover);
+}
+
+.admin-submit-button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.admin-error {
+    padding: 16px;
+    background: var(--error-bg);
+    border: 1px solid var(--error-border);
+    color: var(--error-text);
+    font-size: 14px;
+    margin-bottom: 24px;
+    font-family: Helvetica, Arial, sans-serif;
+}
+
+.admin-success-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    padding: 32px;
+}
+
+.admin-success-title {
+    font-size: 18px;
+    font-weight: 500;
+    color: var(--text-primary);
+    margin-bottom: 24px;
+    font-family: 'HelveticaNeue-Medium', Helvetica, Arial, sans-serif;
+}
+
+.admin-invite-details {
+    margin-bottom: 28px;
+}
+
+.admin-detail-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.admin-detail-row:last-child {
+    border-bottom: none;
+}
+
+.admin-detail-label {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-secondary);
+    font-family: 'HelveticaNeue-Medium', Helvetica, Arial, sans-serif;
+}
+
+.admin-detail-value {
+    font-size: 14px;
+    color: var(--text-primary);
+    font-family: Helvetica, Arial, sans-serif;
+    word-break: break-all;
+    text-align: right;
+    max-width: 65%;
+}
+
+.admin-code {
+    font-family: 'Courier New', monospace;
+    font-size: 12px;
+    background: var(--bg-secondary);
+    padding: 4px 8px;
+    border-radius: 4px;
+}
+
+.admin-invite-link-section {
+    padding-top: 24px;
+    border-top: 1px solid var(--border-color);
+}
+
+.admin-link-container {
+    display: flex;
+    gap: 12px;
+    margin-top: 8px;
+}
+
+.admin-link-input {
+    flex: 1;
+    height: 44px;
+    padding: 10px 14px;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    font-size: 13px;
+    color: var(--text-primary);
+    font-family: 'Courier New', monospace;
+    outline: none;
+    box-sizing: border-box;
+}
+
+.admin-copy-button {
+    height: 44px;
+    padding: 10px 20px;
+    background: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    color: var(--text-primary);
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-family: 'HelveticaNeue-Medium', Helvetica, Arial, sans-serif;
+    white-space: nowrap;
+}
+
+.admin-copy-button:hover {
+    background: var(--bg-secondary);
+    border-color: var(--focus-blue);
+}
+
+/* Mobile responsive */
+@media (max-width: 768px) {
+    .admin-container {
+        padding: 40px 20px;
+    }
+    
+    .admin-form,
+    .admin-success-card {
+        padding: 24px;
+    }
+    
+    .admin-detail-row {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+    }
+    
+    .admin-detail-value {
+        max-width: 100%;
+        text-align: left;
+    }
+    
+    .admin-link-container {
+        flex-direction: column;
+    }
+    
+    .admin-copy-button {
+        width: 100%;
+    }
+}

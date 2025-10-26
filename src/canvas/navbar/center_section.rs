@@ -8,6 +8,10 @@ pub fn CenterSection(
     selected_tool: Signal<Tool>,
     polygon: Signal<Polygon>,
     bbox: Signal<BBox>,
+    current_image_index: usize,
+    total_images: usize,
+    on_prev_image: EventHandler<()>,
+    on_next_image: EventHandler<()>,
 ) -> Element {
     // --- Assets ----
     const ARROW: Asset = asset!("/assets/icons/arrow.svg");
@@ -18,6 +22,8 @@ pub fn CenterSection(
     const UNDO: Asset = asset!("/assets/icons/undo.svg");
     const REDO: Asset = asset!("/assets/icons/redo.svg");
     const TRASH: Asset = asset!("/assets/icons/trash.svg");
+    const CHEVRON_LEFT: &str = "<";
+    const CHEVRON_RIGHT: &str = ">";
 
     // Check if we should show drawing action buttons
     let show_actions = (selected_tool() == Tool::Polygon && polygon().points.len() > 0)
@@ -39,10 +45,50 @@ pub fn CenterSection(
         div {
             class: "navbar-center",
 
-            // House / Block name
-            span {
-                class: "navbar-img-name",
-                "house1 / block1"
+            // Image navigation
+            div {
+                class: "navbar-img-navigation",
+                style: "display: flex; align-items: center; gap: 8px;",
+                
+                // Previous button
+                button {
+                    class: if current_image_index > 0 {
+                        "navbar-nav-button"
+                    } else {
+                        "navbar-nav-button disabled"
+                    },
+                    disabled: current_image_index == 0,
+                    onclick: move |e| {
+                        e.stop_propagation();
+                        if current_image_index > 0 {
+                            on_prev_image.call(());
+                        }
+                    },
+                    "{CHEVRON_LEFT}"
+                }
+                
+                // Image name and counter
+                span {
+                    class: "navbar-img-name",
+                    "{current_image_index + 1} / {total_images}"
+                }
+                
+                // Next button
+                button {
+                    class: if current_image_index < total_images.saturating_sub(1) {
+                        "navbar-nav-button"
+                    } else {
+                        "navbar-nav-button disabled"
+                    },
+                    disabled: current_image_index >= total_images.saturating_sub(1),
+                    onclick: move |e| {
+                        e.stop_propagation();
+                        if current_image_index < total_images.saturating_sub(1) {
+                            on_next_image.call(());
+                        }
+                    },
+                    "{CHEVRON_RIGHT}"
+                }
             }
 
             // Separator

@@ -1,6 +1,6 @@
-/* Login Page Styles */
+/* Signup Page Styles */
 
-.login-container {
+.signup-container {
     min-height: 100vh;
     background: var(--bg-primary);
     display: flex;
@@ -10,13 +10,13 @@
     font-family: Helvetica, Arial, sans-serif;
 }
 
-.login-box {
+.signup-box {
     padding: 60px 50px;
     width: 100%;
     max-width: min(550px, 90%);
 }
 
-.login-title {
+.signup-title {
     font-size: 24px;
     font-weight: 300;
     color: var(--text-primary);
@@ -25,11 +25,11 @@
     font-family: Helvetica, Arial, sans-serif;
 }
 
-.login-field {
+.signup-field {
     margin-top: 21px;
 }
 
-.login-input {
+.signup-input {
     width: 100%;
     height: 70px;
     padding: 14px 16px;
@@ -43,34 +43,43 @@
     font-family: 'HelveticaNeue-Medium', Helvetica, Arial, sans-serif;
 }
 
-.login-input::placeholder {
+.signup-input::placeholder {
     color: #999;
     font-weight: 400;
     font-family: Helvetica, Arial, sans-serif;
 }
 
-.login-input-email {
+/* Stack inputs by removing bottom border from all except last */
+.signup-input-first,
+.signup-input-middle {
     border-bottom: none;
 }
 
-.login-input:focus {
+/* Focus states */
+.signup-input:focus {
     border-color: var(--focus-blue) !important;
 }
 
-.login-input-email:focus {
+.signup-input-first:focus {
     border-bottom: 1px solid var(--focus-blue) !important;
 }
 
-/* Hide second input top border when first is focused */
-form:has(.login-input-email:focus) .login-input-password {
+.signup-input-middle:focus {
+    border-bottom: 1px solid var(--focus-blue) !important;
+}
+
+/* Show blue border on bottom when focused */
+form:has(.signup-input-first:focus) + div .signup-input-middle,
+form:has(.signup-input-middle:nth-of-type(1):focus) + div .signup-input-middle:nth-of-type(2),
+form:has(.signup-input-middle:focus) + div .signup-input-last {
     border-top-color: transparent !important;
 }
 
-.login-button-wrapper {
+.signup-button-wrapper {
     position: relative;
 }
 
-.login-submit-button {
+.signup-submit-button {
     margin-top: 21px;
     width: 100%;
     height: 70px;
@@ -90,30 +99,30 @@ form:has(.login-input-email:focus) .login-input-password {
     gap: 12px;
 }
 
-.login-submit-button:hover {
+.signup-submit-button:hover {
     background: var(--primary-button-hover);
 }
 
-.login-submit-logo {
+.signup-submit-logo {
     height: 18px;
     width: auto;
 }
 
-.login-links {
+.signup-links {
     font-size: 13px;
     font-weight: 300;
     text-align: center;
     margin-top: 16px;
 }
 
-.login-text-secondary {
+.signup-text-secondary {
     color: var(--text-secondary);
     font-size: 13px;
     font-weight: 300;
     font-family: Helvetica, Arial, sans-serif;
 }
 
-.login-link {
+.signup-link {
     color: var(--text-secondary);
     text-decoration: none;
     cursor: pointer;
@@ -123,18 +132,11 @@ form:has(.login-input-email:focus) .login-input-password {
     font-family: Helvetica, Arial, sans-serif;
 }
 
-.login-link:hover {
+.signup-link:hover {
     color: var(--focus-blue) !important;
 }
 
-.login-divider {
-    color: var(--text-secondary);
-    margin: 0 8px;
-    font-size: 13px;
-    font-weight: 300;
-}
-
-.login-error {
+.signup-error {
     margin-top: 16px;
     padding: 12px;
     background: var(--error-bg);
@@ -146,11 +148,11 @@ form:has(.login-input-email:focus) .login-input-password {
 
 /* Mobile responsive */
 @media (max-width: 768px) {
-    .login-box {
+    .signup-box {
         padding: 40px 24px;
     }
     
-    .login-container {
+    .signup-container {
         padding: 20px 16px;
     }
 }

@@ -13,6 +13,10 @@ pub fn CanvasNavbar(
     sidebar_open: Signal<bool>,
     polygon: Signal<Polygon>,
     bbox: Signal<BBox>,
+    current_image_index: usize,
+    total_images: usize,
+    on_prev_image: EventHandler<()>,
+    on_next_image: EventHandler<()>,
 ) -> Element {
 
     rsx! {
@@ -37,7 +41,11 @@ pub fn CanvasNavbar(
                 task_id: task_id.clone(),
                 selected_tool: selected_tool,
                 polygon: polygon,
-                bbox: bbox
+                bbox: bbox,
+                current_image_index: current_image_index,
+                total_images: total_images,
+                on_prev_image: on_prev_image,
+                on_next_image: on_next_image
             }
 
             // Right section

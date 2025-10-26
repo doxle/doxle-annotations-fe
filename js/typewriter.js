@@ -68,7 +68,7 @@
         setTimeout(() => {
           typeNextElement(elements, 0);
         }, 1500);
-      }, 9000); // Wait 9 seconds then restart
+      }, 120000); // Wait 120 seconds then restart
       return;
     }
     

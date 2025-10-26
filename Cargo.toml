@@ -15,15 +15,21 @@ dioxus = { version = "0.7.0-rc.2", features = ["web", "router"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 
-# HTTP client (for API calls)
+# HTTP client (for API calls) - use js backend for WASM
 reqwest = { version = "0.12", features = ["json"] }
+gloo-net = "0.6"
 
 # Logging
 tracing = "0.1"
 tracing-wasm = "0.2"
-web-sys = { version = "0.3", features = ["Window", "MediaQueryList", "Document", "Element",
-"HtmlHeadElement", "Storage", "HtmlCanvasElement", "CanvasRenderingContext2d", "CanvasPattern",
-"CssStyleDeclaration", "HtmlElement", "HtmlImageElement", "MouseEvent"] }
+web-sys = { version = "0.3", features = [
+    "Window", "MediaQueryList", "Document", "Element",
+    "HtmlHeadElement", "Storage", "HtmlCanvasElement", "CanvasRenderingContext2d", "CanvasPattern",
+    "CssStyleDeclaration", "HtmlElement", "HtmlImageElement", "MouseEvent", "DragEvent",
+    "WebSocket", "MessageEvent", "CloseEvent", "ErrorEvent", "BinaryType",
+    "File", "FileList", "FileReader", "Blob", "BlobPropertyBag", "FilePropertyBag", "Url", "HtmlInputElement", "DataTransfer"
+] }
 js-sys = "0.3"
 wasm-bindgen = "0.2"
 wasm-bindgen-futures = "0.4"
+gloo-timers = { version = "0.3", features = ["futures"] }

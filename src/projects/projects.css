@@ -2,35 +2,15 @@
 
 .projects-container {
     min-height: 100vh;
-    padding: 40px 20px;
+    display: flex;
     font-family: Helvetica, Arial, sans-serif;
     background: var(--bg-primary);
 }
 
-.projects-header-wrapper {
-    max-width: 1200px;
-    margin: 0 auto 32px auto;
-    display: flex;
-    justify-content: flex-end;
-}
-
-.user-avatar {
-    width: 27px;
-    height: 27px;
-    border-radius: 50%;
-    background: var(--avatar-bg);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    transition: opacity 0.2s;
-    color: var(--avatar-text);
-    font-size: 14px;
-    font-weight: 500;
-    font-family: Helvetica, Arial, sans-serif;
-}
-
+/* Main content area */
 .projects-content {
+    flex: 1;
+    padding: 40px 20px;
     max-width: 1200px;
     margin: 0 auto;
 }
@@ -39,32 +19,41 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 32px;
+    margin-bottom: 42px;
 }
 
 .projects-title {
-    font-size: 32px;
-    font-weight: 500;
-    color: var(--accent-blue);
+    font-size: 27px;
+    font-weight: 300;
+    color: var(--project-title-color);
     margin: 0;
-}
-
-.btn-add-project {
-    background: var(--accent-blue);
-    color: var(--primary-button-text);
-    border: none;
-    padding: 12px 24px;
-    border-radius: 8px;
-    font-size: 16px;
-    font-weight: 500;
-    cursor: pointer;
     font-family: Helvetica, Arial, sans-serif;
 }
 
 .projects-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
     gap: 24px;
+}
+
+@media (max-width: 1400px) {
+    .projects-grid {
+        grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    }
+}
+
+@media (max-width: 1024px) {
+    .projects-grid {
+        grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+        gap: 16px;
+    }
+}
+
+@media (max-width: 768px) {
+    .projects-grid {
+        grid-template-columns: 1fr;
+        gap: 16px;
+    }
 }
 
 /* Project card */
@@ -72,7 +61,7 @@
     border: 1px solid var(--border-color);
     border-radius: 12px;
     padding: 0;
-    background: var(--bg-card);
+    background: var(--project-card-bg);
     box-shadow: 0 2px 8px var(--shadow);
     cursor: pointer;
     transition:
@@ -81,7 +70,7 @@
     overflow: hidden;
     display: flex;
     flex-direction: column;
-    min-height: 262px;
+    min-height: 236px;
 }
 
 .project-card:hover {
@@ -96,16 +85,15 @@
 
 .project-card-image {
     width: 100%;
-    height: 200px;
-    background: var(--button-secondary-bg);
+    height: 180px;
+    background: var(--project-card-image-bg);
     flex-shrink: 0;
 }
 
 .project-card-divider {
     width: 100%;
     height: 1px;
-    background: var(--border-color);
-    opacity: 0.5;
+    background: var(--project-card-divider);
 }
 
 .project-card-bottom {
@@ -122,16 +110,30 @@
     font-family: Helvetica, Arial, sans-serif;
 }
 
-.btn-delete-project {
-    background: var(--accent-red);
+.btn-create-project {
+    background: var(--project-button-bg);
     color: var(--primary-button-text);
     border: none;
-    padding: 6px 12px;
+    padding: 8px 24px;
     border-radius: 6px;
-    font-size: 14px;
-    font-weight: 500;
+    font-size: 12px;
+    font-weight: 300;
     cursor: pointer;
     font-family: Helvetica, Arial, sans-serif;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    transition: opacity 0.2s ease;
+}
+
+.btn-create-project:hover {
+    opacity: 0.8;
+}
+
+.btn-create-project .btn-plus-icon {
+    font-size: 16px;
+    font-weight: 600;
+    margin-right: 4px;
 }
 
 .project-card-stats {
@@ -148,13 +150,38 @@
     font-family: "Courier New", Courier, monospace;
 }
 
+/* Empty and loading states for projects grid */
+.projects-grid-loading,
+.projects-grid-empty,
+.projects-grid-error {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 70vh;
+    font-family: 'Martian Mono', monospace;
+    font-size: 16px;
+}
+
+.projects-grid-loading {
+    color: var(--text-primary);
+    font-family: 'Martian Mono', monospace;
+}
+
+.projects-grid-empty {
+    color: var(--text-secondary);
+}
+
+.projects-grid-error {
+    color: var(--error-text);
+}
+
 /* Mobile responsive - increase card height by 15% */
 @media (max-width: 768px) {
     .project-card {
-        min-height: 301px;
+        min-height: 271px;
     }
 
     .project-card-image {
-        height: 230px;
+        height: 207px;
     }
 }
