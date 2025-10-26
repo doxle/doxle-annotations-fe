@@ -10,9 +10,12 @@ use super::sidebar::Sidebar;
 use dioxus::prelude::*;
 
 #[component]
-pub fn CanvasPage(task_id: String) -> Element {
-    use crate::state::{IMAGES, CURRENT_IMAGE_INDEX, load_block_images, prev_image, next_image, get_current_image, get_current_block_id, get_current_block_name};
-    
+pub fn CanvasPage(block_id: String) -> Element {
+    use crate::state::{
+        get_current_block_id, get_current_block_name, get_current_image, load_block_images,
+        next_image, prev_image, CURRENT_IMAGE_INDEX, IMAGES,
+    };
+
     let project_id = "1".to_string(); // TODO: Parse from task_id or pass as separate param
     let mut zoom = use_signal(|| 1.0);
     let mut pan_x = use_signal(|| 0.0);
@@ -32,29 +35,56 @@ pub fn CanvasPage(task_id: String) -> Element {
 
     // Clone for use inside closures without moving the original into handlers
     let project_id_for_ann = project_id.clone();
-    // Use dynamic block ID from global state, fallback to task_id if not set
-    let block_id_for_ann = get_current_block_id().unwrap_or_else(|| task_id.clone());
-    let block_name = get_current_block_name().unwrap_or_else(|| "Unknown".to_string());
-    tracing::info!("🏠 Canvas page loaded - Block: '{}' (ID: {})", block_name, block_id_for_ann);
-    let mut class_counter = use_signal(|| 0_u64);
+    // Use block_id from route
+    let block_id_for_ann = block_id.clone();
     
+    // Try to get block info from BLOCKS global state
+    use crate::state::BLOCKS;
+    let block_info = BLOCKS.read().iter()
+        .find(|b| b.block_id == block_id_for_ann)
+        .cloned();
+    
+    let block_name = block_info.as_ref()
+        .map(|b| b.name.clone())
+        .unwrap_or_else(|| block_id_for_ann.clone());
+    tracing::info!(
+        "🏠 Canvas page loaded - Block: '{}' (ID: {})",
+        block_name,
+        block_id_for_ann
+    );
+    let mut class_counter = use_signal(|| 0_u64);
+
     // Load images on mount
     use_hook(|| {
         let block_id = block_id_for_ann.clone();
         let name = block_name.clone();
         spawn(async move {
-            tracing::info!("📷 Loading images for block '{}' ({})", name, block_id);
+            tracing::info!("📷 === LOADING IMAGES FOR BLOCK ===");
+            tracing::info!("📷 Block ID: {}", block_id);
+            tracing::info!("📷 Block Name: {}", name);
+            tracing::info!("📷 Calling load_block_images...");
             load_block_images(&block_id).await;
             let images = IMAGES.read();
+            tracing::info!("📷 ======================================");
             tracing::info!("📷 Images loaded for '{}': {} image(s)", name, images.len());
+            tracing::info!("📷 Current image index: {}", *CURRENT_IMAGE_INDEX.read());
             for (idx, img) in images.iter().enumerate() {
-                tracing::info!("   📷 [{}] {} - {}", idx + 1, img.image_id, img.url);
+                tracing::info!("📷 [{}] ID: {}, URL: {}", idx, img.image_id, img.url);
             }
+            tracing::info!("📷 ======================================");
         });
     });
-    
+
     // Get current image or use fallback
     let current_image = get_current_image();
+    
+    // Log current state every render
+    tracing::info!("🖼️ RENDER STATE: index={}, total={}, has_current={}", 
+        *CURRENT_IMAGE_INDEX.read(), 
+        IMAGES.read().len(),
+        current_image.is_some()
+    );
+    
     let image_id_for_ann = current_image
         .as_ref()
         .map(|img| img.image_id.clone())
@@ -63,6 +93,9 @@ pub fn CanvasPage(task_id: String) -> Element {
         .as_ref()
         .map(|img| img.url.clone())
         .unwrap_or_else(|| asset!("/assets/images/test.png").to_string());
+    // Clones for event handlers to avoid move conflicts
+    let current_image_url_load = current_image_url.clone();
+    let current_image_url_error = current_image_url.clone();
 
     // --- Annotation dropdown state ---
     let mut annotation_dropdown_open = use_signal(|| false);
@@ -129,18 +162,12 @@ pub fn CanvasPage(task_id: String) -> Element {
 
             // Navbar
             CanvasNavbar {
-                task_id: task_id.clone(),
-                project_id: project_id.clone(),
                 selected_tool: selected_tool,
                 avatar_dropdown_open: avatar_dropdown_open,
                 show_grid_lines: show_grid_lines,
                 sidebar_open: sidebar_open,
                 polygon: polygon,
-                bbox: bbox,
-                current_image_index: *CURRENT_IMAGE_INDEX.read(),
-                total_images: IMAGES.read().len(),
-                on_prev_image: move |_| prev_image(),
-                on_next_image: move |_| next_image()
+                bbox: bbox
             }
             div{
                 //Canvas container (viewport has fixed dots)
@@ -218,10 +245,15 @@ pub fn CanvasPage(task_id: String) -> Element {
                     class: "canvas-layer canvas-image",
                     img {
                         src: "{current_image_url}",
+                        alt: "Canvas image",
+                        draggable: "false",
                         onload:move|_|{
-                            tracing::info!("Image loaded");
+                            tracing::info!("🖼️ Image loaded: {}", current_image_url_load);
                             // Cache image world bounds
                             cache_image_world_bounds(zoom(), pan_x(), pan_y());
+                        },
+                        onerror:move|_|{
+                            tracing::error!("🛑 Image failed to load: {}", current_image_url_error);
                         }
                     }
                 }
@@ -254,7 +286,6 @@ pub fn CanvasPage(task_id: String) -> Element {
                         class: "crosshair-center"
                     }
                 }
-
             }
 
             // Annotation dropdown component
@@ -273,13 +304,13 @@ pub fn CanvasPage(task_id: String) -> Element {
                     class_counter: class_counter,
                 }
             }
-            }
+            } // Close canvas-container div
 
-            // Sidebar
-            Sidebar { task_id: task_id.clone(), project_id: project_id.clone(), sidebar_open: sidebar_open, class_counter: class_counter }
-
+        // Sidebar
+        Sidebar {
+            sidebar_open: sidebar_open,
+            class_counter: class_counter
         }
+        }// Close canvas-page div
     }
 }
-
-// Canvas layer kept for future annotations

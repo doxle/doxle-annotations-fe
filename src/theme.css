@@ -6,7 +6,7 @@
     --bg-secondary: rgb(245, 245, 245);
     --bg-card: #ffffff;
     --bg-card-hover: rgb(247, 247, 247);
-    --text-primary: #333333;
+    --text-primary: #000000;
     --text-secondary: #666666;
     --text-tertiary: #999999;
     --border-color: #e5e5e5;
@@ -57,10 +57,10 @@
     --project-card-image-bg: rgb(230, 230, 230);
     --project-card-divider: #e5e5e5;
     --project-button-bg: rgb(11, 153, 245);
-    
+
     /* Block card colors */
     --block-card-bg: rgb(230, 230, 230);
-    
+
     /* App Sidebar colors */
     --app-sidebar-bg: #ffffff;
     --app-sidebar-border: rgb(230, 230, 230);
@@ -88,12 +88,24 @@
     --modal-input-border: #d1d5db;
     --modal-button-secondary-bg: #f3f4f6;
     --modal-button-secondary-text: #374151;
+    --share-modal-divider: #e6e6e6;
+    --share-email-label: #b4b4b4;
+    --share-email-input-bg: #f5f5f5;
+    --share-invite-disabled-bg: #cccccc;
+    --share-invite-disabled-text: #888888;
 
     /* Navbar element colors */
     --navbar-text-bright: rgba(255, 255, 255, 0.9);
     --navbar-separator: rgba(255, 255, 255, 0.2);
     --navbar-tool-active: rgba(255, 255, 255, 0.15);
     --tooltip-bg: rgb(51, 55, 61);
+    
+    /* Canvas navbar breadcrumb colors */
+    --navbar-breadcrumb-link: rgba(255, 255, 255, 0.65);
+    --navbar-breadcrumb-link-hover-bg: rgba(255, 255, 255, 0.1);
+    --navbar-breadcrumb-link-hover-text: rgba(255, 255, 255, 0.9);
+    --navbar-breadcrumb-separator: rgba(255, 255, 255, 0.4);
+    --navbar-breadcrumb-current: rgba(255, 255, 255, 0.95);
 
     /* Annotation colors */
     --annotation-point-fill: rgba(51, 66, 255, 0.3);
@@ -159,10 +171,10 @@ html.dark {
     --project-card-image-bg: rgb(60, 60, 60);
     --project-card-divider: #404040;
     --project-button-bg: rgb(11, 153, 245);
-    
+
     /* Block card colors (dark mode) */
     --block-card-bg: rgb(60, 60, 60);
-    
+
     /* App Sidebar colors (dark mode) */
     --app-sidebar-bg: rgb(30, 30, 30);
     --app-sidebar-border: rgb(60, 60, 60);
@@ -190,12 +202,24 @@ html.dark {
     --modal-input-border: #4b5563;
     --modal-button-secondary-bg: #374151;
     --modal-button-secondary-text: #e5e7eb;
+    --share-modal-divider: #374151;
+    --share-email-label: #6b7280;
+    --share-email-input-bg: #374151;
+    --share-invite-disabled-bg: #4b5563;
+    --share-invite-disabled-text: #9ca3af;
 
     /* Navbar element colors (dark mode) */
     --navbar-text-bright: rgba(255, 255, 255, 0.9);
     --navbar-separator: rgba(255, 255, 255, 0.2);
     --navbar-tool-active: rgba(255, 255, 255, 0.15);
     --tooltip-bg: #000000;
+    
+    /* Canvas navbar breadcrumb colors (dark mode) */
+    --navbar-breadcrumb-link: rgba(255, 255, 255, 0.65);
+    --navbar-breadcrumb-link-hover-bg: rgba(255, 255, 255, 0.1);
+    --navbar-breadcrumb-link-hover-text: rgba(255, 255, 255, 0.9);
+    --navbar-breadcrumb-separator: rgba(255, 255, 255, 0.4);
+    --navbar-breadcrumb-current: rgba(255, 255, 255, 0.95);
 
     /* Annotation colors (dark mode) */
     --annotation-point-fill: rgba(51, 66, 255, 0.3);

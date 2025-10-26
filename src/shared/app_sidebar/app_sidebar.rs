@@ -1,17 +1,8 @@
 use dioxus::prelude::*;
-use crate::Route;
-use crate::api;
 use crate::state::{USER, load_user};
 
-#[derive(Clone, Debug, PartialEq)]
-pub enum AppSidebarPage {
-    Projects,
-    Blocks { project_id: String, project_name: String },
-    Canvas,
-}
-
 #[component]
-pub fn AppSidebar(current_page: AppSidebarPage) -> Element {
+pub fn AppSidebar(open: Signal<bool>) -> Element {
     let nav = navigator();
     
     // Load user if not already loaded - runs only once
@@ -29,54 +20,14 @@ pub fn AppSidebar(current_page: AppSidebarPage) -> Element {
     let reviewed_count = 18;
     let pending_count = 7;
 
-    let handle_logout = move |_| {
-        api::clear_token();
-        nav.push(Route::LoginPage {});
-    };
-
     rsx! {
         div {
-            class: "app-sidebar",
+            class: if open() { "app-sidebar open" } else { "app-sidebar" },
             
-            // User profile section
+            // Stats header
             div {
-                class: "app-sidebar-user-section",
-                
-                div {
-                    class: "app-sidebar-user-profile",
-                    
-                    if let Some(u) = USER.read().as_ref() {
-                        div {
-                            style: "display: flex; flex-direction: column; gap: 4px;",
-                            
-                            div {
-                                style: "display: flex; align-items: center; gap: 8px;",
-                                
-                                div {
-                                    class: "app-sidebar-user-avatar",
-                                    onclick: handle_logout,
-                                    title: "Click to logout",
-                                    {u.name.chars().next().unwrap_or('U').to_uppercase().to_string()}
-                                }
-                                
-                                div {
-                                    class: "app-sidebar-user-name",
-                                    "{u.name}"
-                                }
-                            }
-                            
-                            div {
-                                class: "app-sidebar-user-email",
-                                "{u.email}"
-                            }
-                        }
-                    }
-                }
-            }
-            
-            // Divider
-            div {
-                class: "app-sidebar-divider"
+                class: "app-sidebar-header",
+                h3 { "Statistics" }
             }
             
             // Stats section
@@ -128,24 +79,6 @@ pub fn AppSidebar(current_page: AppSidebarPage) -> Element {
                     div {
                         class: "app-sidebar-stat-value",
                         "{pending_count}"
-                    }
-                }
-            }
-            
-            // Divider
-            div {
-                class: "app-sidebar-divider"
-            }
-            
-            // Navigation section
-            div {
-                class: "app-sidebar-nav-section",
-                
-                // Show current project if in blocks page
-                if let AppSidebarPage::Blocks { project_id, project_name } = &current_page {
-                    div {
-                        class: "app-sidebar-nav-item active sub-item",
-                        "📁 {project_name}"
                     }
                 }
             }

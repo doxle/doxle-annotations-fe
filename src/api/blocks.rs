@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 use super::client::API_BASE_URL;
 use super::auth;
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 pub struct Block {
     pub block_id: String,
     pub project_id: String,

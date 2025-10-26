@@ -1,10 +1,20 @@
 use crate::Route;
+use crate::state::{get_current_block_id, get_current_block_name, BLOCKS};
 use dioxus::prelude::*;
 
 #[component]
-pub fn LeftSection(project_id: String) -> Element {
+pub fn LeftSection() -> Element {
     let nav = navigator();
     let mut dog_hover = use_signal(|| false);
+    
+    // Get project_id from current block in global state
+    let block_id = get_current_block_id();
+    let block_name = get_current_block_name();
+    let project_id = block_id.and_then(|bid| {
+        BLOCKS.read().iter()
+            .find(|b| b.block_id == bid)
+            .map(|b| b.project_id.clone())
+    }).unwrap_or_default();
 
     // --- Assets ----
     const DOG: Asset = asset!("/assets/icons/dog.svg");
@@ -29,29 +39,38 @@ pub fn LeftSection(project_id: String) -> Element {
                 }
             }
 
-            // Projects button
+            // Breadcrumbs
             div {
-                class: "navbar-nav-button navbar-home-button",
-                onclick: move |_| { nav.push(Route::ProjectsPage {}); },
-                "data-tooltip": "Projects",
-                img {
-                    class: "navbar-icon navbar-home-icon",
-                    src: "{HOME}",
-                    alt: "Projects"
+                class: "navbar-breadcrumbs",
+                
+                span {
+                    class: "navbar-breadcrumb-link",
+                    onclick: move |_| { nav.push(Route::ProjectsPage {}); },
+                    "Projects"
                 }
-            }
-
-            // Blocks button
-            div {
-                class: "navbar-nav-button navbar-block-button",
-                onclick: move |_| {
-                    nav.push(Route::BlocksPage { project_id: project_id.clone() });
-                },
-                "data-tooltip": "Blocks",
-                img {
-                    class: "navbar-icon navbar-block-icon",
-                    src: "{BLOCK}",
-                    alt: "Blocks"
+                
+                span {
+                    class: "navbar-breadcrumb-separator",
+                    " / "
+                }
+                
+                span {
+                    class: "navbar-breadcrumb-link",
+                    onclick: move |_| {
+                        nav.push(Route::BlocksPage { project_id: project_id.clone() });
+                    },
+                    "Blocks"
+                }
+                
+                if let Some(name) = block_name {
+                    span {
+                        class: "navbar-breadcrumb-separator",
+                        " / "
+                    }
+                    span {
+                        class: "navbar-breadcrumb-current",
+                        "{name}"
+                    }
                 }
             }
         }

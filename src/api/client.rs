@@ -13,6 +13,57 @@ pub fn auth_header() -> Result<String, String> {
         .ok_or_else(|| "No auth token found".to_string())
 }
 
+// Helper to get user_id from JWT token
+pub fn get_user_id() -> Option<String> {
+    auth::get_token().and_then(|token| {
+        // Decode JWT (split by '.' and get payload)
+        let parts: Vec<&str> = token.split('.').collect();
+        if parts.len() != 3 {
+            return None;
+        }
+        
+        // Decode base64 payload
+        use base64::{Engine as _, engine::general_purpose};
+        let decoded = general_purpose::STANDARD.decode(parts[1]).ok()?;
+        let json_str = String::from_utf8(decoded).ok()?;
+        
+        // Parse JSON and extract 'sub' claim
+        let json: serde_json::Value = serde_json::from_str(&json_str).ok()?;
+        json.get("sub").and_then(|v| v.as_str()).map(|s| s.to_string())
+    })
+}
+
+// Generic GET helper
+pub async fn get<R: for<'de> Deserialize<'de>>(endpoint: &str) -> Result<R, String> {
+    let token = auth::get_token().ok_or("No auth token found")?;
+    let url = format!("{}{}", API_BASE_URL, endpoint);
+    
+    let client = reqwest::Client::new();
+    let mut request = client
+        .get(&url)
+        .header("Authorization", format!("Bearer {}", token));
+    
+    // Add X-User-Id for local development
+    if let Some(user_id) = get_user_id() {
+        request = request.header("X-User-Id", user_id);
+    }
+    
+    let response = request
+        .send()
+        .await
+        .map_err(|e| format!("Network error: {}", e))?;
+    
+    if response.status().is_success() {
+        response
+            .json()
+            .await
+            .map_err(|e| format!("Failed to parse response: {}", e))
+    } else {
+        let error_text = response.text().await.unwrap_or_else(|_| "Unknown error".to_string());
+        Err(format!("Request failed: {}", error_text))
+    }
+}
+
 // Generic POST helper
 pub async fn post<T: Serialize, R: for<'de> Deserialize<'de>>(
     endpoint: &str,
@@ -22,9 +73,16 @@ pub async fn post<T: Serialize, R: for<'de> Deserialize<'de>>(
     let url = format!("{}{}", API_BASE_URL, endpoint);
     
     let client = reqwest::Client::new();
-    let response = client
+    let mut request = client
         .post(&url)
-        .header("Authorization", format!("Bearer {}", token))
+        .header("Authorization", format!("Bearer {}", token));
+    
+    // Add X-User-Id for local development
+    if let Some(user_id) = get_user_id() {
+        request = request.header("X-User-Id", user_id);
+    }
+    
+    let response = request
         .json(body)
         .send()
         .await
@@ -50,9 +108,16 @@ pub async fn patch<T: Serialize, R: for<'de> Deserialize<'de>>(
     let url = format!("{}{}", API_BASE_URL, endpoint);
     
     let client = reqwest::Client::new();
-    let response = client
+    let mut request = client
         .patch(&url)
-        .header("Authorization", format!("Bearer {}", token))
+        .header("Authorization", format!("Bearer {}", token));
+    
+    // Add X-User-Id for local development
+    if let Some(user_id) = get_user_id() {
+        request = request.header("X-User-Id", user_id);
+    }
+    
+    let response = request
         .json(body)
         .send()
         .await
@@ -75,9 +140,16 @@ pub async fn delete(endpoint: &str) -> Result<(), String> {
     let url = format!("{}{}", API_BASE_URL, endpoint);
     
     let client = reqwest::Client::new();
-    let response = client
+    let mut request = client
         .delete(&url)
-        .header("Authorization", format!("Bearer {}", token))
+        .header("Authorization", format!("Bearer {}", token));
+    
+    // Add X-User-Id for local development
+    if let Some(user_id) = get_user_id() {
+        request = request.header("X-User-Id", user_id);
+    }
+    
+    let response = request
         .send()
         .await
         .map_err(|e| format!("Network error: {}", e))?;

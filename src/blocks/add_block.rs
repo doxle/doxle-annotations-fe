@@ -1,9 +1,8 @@
 use dioxus::prelude::*;
 use dioxus::html::HasFileData;
 use web_sys::File;
-use crate::state::blocks::BLOCKS;
 use crate::api::uploads;
-use crate::state::load_block_images;
+use crate::state::{load_block_images, create_block};
 
 #[derive(Clone)]
 pub struct BlockFormData {
@@ -19,7 +18,7 @@ struct PendingUpload {
 }
 
 #[component]
-pub fn AddBlockModal(show: Signal<bool>, project_id: String, on_add: EventHandler<String>) -> Element {
+pub fn AddBlockModal(show: Signal<bool>, project_id: String) -> Element {
     let mut block_name = use_signal(|| String::new());
     let mut assigned_to = use_signal(|| None::<String>);
     let mut pending_uploads = use_signal(|| Vec::<PendingUpload>::new());
@@ -42,26 +41,18 @@ pub fn AddBlockModal(show: Signal<bool>, project_id: String, on_add: EventHandle
             
             tracing::info!("Creating block: {}", block_name_val);
             
-            // First create the block
-            on_add.call(block_name_val.clone());
-            
-            // Wait a bit for block creation
-            gloo_timers::future::TimeoutFuture::new(500).await;
-            
-            // Get the created block ID from state
-            let block_id = match BLOCKS.read().iter()
-                .find(|b| b.name == block_name_val)
-                .map(|b| b.block_id.clone()) {
-                    Some(id) => {
-                        tracing::info!("Found block ID: {}", id);
-                        id
-                    },
-                    None => {
-                        tracing::error!("Failed to find created block");
-                        *error.write() = Some("Failed to get block ID".to_string());
-                        *loading.write() = false;
-                        return;
-                    }
+            // Create the block and get the ID directly
+            let block_id = match create_block(&project_id, block_name_val).await {
+                Ok(block) => {
+                    tracing::info!("✓ Block created: {}", block.block_id);
+                    block.block_id
+                },
+                Err(e) => {
+                    tracing::error!("✗ Failed to create block: {}", e);
+                    *error.write() = Some(format!("Failed to create block: {}", e));
+                    *loading.write() = false;
+                    return;
+                }
             };
             
             // Upload all files if any
@@ -132,7 +123,18 @@ pub fn AddBlockModal(show: Signal<bool>, project_id: String, on_add: EventHandle
                     button {
                         class: "add-block-modal-close",
                         onclick: handle_close,
-                        "×"
+                        svg {
+                            width: "16",
+                            height: "16",
+                            view_box: "0 0 24 24",
+                            fill: "none",
+                            stroke: "currentColor",
+                            stroke_width: "2",
+                            stroke_linecap: "round",
+                            stroke_linejoin: "round",
+                            line { x1: "18", y1: "6", x2: "6", y2: "18" }
+                            line { x1: "6", y1: "6", x2: "18", y2: "18" }
+                        }
                     }
                 }
 
@@ -154,27 +156,6 @@ pub fn AddBlockModal(show: Signal<bool>, project_id: String, on_add: EventHandle
                             value: "{block_name}",
                             required: true,
                             oninput: move |e| *block_name.write() = e.value(),
-                        }
-                    }
-                    
-                    div {
-                        class: "add-block-form-group",
-                        label {
-                            r#for: "assigned-to",
-                            "Assign To"
-                        }
-                        select {
-                            id: "assigned-to",
-                            class: "add-block-form-select",
-                            value: "{assigned_to.read().as_ref().unwrap_or(&String::new())}",
-                            onchange: move |e| {
-                                let val = e.value();
-                                *assigned_to.write() = if val.is_empty() { None } else { Some(val) };
-                            },
-                            option { value: "", "Unassigned" }
-                            option { value: "user1", "Kim Beale" }
-                            option { value: "user2", "John Smith" }
-                            option { value: "user3", "Sarah Jones" }
                         }
                     }
                     

@@ -1,10 +1,11 @@
 use dioxus::prelude::*;
 use crate::Route;
 use crate::state::{PROJECTS, PROJECTS_LOADING, PROJECTS_ERROR, load_projects, USER, load_user, get_project_by_id, remove_project, add_project};
-use crate::shared::{AppSidebar, AppSidebarPage};
+use crate::shared::{AppSidebar, AppNavbar, NavbarContext, ProtectedRoute};
 use crate::api;
 use super::add_project::AddProjectModal;
 use super::rename_project::RenameProjectModal;
+use super::share_project::ShareProjectModal;
 use super::project_dropdown::ProjectDropdown;
 
 #[component]
@@ -34,6 +35,9 @@ pub fn ProjectsPage() -> Element {
     let mut show_rename_modal = use_signal(|| false);
     let mut rename_project_id = use_signal(|| String::new());
     let mut rename_project_name = use_signal(|| String::new());
+    let mut show_share_modal = use_signal(|| false);
+    let mut share_project_id = use_signal(|| String::new());
+    let mut sidebar_open = use_signal(|| true); // Sidebar open by default
 
     let handle_logout = move |_: Event<MouseData>| {
         // Clear the auth token
@@ -52,8 +56,9 @@ pub fn ProjectsPage() -> Element {
     };
 
     rsx! {
-    div {
-        class: "projects-container",
+    ProtectedRoute {
+        div {
+            class: if sidebar_open() { "projects-container sidebar-open" } else { "projects-container" },
         onclick: move |_| {
             project_context_menu.set(None);
         },
@@ -69,10 +74,22 @@ pub fn ProjectsPage() -> Element {
             project_id: rename_project_id.read().clone(),
             current_name: rename_project_name.read().clone(),
         }
+        
+        // Share Project Modal
+        ShareProjectModal {
+            show: show_share_modal,
+            project_id: share_project_id.read().clone(),
+        }
+
+        // App Navbar
+        AppNavbar {
+            context: NavbarContext::Projects,
+            sidebar_open: sidebar_open
+        }
 
         // Shared sidebar
-        AppSidebar {
-            current_page: AppSidebarPage::Projects
+        AppSidebar { 
+            open: sidebar_open
         }
 
         div {
@@ -86,7 +103,11 @@ pub fn ProjectsPage() -> Element {
 
                         h1 {
                             class: "projects-title",
-                            "Team Projects"
+                            if let Some(user) = USER.read().as_ref() {
+                                "{user.name}'s Projects"
+                            } else {
+                                "My Projects"
+                            }
                         }
 
                         button {
@@ -153,6 +174,20 @@ pub fn ProjectsPage() -> Element {
                                     }},
                                     class: "project-card",
 
+                                    // Share button (appears on hover)
+                                    button {
+                                        class: "btn-share-project",
+                                        onclick: {
+                                            let pid = pid.clone();
+                                            move |e| {
+                                                e.stop_propagation();
+                                                *share_project_id.write() = pid.clone();
+                                                *show_share_modal.write() = true;
+                                            }
+                                        },
+                                        "Share"
+                                    }
+
                                     // Top section
                                     div {
                                         class: "project-card-top",
@@ -203,55 +238,17 @@ pub fn ProjectsPage() -> Element {
                             x: x,
                             y: y,
                             project_id: proj_id.clone(),
-                            on_close: move |_| {
-                                project_context_menu.set(None);
-                            },
-                            on_open: move |id| {
-                                println!("Open project {}", id);
-                                handle_project_click(id);
-                            },
-                            on_rename: move |id: String| {
-                                if let Some(project) = get_project_by_id(&id) {
-                                    *rename_project_id.write() = id.clone();
-                                    *rename_project_name.write() = project.name;
-                                    *show_rename_modal.write() = true;
-                                }
-                            },
-                            on_delete: move |id: String| {
-                                tracing::info!("🗑️ Optimistic delete: {}", id);
-                                
-                                // Save project data for potential rollback
-                                let project_backup = get_project_by_id(&id);
-                                
-                                // Step 1: IMMEDIATELY remove from UI (optimistic)
-                                remove_project(&id);
-                                tracing::info!("⚡ UI updated immediately (optimistic)");
-                                
-                                // Step 2: Send HTTP DELETE in background
-                                spawn(async move {
-                                    tracing::info!("📡 Sending HTTP DELETE /projects/{}", id);
-                                    
-                                    match api::client::delete(&format!("/projects/{}", id)).await {
-                                        Ok(_) => {
-                                            tracing::info!("✅ Delete confirmed by server");
-                                            // Success! Optimistic update was correct
-                                            // DynamoDB Stream will broadcast to other users
-                                        }
-                                        Err(e) => {
-                                            tracing::error!("❌ Delete failed: {} - Rolling back", e);
-                                            // Rollback: add project back to UI
-                                            if let Some(project) = project_backup {
-                                                add_project(project);
-                                                tracing::info!("🔄 Project restored to UI");
-                                            }
-                                        }
-                                    }
-                                });
-                            }
+                            on_close: project_context_menu,
+                            show_rename_modal: show_rename_modal,
+                            rename_project_id: rename_project_id,
+                            rename_project_name: rename_project_name,
+                            show_share_modal: show_share_modal,
+                            share_project_id: share_project_id
                         }
                     }
                 }
             }
         }
+    }
     }
 }

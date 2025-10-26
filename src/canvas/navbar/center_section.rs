@@ -1,18 +1,16 @@
 use super::super::annotations::shapes::{BBox, Polygon};
 use super::super::annotations::Tool;
+use crate::state::{prev_image, next_image, IMAGES, CURRENT_IMAGE_INDEX};
 use dioxus::prelude::*;
 
 #[component]
 pub fn CenterSection(
-    task_id: String,
     selected_tool: Signal<Tool>,
     polygon: Signal<Polygon>,
     bbox: Signal<BBox>,
-    current_image_index: usize,
-    total_images: usize,
-    on_prev_image: EventHandler<()>,
-    on_next_image: EventHandler<()>,
 ) -> Element {
+    let current_image_index = *CURRENT_IMAGE_INDEX.read();
+    let total_images = IMAGES.read().len();
     // --- Assets ----
     const ARROW: Asset = asset!("/assets/icons/arrow.svg");
     const HAND: Asset = asset!("/assets/icons/hand.svg");
@@ -61,7 +59,7 @@ pub fn CenterSection(
                     onclick: move |e| {
                         e.stop_propagation();
                         if current_image_index > 0 {
-                            on_prev_image.call(());
+                            prev_image();
                         }
                     },
                     "{CHEVRON_LEFT}"
@@ -84,7 +82,7 @@ pub fn CenterSection(
                     onclick: move |e| {
                         e.stop_propagation();
                         if current_image_index < total_images.saturating_sub(1) {
-                            on_next_image.call(());
+                            next_image();
                         }
                     },
                     "{CHEVRON_RIGHT}"

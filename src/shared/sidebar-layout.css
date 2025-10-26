@@ -1,0 +1,19 @@
+/* Shared sidebar layout styles */
+
+/* Main content area adjustment for pages with AppSidebar */
+.with-app-sidebar {
+    margin-right: 18vw;
+}
+
+/* Responsive adjustments */
+@media (max-width: 1024px) {
+    .with-app-sidebar {
+        margin-right: 22vw;
+    }
+}
+
+@media (max-width: 768px) {
+    .with-app-sidebar {
+        margin-right: 0; /* Full width on mobile */
+    }
+}

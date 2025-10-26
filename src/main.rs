@@ -51,6 +51,7 @@ const SIDEBAR_CSS: &str = include_str!("canvas/sidebar/sidebar.css");
 const APP_SIDEBAR_CSS: &str = include_str!("shared/app_sidebar/app_sidebar.css");
 const PROJECT_DROPDOWN_CSS: &str = include_str!("projects/project_dropdown.css");
 const BLOCK_DROPDOWN_CSS: &str = include_str!("blocks/block_dropdown.css");
+const SHARE_PROJECT_CSS: &str = include_str!("projects/share_project.css");
 const ADMIN_INVITES_CSS: &str = include_str!("admin/invites.css");
 
 fn main() {
@@ -132,6 +133,7 @@ fn App() -> Element {
                 document::Style { {APP_SIDEBAR_CSS} }
                 document::Style { {PROJECT_DROPDOWN_CSS} }
                 document::Style { {BLOCK_DROPDOWN_CSS} }
+                document::Style { {SHARE_PROJECT_CSS} }
                 document::Style { {ADMIN_INVITES_CSS} }
 
                 // Force light theme always
@@ -186,8 +188,8 @@ enum Route {
     ProjectsPage {},
     #[route("/block/:project_id")]
     BlocksPage { project_id: String },
-    #[route("/canvas/:task_id")]
-    CanvasPage { task_id: String },
+    #[route("/canvas/:block_id")]
+    CanvasPage { block_id: String },
     #[route("/admin/invites")]
     AdminInvitesPage {},
 }

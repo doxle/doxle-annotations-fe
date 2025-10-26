@@ -27,11 +27,11 @@ pub async fn load_project_blocks(project_id: &str) {
 }
 
 /// Create a new block and add to global state
-pub async fn create_block(project_id: &str, name: String) -> Result<(), String> {
+pub async fn create_block(project_id: &str, name: String) -> Result<api::blocks::Block, String> {
     match api::blocks::create_block(project_id, name).await {
         Ok(block) => {
-            BLOCKS.write().push(block);
-            Ok(())
+            BLOCKS.write().push(block.clone());
+            Ok(block)
         }
         Err(e) => Err(e)
     }

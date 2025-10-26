@@ -11,6 +11,16 @@ pub fn setup_global_keyboard_shortcuts() {
         };
 
         let closure = Closure::wrap(Box::new(move |event: KeyboardEvent| {
+            // Ignore shortcuts when typing in input fields
+            if let Some(target) = event.target() {
+                if let Ok(element) = target.dyn_into::<web_sys::HtmlElement>() {
+                    let tag_name = element.tag_name().to_lowercase();
+                    if tag_name == "input" || tag_name == "textarea" || tag_name == "select" {
+                        return;
+                    }
+                }
+            }
+
             let key = event.key();
 
             // Handle 't' key - toggle theme

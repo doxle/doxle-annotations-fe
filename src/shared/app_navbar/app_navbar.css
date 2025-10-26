@@ -1,0 +1,188 @@
+/* App Navbar Styles */
+
+.app-navbar {
+    height: 36px;
+    background: var(--navbar-bg, rgb(51, 55, 61));
+    border-bottom: 1px solid var(--navbar-border, rgba(0, 0, 0, 0.2));
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 12px;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 100;
+}
+
+/* Left section */
+.app-navbar-left {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.app-navbar-logo {
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+    height: 20px;
+}
+
+.app-navbar-logo-img {
+    height: 20px;
+    width: auto;
+}
+
+/* Breadcrumbs */
+.app-navbar-breadcrumbs {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+    font-size: 11.5px; /* Reduced from 12px */
+    font-weight: 400;
+}
+
+.app-navbar-breadcrumb {
+    color: rgba(255, 255, 255, 0.7);
+    cursor: pointer;
+    padding: 2px 6px;
+    border-radius: 4px;
+    transition: all 0.2s ease;
+    font-weight: 400; /* Added light font weight */
+}
+
+.app-navbar-breadcrumb:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: rgba(255, 255, 255, 0.95);
+}
+
+.app-navbar-breadcrumb.current {
+    color: rgba(255, 255, 255, 0.95);
+    font-weight: 400; /* Reduced from 500 */
+    cursor: default;
+}
+
+.app-navbar-breadcrumb.current:hover {
+    background: transparent;
+}
+
+.app-navbar-separator {
+    color: rgba(255, 255, 255, 0.4);
+    font-size: 11px;
+}
+
+/* Center section */
+.app-navbar-center {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Right section */
+.app-navbar-right {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+/* User avatar */
+.app-navbar-user-avatar {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: rgb(255, 204, 0);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: 500;
+    color: #000;
+    cursor: pointer;
+    position: relative;
+    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+}
+
+/* User dropdown */
+.app-navbar-user-dropdown {
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 0;
+    min-width: 200px;
+    background: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    box-shadow: var(--shadow-dropdown, 0 4px 12px rgba(0, 0, 0, 0.1));
+    z-index: 1000;
+}
+
+.user-dropdown-name {
+    padding: 12px 16px 4px 16px;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-primary);
+}
+
+.user-dropdown-email {
+    padding: 0 16px 12px 16px;
+    font-size: 11px;
+    color: var(--text-secondary);
+}
+
+.user-dropdown-divider {
+    height: 1px;
+    background: var(--border-color);
+    margin: 0;
+}
+
+.user-dropdown-item {
+    display: block;
+    width: 100%;
+    padding: 10px 16px;
+    font-size: 12px;
+    color: var(--text-primary);
+    background: none;
+    border: none;
+    text-align: left;
+    cursor: pointer;
+    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+}
+
+.user-dropdown-item:hover {
+    background: var(--bg-hover, rgba(0, 0, 0, 0.05));
+}
+
+/* Sidebar toggle */
+.app-navbar-sidebar-toggle {
+    width: 32px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.app-navbar-sidebar-toggle:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.app-navbar-sidebar-icon {
+    width: 16px;
+    height: 16px;
+    opacity: 0.7;
+}
+
+.app-navbar-sidebar-toggle:hover .app-navbar-sidebar-icon {
+    opacity: 1;
+}
+
+/* Adjust main content for navbar */
+body {
+    padding-top: 36px;
+}

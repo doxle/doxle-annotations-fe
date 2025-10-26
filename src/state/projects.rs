@@ -56,3 +56,39 @@ pub fn remove_project(project_id: &str) {
 pub fn add_project(project: api::Project) {
     PROJECTS.write().push(project);
 }
+
+/// Delete a project (optimistic with rollback)
+pub async fn delete_project(project_id: String) {
+    tracing::info!("🗑️ Starting delete for project: {}", project_id);
+    
+    // Save project data for potential rollback
+    let project_backup = get_project_by_id(&project_id);
+    
+    // Step 1: IMMEDIATELY remove from UI (optimistic)
+    remove_project(&project_id);
+    tracing::info!("⚡ UI updated immediately (optimistic)");
+    
+    // Step 2: Send HTTP DELETE to backend
+    tracing::info!("📡 Sending HTTP DELETE /projects/{}", project_id);
+    
+    match api::client::delete(&format!("/projects/{}", project_id)).await {
+        Ok(_) => {
+            tracing::info!("✅ Delete confirmed by server for project: {}", project_id);
+        }
+        Err(e) => {
+            tracing::error!("❌ Delete failed for project {}: {}", project_id, e);
+            
+            // Show user-friendly error
+            if let Some(window) = web_sys::window() {
+                let _ = window.alert_with_message(&format!("Failed to delete project: {}", e));
+            }
+            
+            // Rollback: add project back to UI
+            if let Some(project) = project_backup {
+                let project_name = project.name.clone();
+                add_project(project);
+                tracing::info!("🔄 Project restored to UI: {}", project_name);
+            }
+        }
+    }
+}

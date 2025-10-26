@@ -1,7 +1,8 @@
 /* Blocks Page Styles */
 
 .blocks-page-container {
-    min-height: 100vh;
+    min-height: calc(100vh - 36px); /* Account for navbar */
+    margin-top: 36px; /* Below navbar */
     display: flex;
     font-family: Helvetica, Arial, sans-serif;
     background: var(--bg-primary);
@@ -12,6 +13,13 @@
     padding: 40px 20px;
     max-width: 1200px;
     margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    transition: margin 0.3s ease;
+}
+
+.blocks-page-container.sidebar-open .blocks-content {
+    margin-right: 18vw; /* Account for right sidebar when open */
 }
 
 .block-header {
@@ -21,9 +29,38 @@
     margin-bottom: 42px;
 }
 
-.block-title {
-    font-size: 27px;
+.block-breadcrumbs {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.breadcrumb-link {
+    font-size: 11.5px;
+    font-weight: 400;
+    color: var(--text-secondary);
+    cursor: pointer;
+    font-family: Helvetica, Arial, sans-serif;
+    padding: 2px 6px;
+    border-radius: 4px;
+    transition: all 0.2s ease;
+}
+
+.breadcrumb-link:hover {
+    background: var(--project-button-bg);
+    color: var(--primary-button-text);
+}
+
+.breadcrumb-separator {
+    font-size: 11.5px;
     font-weight: 300;
+    color: var(--text-tertiary);
+    font-family: Helvetica, Arial, sans-serif;
+}
+
+.block-title {
+    font-size: 11.5px;
+    font-weight: 500;
     color: var(--project-title-color);
     margin: 0;
     font-family: Helvetica, Arial, sans-serif;
@@ -53,6 +90,7 @@
 .block-table {
     display: flex;
     flex-direction: column;
+    flex: 1;
 }
 
 .block-table-header {
@@ -130,21 +168,21 @@
 .block-table-loading,
 .block-table-empty,
 .block-table-error {
-    padding: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: 1;
     text-align: center;
     font-family: 'Martian Mono', monospace;
+    font-size: 11.5px;
+    font-weight: 300;
 }
 
 .block-table-loading {
     color: var(--text-primary);
-    font-family: 'Martian Mono', monospace;
 }
 
 .block-table-empty {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
     color: var(--text-secondary);
 }
 

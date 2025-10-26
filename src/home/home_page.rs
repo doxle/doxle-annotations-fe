@@ -1,4 +1,5 @@
 use crate::Route;
+use crate::api;
 use dioxus::prelude::*;
 
 const LOGO_LIGHT: Asset = asset!("/assets/icons/floorplan-light.svg");
@@ -9,6 +10,16 @@ const TYPEWRITER_JS: &str = include_str!("../../js/typewriter.js");
 
 #[component]
 pub fn HomePage() -> Element {
+    let nav = navigator();
+    
+    // Redirect to projects if already logged in
+    use_hook(|| {
+        if api::get_token().is_some() {
+            tracing::info!("User already logged in - redirecting to projects");
+            nav.push(Route::ProjectsPage {});
+        }
+    });
+    
     // Inject animation scripts
     use_effect(move || {
         #[cfg(target_arch = "wasm32")]

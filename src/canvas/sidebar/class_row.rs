@@ -1,18 +1,27 @@
 use dioxus::prelude::*;
 use crate::canvas::sidebar::types::ClassItem;
 use crate::canvas::sidebar::storage::save_json;
+use crate::state::{get_current_block_id, BLOCKS};
 
 fn storage_key(project_id: &str) -> String { format!("classes:{}", project_id) }
 fn active_key(project_id: &str) -> String { format!("active_class:{}", project_id) }
 
 #[component]
 pub fn ClassRow(
-    project_id: String,
     class_item: ClassItem,
     classes: Signal<Vec<ClassItem>>,
     active_class: Signal<Option<String>>,
 ) -> Element {
     const MORE: Asset = asset!("/assets/icons/more.svg");
+
+    // Get project_id from current block in global state
+    let project_id = get_current_block_id()
+        .and_then(|bid| {
+            BLOCKS.read().iter()
+                .find(|b| b.block_id == bid)
+                .map(|b| b.project_id.clone())
+        })
+        .unwrap_or_default();
 
     let id = class_item.id.clone();
     let is_active = active_class().as_ref().is_some_and(|s| s == &id);

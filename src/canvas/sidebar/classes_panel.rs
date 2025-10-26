@@ -2,6 +2,7 @@ use dioxus::prelude::*;
 use crate::canvas::sidebar::types::ClassItem;
 use crate::canvas::sidebar::storage::{load_json, save_json};
 use crate::canvas::sidebar::class_row::ClassRow;
+use crate::state::get_current_block_id;
 fn storage_key(project_id: &str) -> String { format!("classes:{}", project_id) }
 fn active_key(project_id: &str) -> String { format!("active_class:{}", project_id) }
 
@@ -22,7 +23,17 @@ fn default_classes() -> Vec<ClassItem> {
 }
 
 #[component]
-pub fn ClassesPanel(project_id: String, class_counter: Signal<u64>) -> Element {
+pub fn ClassesPanel(class_counter: Signal<u64>) -> Element {
+    // Get project_id from current block in global state
+    let project_id = get_current_block_id()
+        .and_then(|bid| {
+            use crate::state::BLOCKS;
+            BLOCKS.read().iter()
+                .find(|b| b.block_id == bid)
+                .map(|b| b.project_id.clone())
+        })
+        .unwrap_or_default();
+    
     // Initialize defaults into storage if missing
     let existing = load_json::<Vec<ClassItem>>(&storage_key(&project_id));
     let mut classes = use_signal(|| existing.clone().unwrap_or_else(default_classes));
@@ -53,7 +64,7 @@ pub fn ClassesPanel(project_id: String, class_counter: Signal<u64>) -> Element {
         div { class: "classes-panel",
             div { class: "classes-list",
                 for class_item in classes().iter().cloned() {
-                    ClassRow { project_id: project_id.clone(), class_item: class_item, classes: classes, active_class: active_class }
+                    ClassRow { class_item: class_item, classes: classes, active_class: active_class }
                 }
             }
         }

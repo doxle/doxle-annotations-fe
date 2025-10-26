@@ -9,12 +9,13 @@ pub static CURRENT_IMAGE_INDEX: GlobalSignal<usize> = Signal::global(|| 0);
 
 /// Load images for a block from API and update global state
 pub async fn load_block_images(block_id: &str) {
+    tracing::info!("🔍 Fetching images from API for block: {}", block_id);
     *IMAGES_LOADING.write() = true;
     *IMAGES_ERROR.write() = None;
     
     match api::images::list_block_images(block_id).await {
         Ok(images_list) => {
-            tracing::info!("✅ Images loaded: {} items", images_list.len());
+            tracing::info!("✅ API returned {} images", images_list.len());
             *IMAGES.write() = images_list;
             // Reset to first image when loading new images
             *CURRENT_IMAGE_INDEX.write() = 0;

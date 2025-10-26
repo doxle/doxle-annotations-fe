@@ -12,7 +12,7 @@ use super::storage::{load_f32, save_f32};
 const _SIDEBAR_CSS: Asset = asset!("/src/canvas/sidebar/sidebar.css");
 
 #[component]
-pub fn Sidebar(task_id: String, project_id: String, sidebar_open: Signal<bool>, class_counter: Signal<u64>) -> Element {
+pub fn Sidebar(sidebar_open: Signal<bool>, class_counter: Signal<u64>) -> Element {
     let mut active_tab = use_signal(|| SidebarTab::Classes);
 
     // Sidebar width with persistence
@@ -71,7 +71,7 @@ let up_cb = {
 
             // Content
             match active_tab() {
-                SidebarTab::Classes => rsx! { ClassesPanel { project_id: project_id.clone(), class_counter: class_counter } },
+                SidebarTab::Classes => rsx! { ClassesPanel { class_counter: class_counter } },
                 SidebarTab::Comments => rsx! { CommentsPanel {} },
             }
         }
