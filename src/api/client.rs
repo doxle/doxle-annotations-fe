@@ -6,6 +6,24 @@ use super::auth;
 // Production: https://api.doxle.ai
 pub const API_BASE_URL: &str = "https://api.doxle.ai";
 
+// CloudFront CDN for image caching
+pub const CLOUDFRONT_URL: &str = "https://d1flb4kxeu5kb6.cloudfront.net";
+
+// Convert S3 URL to CloudFront URL for cached image loading
+pub fn to_cloudfront_url(s3_url: &str) -> String {
+    // Example S3 URL: https://doxle-annotations.s3.amazonaws.com/projects/.../image.jpg
+    // Convert to: https://d1flb4kxeu5kb6.cloudfront.net/proxy-image/projects/.../image.jpg
+    
+    if let Some(path) = s3_url.split("doxle-annotations.s3.amazonaws.com/").nth(1) {
+        format!("{}/proxy-image/{}", CLOUDFRONT_URL, path)
+    } else if let Some(path) = s3_url.split("s3.amazonaws.com/doxle-annotations/").nth(1) {
+        format!("{}/proxy-image/{}", CLOUDFRONT_URL, path)
+    } else {
+        // Fallback to original URL if parsing fails
+        s3_url.to_string()
+    }
+}
+
 // Helper to get auth header
 pub fn auth_header() -> Result<String, String> {
     auth::get_token()

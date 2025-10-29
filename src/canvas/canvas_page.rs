@@ -110,20 +110,24 @@ pub fn CanvasPage(block_id: String) -> Element {
         tracing::info!("🕵️ Effect triggered: index={}, total images={}", index, images.len());
         
         if let Some(img) = images.get(index) {
-            let url = img.url.clone();
-            tracing::info!("⚡ Loading authenticated image [{}]: {}", index + 1, url);
+            // Convert S3 URL to CloudFront URL for cached loading
+            let s3_url = img.url.clone();
+            let cloudfront_url = crate::api::client::to_cloudfront_url(&s3_url);
+            tracing::info!("⚡ Loading image [{}] via CloudFront", index + 1);
+            tracing::info!("   S3 URL: {}", s3_url);
+            tracing::info!("   CloudFront URL: {}", cloudfront_url);
             is_loading_image.set(true);
             blob_url.set(String::new()); // Clear previous blob
             
             spawn(async move {
-                match super::image_loader::load_authenticated_image(&url).await {
+                match super::image_loader::load_authenticated_image(&cloudfront_url).await {
                     Ok(blob) => {
-                        tracing::info!("✨ Image successfully loaded as blob URL");
+                        tracing::info!("✨ Image successfully loaded via CloudFront");
                         blob_url.set(blob);
                         is_loading_image.set(false);
                     }
                     Err(e) => {
-                        tracing::error!("⚠️ Failed to load authenticated image: {}", e);
+                        tracing::error!("⚠️ Failed to load image from CloudFront: {}", e);
                         is_loading_image.set(false);
                     }
                 }
