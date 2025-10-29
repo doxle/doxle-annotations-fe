@@ -35,6 +35,12 @@ pub fn AddBlockModal(show: Signal<bool>, project_id: String) -> Element {
         
         tracing::info!("Submit clicked. Block name: {}, Files: {}", block_name_val, uploads.len());
         
+        // Validation: require at least one image
+        if uploads.is_empty() {
+            *error.write() = Some("Block cannot be created without images".to_string());
+            return;
+        }
+        
         spawn(async move {
             *loading.write() = true;
             *error.write() = None;
@@ -380,7 +386,7 @@ pub fn AddBlockModal(show: Signal<bool>, project_id: String) -> Element {
                         button {
                             r#type: "submit",
                             class: "add-block-btn-submit",
-                            disabled: *loading.read(),
+                            disabled: *loading.read() || pending_uploads.read().is_empty(),
                             if *loading.read() {
                                 "Creating..."
                             } else {

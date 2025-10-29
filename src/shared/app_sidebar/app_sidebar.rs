@@ -89,7 +89,7 @@ pub fn AppSidebar(open: Signal<bool>) -> Element {
                 
                 div {
                     class: "app-sidebar-version",
-                    "v1.0.0"
+                    "v1.06"
                 }
             }
         }

@@ -16,7 +16,6 @@ pub fn CanvasPage(block_id: String) -> Element {
         next_image, prev_image, CURRENT_IMAGE_INDEX, IMAGES,
     };
 
-    let project_id = "1".to_string(); // TODO: Parse from task_id or pass as separate param
     let mut zoom = use_signal(|| 1.0);
     let mut pan_x = use_signal(|| 0.0);
     let mut pan_y = use_signal(|| 0.0);
@@ -33,8 +32,6 @@ pub fn CanvasPage(block_id: String) -> Element {
     let dot_spacing_px: f64 = 12.0;
     let dot_radius_px: f64 = 1.0;
 
-    // Clone for use inside closures without moving the original into handlers
-    let project_id_for_ann = project_id.clone();
     // Use block_id from route
     let block_id_for_ann = block_id.clone();
     
@@ -47,6 +44,13 @@ pub fn CanvasPage(block_id: String) -> Element {
     let block_name = block_info.as_ref()
         .map(|b| b.name.clone())
         .unwrap_or_else(|| block_id_for_ann.clone());
+    
+    let project_id = block_info.as_ref()
+        .map(|b| b.project_id.clone())
+        .unwrap_or_else(|| "1".to_string());
+    
+    // Clone for use inside closures without moving the original into handlers
+    let project_id_for_ann = project_id.clone();
     tracing::info!(
         "🏠 Canvas page loaded - Block: '{}' (ID: {})",
         block_name,
@@ -93,9 +97,44 @@ pub fn CanvasPage(block_id: String) -> Element {
         .as_ref()
         .map(|img| img.url.clone())
         .unwrap_or_default();
-    // Clones for event handlers to avoid move conflicts
-    let current_image_url_load = current_image_url.clone();
-    let current_image_url_error = current_image_url.clone();
+    
+    // Blob URL for authenticated image loading
+    let mut blob_url = use_signal(|| String::new());
+    let mut is_loading_image = use_signal(|| false);
+    
+    // Load image with credentials - reactive to CURRENT_IMAGE_INDEX and IMAGES
+    use_effect(move || {
+        let index = CURRENT_IMAGE_INDEX();
+        let images = IMAGES.read();
+        
+        tracing::info!("🕵️ Effect triggered: index={}, total images={}", index, images.len());
+        
+        if let Some(img) = images.get(index) {
+            let url = img.url.clone();
+            tracing::info!("⚡ Loading authenticated image [{}]: {}", index + 1, url);
+            is_loading_image.set(true);
+            blob_url.set(String::new()); // Clear previous blob
+            
+            spawn(async move {
+                match super::image_loader::load_authenticated_image(&url).await {
+                    Ok(blob) => {
+                        tracing::info!("✨ Image successfully loaded as blob URL");
+                        blob_url.set(blob);
+                        is_loading_image.set(false);
+                    }
+                    Err(e) => {
+                        tracing::error!("⚠️ Failed to load authenticated image: {}", e);
+                        is_loading_image.set(false);
+                    }
+                }
+            });
+        } else {
+            tracing::info!("🚧 No image at index {} yet", index);
+        }
+    });
+    
+    // Clone for event handlers
+    let current_image_url_load = blob_url().clone();
 
     // --- Annotation dropdown state ---
     let mut annotation_dropdown_open = use_signal(|| false);
@@ -241,26 +280,31 @@ pub fn CanvasPage(block_id: String) -> Element {
                 ),
 
                 // Background image layer only
-                if !current_image_url.is_empty() {
+                if !blob_url().is_empty() {
                     div {
                         class: "canvas-layer canvas-image",
                         img {
                             key: "{image_id_for_ann}",
-                            src: "{current_image_url}",
+                            src: "{blob_url()}",
                             alt: "Canvas image",
                             draggable: "false",
                             decoding: "async",
                             fetchpriority: "high",
-                            crossorigin: "use-credentials",
                             onload:move|_|{
                                 tracing::info!("🖼️ Image loaded: {}", current_image_url_load);
                                 // Cache image world bounds
                                 cache_image_world_bounds(zoom(), pan_x(), pan_y());
                             },
                             onerror:move|_|{
-                                tracing::error!("🛑 Image failed to load: {}", current_image_url_error);
+                                tracing::error!("🛑 Blob image failed to render in img tag");
                             }
                         }
+                    }
+                } else if is_loading_image() {
+                    div {
+                        class: "canvas-layer canvas-image",
+                        style: "display: flex; align-items: center; justify-content: center; min-height: 400px; color: var(--text-secondary);",
+                        "🔄 Loading image..."
                     }
                 }
             }

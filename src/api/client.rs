@@ -3,8 +3,8 @@ use super::auth;
 
 // Shared API configuration
 // Local: http://localhost:9000
-// Production: https://qxh6o5rw2b.execute-api.ap-southeast-2.amazonaws.com
-pub const API_BASE_URL: &str = "http://localhost:9000";
+// Production: https://api.doxle.ai
+pub const API_BASE_URL: &str = "https://api.doxle.ai";
 
 // Helper to get auth header
 pub fn auth_header() -> Result<String, String> {
@@ -165,6 +165,7 @@ pub async fn delete(endpoint: &str) -> Result<(), String> {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct User {
     pub user_id: String,
+    #[serde(default)]
     pub name: String,
     pub email: String,
     pub company: Option<String>,

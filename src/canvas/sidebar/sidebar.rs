@@ -74,6 +74,12 @@ let up_cb = {
                 SidebarTab::Classes => rsx! { ClassesPanel { class_counter: class_counter } },
                 SidebarTab::Comments => rsx! { CommentsPanel {} },
             }
+
+            // Version number at bottom
+            div {
+                class: "sidebar-version",
+                "v1.06"
+            }
         }
     }
 }

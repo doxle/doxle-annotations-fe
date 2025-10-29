@@ -9,7 +9,7 @@ pub mod upload;
 
 pub use home_page::HomePage;
 pub use home_navbar::Navbar;
-pub use join_page::JoinPage;
+pub use join_page::VisionPage;
 pub use login_page::LoginPage;
 pub use signup_page::SignupPage;
 pub use ourstory_page::OurStoryPage;

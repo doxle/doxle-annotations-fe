@@ -5,6 +5,7 @@ mod api;
 mod blocks;
 mod canvas;
 mod home;
+mod matrix;
 mod projects;
 mod shared;
 mod state;
@@ -37,6 +38,8 @@ const THEME_CSS: &str = include_str!("theme.css");
 const HOME_CSS: &str = include_str!("home/home.css");
 const LOGIN_CSS: &str = include_str!("home/login.css");
 const SIGNUP_CSS: &str = include_str!("home/signup.css");
+const OURSTORY_CSS: &str = include_str!("home/ourstory.css");
+const VISION_CSS: &str = include_str!("home/vision.css");
 const PROJECTS_CSS: &str = include_str!("projects/projects.css");
 const BLOCK_CSS: &str = include_str!("blocks/blocks.css");
 const ADD_PROJECT_CSS: &str = include_str!("projects/add_project.css");
@@ -119,6 +122,8 @@ fn App() -> Element {
                 document::Style { {HOME_CSS} }
                 document::Style { {LOGIN_CSS} }
                 document::Style { {SIGNUP_CSS} }
+                document::Style { {OURSTORY_CSS} }
+                document::Style { {VISION_CSS} }
                 document::Style { {PROJECTS_CSS} }
                 document::Style { {ADD_PROJECT_CSS} }
                 document::Style { {BLOCK_CSS} }
@@ -176,8 +181,8 @@ enum Route {
     LoginPage {},
     #[route("/signup")]
     SignupPage {},
-    #[route("/join")]
-    JoinPage {},
+    #[route("/vision")]
+    VisionPage {},
     #[route("/upload")]
     UploadPage {},
     #[route("/sayhello")]
@@ -192,6 +197,8 @@ enum Route {
     CanvasPage { block_id: String },
     #[route("/admin/invites")]
     AdminInvitesPage {},
+    #[route("/matrix")]
+    MatrixPage {},
 }
 
 // Page imports
@@ -199,7 +206,8 @@ use admin::AdminInvitesPage;
 use blocks::BlocksPage;
 use canvas::CanvasPage;
 use home::upload::UploadPage;
-use home::{HomePage, JoinPage, LoginPage, SignupPage, Navbar, OurStoryPage, SayHelloPage};
+use home::{HomePage, VisionPage, LoginPage, SignupPage, Navbar, OurStoryPage, SayHelloPage};
+use matrix::MatrixPage;
 use projects::ProjectsPage;
 
 #[component]

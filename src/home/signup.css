@@ -29,6 +29,40 @@
     margin-top: 21px;
 }
 
+.signup-password-wrapper {
+    position: relative;
+}
+
+.signup-input-with-icon {
+    padding-right: 50px;
+}
+
+.signup-password-toggle {
+    position: absolute;
+    right: 16px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0.6;
+    transition: opacity 0.2s;
+}
+
+.signup-password-toggle:hover {
+    opacity: 1;
+}
+
+.signup-password-toggle svg {
+    width: 20px;
+    height: 20px;
+    stroke: var(--text-secondary);
+}
+
 .signup-input {
     width: 100%;
     height: 70px;

@@ -6,6 +6,7 @@ mod cursor_state;
 pub mod dom_cache;
 mod hit_utils;
 mod image_utils;
+mod image_loader;
 mod keyboard_shortcuts;
 mod mouse_handlers;
 mod navbar;

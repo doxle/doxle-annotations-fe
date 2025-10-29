@@ -18,5 +18,5 @@ pub use websocket::{init_websocket, is_websocket_connected, close_websocket};
 /// Get the API URL from environment or default to localhost
 pub fn get_api_url() -> String {
     // TODO: Make this configurable via environment
-    "http://localhost:9000".to_string()
+    "https://api.doxle.ai".to_string()
 }

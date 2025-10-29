@@ -1,0 +1,26 @@
+/* Vision Page Styles */
+
+.vision-container {
+    min-height: 100vh;
+    background: var(--vision-bg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 20px;
+    font-family: Helvetica, Arial, sans-serif;
+}
+
+.vision-card {
+    background: var(--vision-card-bg);
+    padding: 32px;
+    width: 100%;
+    max-width: 500px;
+    text-align: center;
+}
+
+.vision-title {
+    font-size: 32px;
+    font-weight: 300;
+    color: var(--vision-title);
+    font-family: Helvetica, Arial, sans-serif;
+}

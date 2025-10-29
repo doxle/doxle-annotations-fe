@@ -75,3 +75,14 @@
 
 /* Comments stub */
 .sidebar-muted { opacity: 0.6; padding: 12px 16px; }
+
+/* Version number */
+.sidebar-version {
+    position: absolute;
+    bottom: 8px;
+    left: 16px;
+    font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Fira Code', 'Droid Sans Mono', 'Source Code Pro', monospace;
+    font-size: 10px;
+    color: var(--sidebar-version-text);
+    opacity: 1;
+}

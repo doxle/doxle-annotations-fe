@@ -23,6 +23,7 @@
     --sidebar-border: rgb(230, 230, 230);
     --sidebar-text: #000000;
     --sidebar-row-hover: rgb(230, 230, 230);
+    --sidebar-version-text: #000000;
 
     /* UI element colors */
     --primary-button-bg: #000000;
@@ -111,6 +112,21 @@
     --annotation-point-fill: rgba(51, 66, 255, 0.3);
     --annotation-point-stroke: rgb(51, 66, 255);
     --annotation-stroke-width: 2;
+
+    /* Login page colors */
+    --login-input-text: #000000;
+    --login-input-placeholder: #999999;
+    --login-navbar-text: #333333;
+
+    /* Our Story page colors */
+    --ourstory-bg: #ffffff;
+    --ourstory-title: #333333;
+    --ourstory-text: #666666;
+
+    /* Vision page colors */
+    --vision-bg: #ffffff;
+    --vision-card-bg: #ffffff;
+    --vision-title: #333333;
 }
 
 /* Manual dark theme override via .dark class only */
@@ -137,6 +153,7 @@ html.dark {
     --sidebar-border: rgb(60, 60, 60);
     --sidebar-text: #ffffff;
     --sidebar-row-hover: rgb(50, 50, 50);
+    --sidebar-version-text: #ffffff;
 
     /* UI element colors (dark mode) */
     --primary-button-bg: #4f5bf8;
@@ -225,4 +242,19 @@ html.dark {
     --annotation-point-fill: rgba(51, 66, 255, 0.3);
     --annotation-point-stroke: rgb(51, 66, 255);
     --annotation-stroke-width: 2;
+
+    /* Login page colors (dark mode) */
+    --login-input-text: #ffffff;
+    --login-input-placeholder: #808080;
+    --login-navbar-text: #ffffff;
+
+    /* Our Story page colors (dark mode) */
+    --ourstory-bg: #1a1a1a;
+    --ourstory-title: #ffffff;
+    --ourstory-text: #b0b0b0;
+
+    /* Vision page colors (dark mode) */
+    --vision-bg: #1a1a1a;
+    --vision-card-bg: #252525;
+    --vision-title: #ffffff;
 }

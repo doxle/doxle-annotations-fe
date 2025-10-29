@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 // API Gateway endpoint
-const API_BASE_URL: &str = "http://localhost:9000";
+const API_BASE_URL: &str = "https://api.doxle.ai";
 
 #[derive(Debug, Serialize)]
 struct LoginRequest {

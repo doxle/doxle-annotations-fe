@@ -43,7 +43,7 @@
     border: none;
     font-family: Helvetica, Arial, sans-serif;
     cursor: pointer;
-    color: #333333 !important; /* Force text-primary */
+    color: var(--login-navbar-text) !important;
     transition: opacity 0.2s;
 }
 

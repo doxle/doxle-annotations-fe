@@ -10,7 +10,7 @@ pub fn Navbar() -> Element {
     let nav = navigator();
     let route = use_route::<Route>();
     let is_ourstory = matches!(route, Route::OurStoryPage {});
-    let is_join = matches!(route, Route::JoinPage {});
+    let is_vision = matches!(route, Route::VisionPage {});
     let is_signin = matches!(route, Route::LoginPage {});
 
     rsx! {
@@ -50,9 +50,9 @@ pub fn Navbar() -> Element {
                     }
 
                     button {
-                        class: if is_join { "nav-btn active" } else { "nav-btn" },
-                        onclick: move |_| { nav.push(Route::JoinPage {}); },
-                        "Join"
+                        class: if is_vision { "nav-btn active" } else { "nav-btn" },
+                        onclick: move |_| { nav.push(Route::VisionPage {}); },
+                        "Vision"
                     }
 
                     button {
@@ -100,8 +100,8 @@ pub fn Navbar() -> Element {
 
                     button {
                         class: "mobile-menu-item",
-                        onclick: move |_| { menu_open.set(false); nav.push(Route::JoinPage {}); },
-                        "Join"
+                        onclick: move |_| { menu_open.set(false); nav.push(Route::VisionPage {}); },
+                        "Vision"
                     }
 
                     button {
