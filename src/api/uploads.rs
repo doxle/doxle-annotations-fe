@@ -78,7 +78,7 @@ pub async fn upload_file(
         file_size,
     };
     
-    let response = Request::post(&format!("{}/upload/initiate", api_url))
+    let response = Request::post(&format!("{}/annotate/upload/initiate", api_url))
         .header("Content-Type", "application/json")
         .json(&initiate_request)
         .map_err(|e| format!("Failed to serialize initiate request: {}", e))?
@@ -230,7 +230,7 @@ async fn upload_multipart(
         parts: completed_parts,
     };
     
-    let response = Request::post(&format!("{}/upload/complete", api_url))
+    let response = Request::post(&format!("{}/annotate/upload/complete", api_url))
         .header("Content-Type", "application/json")
         .json(&complete_request)
         .map_err(|e| format!("Failed to serialize complete request: {}", e))?
