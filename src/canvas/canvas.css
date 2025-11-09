@@ -104,7 +104,9 @@
 
 /* Comment tool cursor */
 .canvas-container.comment-tool-active {
-    cursor: url('/assets/icons/comment-cursor.svg') 3 3, auto;
+    cursor:
+        url("/assets/icons/comment-cursor.svg") 3 3,
+        auto;
 }
 
 /* Crosshair cursor for polygon tool */
@@ -446,6 +448,16 @@ html.light .canvas-image img {
     filter: none;
 }
 
+.canvas-saved {
+    z-index: 3;
+    pointer-events: none;
+}
+
+.canvas-overlay {
+    z-index: 4;
+    pointer-events: none;
+}
+
 /* Layer 3: Annotations (top) */
 .canvas-annotations {
     z-index: 3;
@@ -490,7 +502,7 @@ html.light .canvas-image img {
     top: 0;
     background: rgb(0, 0, 0);
     border-radius: 4px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
     padding: 4px 0;
     min-width: 180px;
     z-index: 10002;
@@ -504,7 +516,7 @@ html.light .canvas-image img {
     top: 0;
     background: rgb(0, 0, 0);
     border-radius: 4px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
     padding: 0;
     min-width: 240px;
     max-width: 300px;

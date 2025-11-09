@@ -1,10 +1,15 @@
+use crate::canvas::canvas_setup::setup_canvas_size;
+use crate::canvas::dom_cache::clear_all_caches;
+
 use super::annotations::comment::Comment;
-use super::annotations::shapes::BBox;
-use super::annotations::shapes::Polygon;
+use crate::shared::shapes::BBox;
+use crate::shared::shapes::Polygon;
 use super::annotations::Tool;
+use super::annotations::{overlay_canvas, overlay_canvas::clear_polygon_preview};
 use super::annotations::{AnnotationDropdown, AnnotationTarget};
 use super::canvas_navbar::CanvasNavbar;
 use super::cursor_state::CursorState;
+use super::dom_cache::get_window;
 use super::image_utils::cache_image_world_bounds;
 use super::sidebar::Sidebar;
 use dioxus::prelude::*;
@@ -145,6 +150,35 @@ pub fn CanvasPage(block_id: String) -> Element {
         } else {
             tracing::info!("🚧 No image at index {} yet", index);
         }
+    });
+
+    //Reset drawing state when image changes
+    use_effect(move || {
+        let _ = CURRENT_IMAGE_INDEX(); // Watch for image changes
+
+        //Invalidates cached DOM reference so new <img> is picked up
+        clear_all_caches();
+
+        // Clear polygon state with new image
+        polygon.write().reset();
+        bbox.write().reset();
+        clear_polygon_preview();
+
+        // Clear overlay canvas
+        if let Some(ctx) = overlay_canvas::get_overlay_canvas_context() {
+            if let Some(canvas) = ctx.canvas() {
+                let win = get_window().expect("window");
+                let dpr = win.device_pixel_ratio();
+                let css_w = canvas.width() as f64 / dpr;
+                let css_h = canvas.height() as f64 / dpr;
+                ctx.clear_rect(0.0, 0.0, css_w, css_h);
+            }
+        }
+
+        setup_canvas_size();
+        // cache_image_world_bounds() is still called on <img>.onload, which will now
+        // see the NEW image element because we cleared the cache above.
+        tracing::info!("🔄 DOM caches cleared and drawing state reset for image change");
     });
 
     // Clone for event handlers

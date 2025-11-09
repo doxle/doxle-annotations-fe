@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 use crate::canvas::sidebar::storage::{load_json, save_json as save_json_internal};
-use super::shapes::Polygon;
+use crate::shared::shapes::Polygon;
 use crate::canvas::dom_cache::get_window;
 
 // Re-export save_json for edit_commit

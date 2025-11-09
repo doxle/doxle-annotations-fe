@@ -1,5 +1,5 @@
 use std::cell::RefCell;
-use super::shapes::Point;
+use crate::shared::shapes::Point;
 use super::store::{SavedPolygon, SavedBBox};
 use crate::canvas::annotations::AnnotationTarget;
 

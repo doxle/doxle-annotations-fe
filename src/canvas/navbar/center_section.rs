@@ -1,4 +1,4 @@
-use super::super::annotations::shapes::{BBox, Polygon};
+use crate::shared::shapes::{BBox, Polygon};
 use super::super::annotations::Tool;
 use crate::state::{next_image, prev_image, CURRENT_IMAGE_INDEX, IMAGES};
 use dioxus::prelude::*;

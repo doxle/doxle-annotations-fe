@@ -12,6 +12,8 @@ pub const LABEL_COLORS: [&str; 40] = [
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Label {
+    #[serde(default)]
+    pub label_id: String,
     pub name: String,
     pub color: String,
 }

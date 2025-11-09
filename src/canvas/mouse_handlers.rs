@@ -9,7 +9,7 @@ use super::annotations::overlay_canvas::{
 };
 use super::annotations::polygon::on_polygon_click;
 use super::annotations::saved_canvas::{get_cached_bboxes, get_cached_polygons};
-use super::annotations::shapes::{BBox, Point, Polygon};
+use crate::shared::shapes::{BBox, Point, Polygon};
 use super::annotations::store::save_polygon;
 use super::annotations::{AnnotationTarget, Tool};
 use super::cursor_state::CursorState;
@@ -17,6 +17,8 @@ use super::dom_cache::get_canvas_container;
 use super::hit_utils::{point_in_bbox, point_in_poly};
 use super::image_utils::{clamp_f64, get_image_bounds_world, point_inside_image, NAVBAR_H};
 use super::sidebar::storage::{get_active_or_first_class_id, increment_class_count};
+use crate::api::annotations_api::{self, CreateAnnotationRequest, Geometry};
+use super::annotations::saved_canvas::{invalidate_polygon_cache, redraw_saved_annotations};
 use crate::dioxus_elements::input_data::MouseButton;
 use dioxus::prelude::*;
 
@@ -322,18 +324,8 @@ pub fn handle_mousedown(
                         // Persist completed polygon and reset for a new one
                         if let Some(class_id) = get_active_or_first_class_id(&project_id) {
                             save_polygon(&project_id, &block_id, &image_id, &poly, &class_id);
-                            tracing::info!(
-                                "✅ Polygon saved with {} points, class: {}",
-                                poly.points.len(),
-                                class_id
-                            );
                             increment_class_count(&project_id, &class_id, 1);
-                            // Cache invalidation will happen in use_effect
-                            class_counter.set(class_counter() + 1); // Triggers saved canvas redraw
-                            tracing::info!(
-                                "🔄 Class counter incremented to trigger redraw: {}",
-                                class_counter()
-                            );
+                            class_counter.set(class_counter() + 1);
                         } else {
                             tracing::error!("❌ Cannot save polygon: No class found! Create a class first in the sidebar.");
                         }
@@ -515,7 +507,7 @@ pub fn handle_mousemove(
         }
 
         // Update preview point for drawing
-        if polygon().points.len() > 0 && !polygon().is_closed {
+        if !polygon().is_closed {
             set_polygon_preview(Some(Point::new(world_x, world_y)));
             schedule_overlay_redraw(polygon(), zoom(), pan_x(), pan_y());
         }
@@ -556,7 +548,7 @@ pub fn handle_mousemove(
 
         // Update preview point for bbox drawing
         if bbox().start_point.is_some() && !bbox().is_complete {
-            bbox.write().set_preview(Some(Point::new(world_x, world_y)));
+            // Preview is handled by redraw_bbox
             if let Some(ctx) = get_canvas_context() {
                 redraw_bbox(&ctx, &bbox(), zoom(), pan_x(), pan_y());
             }

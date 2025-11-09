@@ -7,7 +7,7 @@ use super::polygon::{
     draw_endpoint, draw_point, draw_polygon, draw_preview_line, fill_polygon, POINT_RADIUS,
     ZOOMED_IN_RADIUS, ZOOMED_OUT_RADIUS,
 };
-use super::shapes::{Point, Polygon};
+use crate::shared::shapes::{Point, Polygon};
 use crate::canvas::dom_cache::{get_document, get_overlay_context, get_window};
 
 thread_local! {

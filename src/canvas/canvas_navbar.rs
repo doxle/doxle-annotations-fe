@@ -1,4 +1,4 @@
-use super::annotations::shapes::{BBox, Polygon};
+use crate::shared::shapes::{BBox, Polygon};
 use super::annotations::Tool;
 use super::navbar::{LeftSection, CenterSection, RightSection};
 use dioxus::prelude::*;

@@ -1,7 +1,7 @@
 use super::annotations::comment::Comment;
 use super::annotations::overlay_canvas::{clear_polygon_preview, get_overlay_canvas_context};
-use super::annotations::shapes::BBox;
-use super::annotations::shapes::Polygon;
+use crate::shared::shapes::BBox;
+use crate::shared::shapes::Polygon;
 use super::annotations::Tool;
 use super::dom_cache::get_window;
 use dioxus::prelude::*;

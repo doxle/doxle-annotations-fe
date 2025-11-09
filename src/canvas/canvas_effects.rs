@@ -1,6 +1,6 @@
-use super::annotations::shapes::BBox;
+use crate::shared::shapes::BBox;
 use super::annotations::comment::Comment;
-use super::annotations::shapes::Polygon;
+use crate::shared::shapes::Polygon;
 use super::annotations::saved_canvas::{
     invalidate_bbox_cache, invalidate_polygon_cache, redraw_saved_annotations,
 };

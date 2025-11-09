@@ -1,3 +1,5 @@
+use crate::state::PROJECTS;
+use dioxus::prelude::ReadableExt;
 use serde::{de::DeserializeOwned, Serialize};
 use web_sys::window;
 
@@ -29,23 +31,18 @@ pub fn save_f32(key: &str, v: f32) {
     }
 }
 
-fn classes_key(project_id: &str) -> String { format!("classes:{}", project_id) }
-fn active_key(project_id: &str) -> String { format!("active_class:{}", project_id) }
+fn classes_key(project_id: &str) -> String {
+    format!("classes:{}", project_id)
+}
+fn active_key(project_id: &str) -> String {
+    format!("active_class:{}", project_id)
+}
 
 pub fn get_active_or_first_class_id(project_id: &str) -> Option<String> {
-    let active_opt: Option<String> = load_json(&active_key(project_id));
-    if let Some(active) = active_opt {
-        return Some(active);
-    }
-    let classes_opt: Option<Vec<ClassItem>> = load_json(&classes_key(project_id));
-    classes_opt.and_then(|v| v.first().map(|c| c.id.clone()))
+    let pid = project_id.to_string();
+    let projects = PROJECTS.read();
+    let proj = projects.iter().find(|p| p.project_id == pid)?;
+    proj.labels.first().map(|l| l.name.clone()) // Use label name as the class id
 }
 
-pub fn increment_class_count(project_id: &str, class_id: &str, delta: i32) {
-    let mut classes: Vec<ClassItem> = load_json(&classes_key(project_id)).unwrap_or_default();
-    if let Some(ci) = classes.iter_mut().find(|c| c.id == class_id) {
-        let new = (ci.count as i32 + delta).max(0) as u32;
-        ci.count = new;
-    }
-    save_json(&classes_key(project_id), &classes);
-}
+pub fn increment_class_count(project_id: &str, class_id: &str, delta: i32) {}

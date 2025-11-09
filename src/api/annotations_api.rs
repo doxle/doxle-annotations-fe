@@ -1,20 +1,8 @@
 use serde::{Deserialize, Serialize};
 use super::client_api::{API_BASE_URL, auth_header};
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct Point {
-    pub x: f64,
-    pub y: f64,
-}
-
-#[derive(Debug, Serialize, Deserialize, Clone)]
-#[serde(tag = "type")]
-pub enum Geometry {
-    #[serde(rename = "polygon")]
-    Polygon { points: Vec<Point> },
-    #[serde(rename = "bbox")]
-    BBox { start: Point, end: Point },
-}
+// Re-export shared shapes for convenience
+pub use crate::shared::shapes::{Point, Geometry};
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Annotation {

@@ -1,4 +1,4 @@
-use super::shapes::Point;
+use crate::shared::shapes::Point;
 
 const NODE_HIT_RADIUS: f64 = 10.0; // Screen pixels
 const EDGE_HIT_THRESHOLD: f64 = 8.0; // Screen pixels

@@ -1,5 +1,5 @@
 use web_sys::CanvasRenderingContext2d;
-use super::shapes::Point;
+use crate::shared::shapes::Point;
 use super::edit_state::{EditTarget, get_edit_target};
 
 const NODE_RADIUS: f64 = 5.0; // Base radius in screen pixels

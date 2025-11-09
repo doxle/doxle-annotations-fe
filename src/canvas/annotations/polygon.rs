@@ -1,7 +1,7 @@
 use wasm_bindgen::JsValue;
 use web_sys::CanvasRenderingContext2d;
 
-use super::shapes::{Point, Polygon};
+use crate::shared::shapes::{Point, Polygon};
 
 /* ---- styles (edit once here) ---- */
 pub const POINT_STROKE: &str = "rgb(51, 66, 255)";

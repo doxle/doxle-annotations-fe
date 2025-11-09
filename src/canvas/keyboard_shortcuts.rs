@@ -1,10 +1,10 @@
 use super::annotations::bbox::redraw_bbox;
-use super::annotations::shapes::BBox;
+use crate::shared::shapes::BBox;
 use super::annotations::edit_state::{is_editing, cancel_edit};
 use super::annotations::overlay_canvas::schedule_edit_redraw;
 use super::dom_cache::{get_window, get_document};
 use super::annotations::overlay_canvas::{get_overlay_canvas_context, schedule_overlay_redraw};
-use super::annotations::shapes::Polygon;
+use crate::shared::shapes::Polygon;
 use super::annotations::store::{delete_bbox_at, delete_polygon_at, load_bboxes, load_polygons, save_bbox, save_polygon, SavedPoint as SP};
 use super::annotations::AnnotationTarget;
 use super::annotations::Tool;

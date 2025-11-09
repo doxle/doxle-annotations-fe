@@ -1,7 +1,7 @@
 use wasm_bindgen::JsValue;
 use web_sys::CanvasRenderingContext2d;
 
-use super::shapes::{BBox, Point};
+use crate::shared::shapes::{BBox, Point};
 use crate::canvas::dom_cache::get_window;
 
 /* ---- styles (same as polygon) ---- */
