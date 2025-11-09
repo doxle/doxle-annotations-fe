@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use super::client::{API_BASE_URL, auth_header};
+use super::client_api::{API_BASE_URL, auth_header};
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Class {

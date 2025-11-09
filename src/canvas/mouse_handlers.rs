@@ -1,13 +1,16 @@
 use super::annotations::bbox::{on_bbox_click, redraw_bbox};
-use super::annotations::edit_hit_test::{hit_test_node, hit_test_edge, hit_test_bbox_corner};
-use super::annotations::edit_state::{start_edit, start_drag, end_drag, clear_edit, is_editing, get_edit_target, update_drag, EditTarget};
+use super::annotations::edit_hit_test::{hit_test_bbox_corner, hit_test_edge, hit_test_node};
+use super::annotations::edit_state::{
+    clear_edit, end_drag, get_edit_target, is_editing, start_drag, start_edit, update_drag,
+    EditTarget,
+};
 use super::annotations::overlay_canvas::{
-    clear_polygon_preview, schedule_overlay_redraw, set_polygon_preview, schedule_edit_redraw,
+    clear_polygon_preview, schedule_edit_redraw, schedule_overlay_redraw, set_polygon_preview,
 };
 use super::annotations::polygon::on_polygon_click;
+use super::annotations::saved_canvas::{get_cached_bboxes, get_cached_polygons};
 use super::annotations::shapes::{BBox, Point, Polygon};
-use super::annotations::store::{save_polygon};
-use super::annotations::saved_canvas::{get_cached_polygons, get_cached_bboxes};
+use super::annotations::store::save_polygon;
 use super::annotations::{AnnotationTarget, Tool};
 use super::cursor_state::CursorState;
 use super::dom_cache::get_canvas_container;
@@ -83,7 +86,7 @@ pub fn handle_wheel(
     pan_y.set(new_pan_y);
     zoom.set(new);
     // Note: use_effect watching zoom/pan will redraw Canvas-A
-    
+
     // Redraw appropriate overlay
     if is_editing() {
         schedule_edit_redraw(new, new_pan_x, new_pan_y);
@@ -144,14 +147,16 @@ pub fn handle_mousedown(
         let screen_y = coords.y - NAVBAR_H;
         let world_x = (screen_x - pan_x()) / zoom();
         let world_y = (screen_y - pan_y()) / zoom();
-        
+
         // If already editing, check for node/edge hits first
         if is_editing() {
             if let Some(target) = get_edit_target() {
                 let hit_annotation = match target {
                     EditTarget::Polygon { points, .. } => {
                         // Check node hit
-                        if let Some(node_idx) = hit_test_node(Point::new(world_x, world_y), &points, zoom()) {
+                        if let Some(node_idx) =
+                            hit_test_node(Point::new(world_x, world_y), &points, zoom())
+                        {
                             start_drag(Some(node_idx), Point::new(world_x, world_y));
                             return;
                         }
@@ -160,18 +165,26 @@ pub fn handle_mousedown(
                     }
                     EditTarget::BBox { start, end, .. } => {
                         // Check corner hit
-                        if let Some(corner_idx) = hit_test_bbox_corner(Point::new(world_x, world_y), start, end, zoom()) {
+                        if let Some(corner_idx) =
+                            hit_test_bbox_corner(Point::new(world_x, world_y), start, end, zoom())
+                        {
                             // Map corner to start/end (0=start, 2=end for diagonal corners)
-                            let node_idx = if corner_idx == 0 || corner_idx == 3 { 0 } else { 1 };
+                            let node_idx = if corner_idx == 0 || corner_idx == 3 {
+                                0
+                            } else {
+                                1
+                            };
                             start_drag(Some(node_idx), Point::new(world_x, world_y));
                             return;
                         }
                         // Check if clicking inside bbox
-                        world_x >= start.x.min(end.x) && world_x <= start.x.max(end.x) &&
-                        world_y >= start.y.min(end.y) && world_y <= start.y.max(end.y)
+                        world_x >= start.x.min(end.x)
+                            && world_x <= start.x.max(end.x)
+                            && world_y >= start.y.min(end.y)
+                            && world_y <= start.y.max(end.y)
                     }
                 };
-                
+
                 if hit_annotation {
                     // Start dragging the whole shape
                     start_drag(None, Point::new(world_x, world_y));
@@ -183,7 +196,14 @@ pub fn handle_mousedown(
                     schedule_edit_redraw(zoom(), pan_x(), pan_y());
                     // Redraw saved canvas directly without signal
                     use super::annotations::saved_canvas::redraw_saved_annotations;
-                    redraw_saved_annotations(&project_id, &block_id, &image_id, zoom(), pan_x(), pan_y());
+                    redraw_saved_annotations(
+                        &project_id,
+                        &block_id,
+                        &image_id,
+                        zoom(),
+                        pan_x(),
+                        pan_y(),
+                    );
                     // Start panning
                     is_panning.set(true);
                     last_x.set(coords.x);
@@ -192,7 +212,7 @@ pub fn handle_mousedown(
                 }
             }
         }
-        
+
         // Only check for annotations if we were editing (need to exit) or might select something
         // Skip expensive localStorage reads if just panning around
         if is_editing() {
@@ -206,14 +226,14 @@ pub fn handle_mousedown(
             is_panning.set(true);
             last_x.set(coords.x);
             last_y.set(coords.y);
-            } else {
-                // Not editing - check if clicking on annotation to select
-                // Use cached versions to avoid localStorage reads on every click
-                let saved_polys = get_cached_polygons(&project_id, &block_id, &image_id);
-                let saved_bboxes = get_cached_bboxes(&project_id, &block_id, &image_id);
-                
-                let mut found: Option<AnnotationTarget> = None;
-            
+        } else {
+            // Not editing - check if clicking on annotation to select
+            // Use cached versions to avoid localStorage reads on every click
+            let saved_polys = get_cached_polygons(&project_id, &block_id, &image_id);
+            let saved_bboxes = get_cached_bboxes(&project_id, &block_id, &image_id);
+
+            let mut found: Option<AnnotationTarget> = None;
+
             // Prefer bboxes over polygons
             for (idx, bb) in saved_bboxes.iter().enumerate().rev() {
                 if point_in_bbox(world_x, world_y, bb) {
@@ -221,7 +241,7 @@ pub fn handle_mousedown(
                     break;
                 }
             }
-            
+
             if found.is_none() {
                 for (idx, sp) in saved_polys.iter().enumerate().rev() {
                     if sp.points.len() >= 3 && point_in_poly(world_x, world_y, &sp.points) {
@@ -230,14 +250,21 @@ pub fn handle_mousedown(
                     }
                 }
             }
-            
+
             if let Some(target) = found {
                 // Enter edit mode
                 start_edit(target, &saved_polys, &saved_bboxes);
                 schedule_edit_redraw(zoom(), pan_x(), pan_y());
                 // Redraw saved canvas directly to hide selected annotation (no data change, no counter)
                 use super::annotations::saved_canvas::redraw_saved_annotations;
-                redraw_saved_annotations(&project_id, &block_id, &image_id, zoom(), pan_x(), pan_y());
+                redraw_saved_annotations(
+                    &project_id,
+                    &block_id,
+                    &image_id,
+                    zoom(),
+                    pan_x(),
+                    pan_y(),
+                );
             } else {
                 // No annotation clicked, just pan
                 is_panning.set(true);
@@ -274,23 +301,41 @@ pub fn handle_mousedown(
         if let Some(ctx) = get_canvas_context() {
             // Check if clicking near first point to close (only if inside image)
             let mut poly = polygon.write();
+            tracing::info!("🔵 Polygon click - current points: {}", poly.points.len());
             if poly.points.len() >= 3 {
                 if let Some(first) = poly.points.first() {
+                    tracing::info!("🟢 Polygon has 3+ points, checking for close");
                     let first_screen_x = first.x * zoom() + pan_x();
                     let first_screen_y = first.y * zoom() + pan_y();
                     let dx = screen_x - first_screen_x;
                     let dy = screen_y - first_screen_y;
                     let distance = (dx * dx + dy * dy).sqrt();
+                    tracing::info!(
+                        "📏 Distance to first point: {} (need < 30.0 to close)",
+                        distance
+                    );
 
                     if distance < 30.0 {
+                        tracing::info!("🎯 CLOSING POLYGON! Distance to first point: {}", distance);
                         // Close the polygon
                         poly.close();
                         // Persist completed polygon and reset for a new one
                         if let Some(class_id) = get_active_or_first_class_id(&project_id) {
                             save_polygon(&project_id, &block_id, &image_id, &poly, &class_id);
+                            tracing::info!(
+                                "✅ Polygon saved with {} points, class: {}",
+                                poly.points.len(),
+                                class_id
+                            );
                             increment_class_count(&project_id, &class_id, 1);
                             // Cache invalidation will happen in use_effect
                             class_counter.set(class_counter() + 1); // Triggers saved canvas redraw
+                            tracing::info!(
+                                "🔄 Class counter incremented to trigger redraw: {}",
+                                class_counter()
+                            );
+                        } else {
+                            tracing::error!("❌ Cannot save polygon: No class found! Create a class first in the sidebar.");
                         }
                         poly.reset();
                         // Drop borrow before scheduling overlay redraw
@@ -391,7 +436,7 @@ pub fn handle_mousemove(
         return;
     } // freeze interactions under dropdown
     let coords = evt.client_coordinates();
-    
+
     // Handle edit mode dragging (fast path - no signals!)
     if is_editing() {
         use super::annotations::edit_state::is_dragging;
@@ -400,7 +445,7 @@ pub fn handle_mousemove(
             let screen_y = coords.y - NAVBAR_H;
             let world_x = (screen_x - pan_x()) / zoom();
             let world_y = (screen_y - pan_y()) / zoom();
-            
+
             if update_drag(Point::new(world_x, world_y)) {
                 schedule_edit_redraw(zoom(), pan_x(), pan_y());
             }
@@ -419,7 +464,7 @@ pub fn handle_mousemove(
         last_x.set(coords.x);
         last_y.set(coords.y);
         // Note: use_effect watching pan will redraw Canvas-A
-        
+
         // Redraw edit overlay if editing
         if is_editing() {
             schedule_edit_redraw(zoom(), new_pan_x, new_pan_y);
@@ -567,10 +612,10 @@ pub fn handle_mouseup(
     if annotation_dropdown_open() {
         return;
     }
-    
+
     // End drag but stay in edit mode
-    use super::annotations::edit_state::is_dragging;
     use super::annotations::edit_commit::commit_edit;
+    use super::annotations::edit_state::is_dragging;
     if is_dragging() {
         end_drag();
         // Commit changes but DON'T clear edit mode - stay selected for further editing
@@ -578,7 +623,9 @@ pub fn handle_mouseup(
             // Keep edit mode active, just refresh the display
             schedule_edit_redraw(zoom(), pan_x(), pan_y());
             // Invalidate saved canvas cache
-            use super::annotations::saved_canvas::{invalidate_polygon_cache, invalidate_bbox_cache};
+            use super::annotations::saved_canvas::{
+                invalidate_bbox_cache, invalidate_polygon_cache,
+            };
             invalidate_polygon_cache();
             invalidate_bbox_cache();
             class_counter.set(class_counter() + 1);

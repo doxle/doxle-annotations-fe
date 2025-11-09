@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+use serde_json::json;
 
 // API Gateway endpoint
 const API_BASE_URL: &str = "https://api.doxle.ai";
@@ -62,14 +63,15 @@ pub async fn authenticate(email: &str, password: &str) -> Result<AuthResult, Str
             .text()
             .await
             .unwrap_or_else(|_| "Unknown error".to_string());
-        
+
         // Try to parse the error response JSON
-        let error_msg = if let Ok(error_response) = serde_json::from_str::<ErrorResponse>(&error_text) {
-            error_response.message
-        } else {
-            error_text
-        };
-        
+        let error_msg =
+            if let Ok(error_response) = serde_json::from_str::<ErrorResponse>(&error_text) {
+                error_response.message
+            } else {
+                error_text
+            };
+
         tracing::error!("Authentication failed: {}", error_msg);
         return Err(error_msg);
     }
@@ -99,6 +101,24 @@ pub fn store_token(id_token: &str) {
     }
 }
 
+// Store refresh token in browser local storage
+pub fn store_refresh_token(refresh_token: &str) {
+    if let Some(window) = web_sys::window() {
+        if let Ok(Some(storage)) = window.local_storage() {
+            let _ = storage.set_item("doxle_refresh_token", refresh_token);
+        }
+    }
+}
+
+// Get refresh token from browser local storage
+pub fn get_refresh_token() -> Option<String> {
+    web_sys::window()?
+        .local_storage()
+        .ok()??
+        .get_item("doxle_refresh_token")
+        .ok()?
+}
+
 // Get token from browser local storage
 pub fn get_token() -> Option<String> {
     web_sys::window()?
@@ -113,6 +133,7 @@ pub fn clear_token() {
     if let Some(window) = web_sys::window() {
         if let Ok(Some(storage)) = window.local_storage() {
             let _ = storage.remove_item("doxle_auth_token");
+            let _ = storage.remove_item("doxle_refresh_token");
         }
     }
 }
@@ -151,18 +172,65 @@ pub async fn signup(email: &str, password: &str, invite_code: &str) -> Result<()
             .text()
             .await
             .unwrap_or_else(|_| "Unknown error".to_string());
-        
+
         // Try to parse the error response JSON
-        let error_msg = if let Ok(error_response) = serde_json::from_str::<ErrorResponse>(&error_text) {
-            error_response.message
-        } else {
-            error_text
-        };
-        
+        let error_msg =
+            if let Ok(error_response) = serde_json::from_str::<ErrorResponse>(&error_text) {
+                error_response.message
+            } else {
+                error_text
+            };
+
         tracing::error!("Signup failed: {}", error_msg);
         return Err(error_msg);
     }
 
     tracing::info!("✅ Signup successful!");
     Ok(())
+}
+
+///Refresh access token using refresh token
+pub async fn refresh_access_token() -> Result<AuthResult, String> {
+    tracing::info!("🔄 Refreshing access token");
+
+    let refresh_token = get_refresh_token().ok_or("No refresh token found")?;
+
+    let request = json! ({
+        "refresh_token": refresh_token,
+    });
+
+    let endpoint = format!("{}/refresh", API_BASE_URL);
+    let client = reqwest::Client::new();
+
+    let response = client
+        .post(&endpoint)
+        .header("Content-Type", "application/json")
+        .json(&request)
+        .send()
+        .await
+        .map_err(|e| {
+            let error_msg = format!("Network error: {}", e);
+            tracing::error!("{}", error_msg);
+            error_msg
+        })?;
+
+    if !response.status().is_success() {
+        let error_text = response
+            .text()
+            .await
+            .unwrap_or_else(|_| "Unknown error".to_string());
+        tracing::error!("Token refresh failed: {}", error_text);
+        return Err(error_text);
+    }
+
+    let auth_result: AuthResult = response
+        .json()
+        .await
+        .map_err(|e| format!("Failed to parse JSON response: {}", e))?;
+
+    // Store the new tokens
+    store_token(&auth_result.id_token);
+    store_refresh_token(&auth_result.refresh_token);
+    tracing::info!("✅ Token refresh successful!");
+    Ok(auth_result)
 }

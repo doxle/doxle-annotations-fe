@@ -5,7 +5,8 @@
     margin-top: 36px; /* Below navbar */
     display: flex;
     font-family: Helvetica, Arial, sans-serif;
-    background: var(--bg-primary);
+    /*background: var(--bg-primary);*/
+    /*background-color: red;*/
 }
 
 /* Main content area */
@@ -14,6 +15,7 @@
     padding: 40px 20px;
     max-width: 1200px;
     margin: 0 auto;
+    /*background-color: greenyellow;*/
     display: flex;
     flex-direction: column;
     transition: margin 0.3s ease;
@@ -25,6 +27,7 @@
 
 .projects-title-bar {
     display: flex;
+    /*background-color: rebeccapurple;*/
     justify-content: space-between;
     align-items: center;
     margin-bottom: 42px;

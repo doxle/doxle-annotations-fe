@@ -71,7 +71,7 @@ pub async fn delete_project(project_id: String) {
     // Step 2: Send HTTP DELETE to backend
     tracing::info!("📡 Sending HTTP DELETE /projects/{}", project_id);
     
-    match api::client::delete(&format!("/projects/{}", project_id)).await {
+    match api::client_api::delete(&format!("/projects/{}", project_id)).await {
         Ok(_) => {
             tracing::info!("✅ Delete confirmed by server for project: {}", project_id);
         }

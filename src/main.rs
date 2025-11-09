@@ -30,6 +30,7 @@ const MAIN_CSS_CONTENT: &str = r#"
     }
     body {
         font-family: 'HelveticaNeue', Helvetica, Arial, sans-serif;
+        background: var(--bg-primary);
     }
 "#;
 
@@ -142,17 +143,17 @@ fn App() -> Element {
                 document::Style { {ADMIN_INVITES_CSS} }
 
                 // Force light theme always
-                script {
-                    {
-                        r#"
-(function(){
-    var html = document.documentElement;
-    html.classList.remove('dark');
-    html.classList.add('light');
-})();
-                        "#
-                    }
-                }
+                // script {
+                //     {
+                //         r#"
+                //             (function(){
+                //                 var html = document.documentElement;
+                //                 html.classList.remove('dark');
+                //                 html.classList.add('light');
+                //             })();
+                //         "#
+                //     }
+                // }
 
                 // Fonts from template with asset URLs
                 document::Style {
@@ -206,7 +207,7 @@ use admin::AdminInvitesPage;
 use blocks::BlocksPage;
 use canvas::CanvasPage;
 use home::upload::UploadPage;
-use home::{HomePage, VisionPage, LoginPage, SignupPage, Navbar, OurStoryPage, SayHelloPage};
+use home::{HomePage, LoginPage, Navbar, OurStoryPage, SayHelloPage, SignupPage, VisionPage};
 use matrix::MatrixPage;
 use projects::ProjectsPage;
 

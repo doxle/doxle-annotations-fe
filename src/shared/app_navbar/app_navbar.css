@@ -51,6 +51,7 @@
     border-radius: 4px;
     transition: all 0.2s ease;
     font-weight: 400; /* Added light font weight */
+    user-select: none;
 }
 
 .app-navbar-breadcrumb:hover {

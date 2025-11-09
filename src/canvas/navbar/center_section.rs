@@ -1,6 +1,6 @@
 use super::super::annotations::shapes::{BBox, Polygon};
 use super::super::annotations::Tool;
-use crate::state::{prev_image, next_image, IMAGES, CURRENT_IMAGE_INDEX};
+use crate::state::{next_image, prev_image, CURRENT_IMAGE_INDEX, IMAGES};
 use dioxus::prelude::*;
 
 #[component]
@@ -47,9 +47,10 @@ pub fn CenterSection(
             div {
                 class: "navbar-img-navigation",
                 style: "display: flex; align-items: center; gap: 8px;",
-                
+
                 // Previous button
                 button {
+                    "data-tooltip": "Previous",
                     class: if current_image_index > 0 {
                         "navbar-nav-button"
                     } else {
@@ -64,15 +65,16 @@ pub fn CenterSection(
                     },
                     "{CHEVRON_LEFT}"
                 }
-                
+
                 // Image name and counter
                 span {
                     class: "navbar-img-name",
                     "{current_image_index + 1} / {total_images}"
                 }
-                
+
                 // Next button
                 button {
+                    "data-tooltip": "Next",
                     class: if current_image_index < total_images.saturating_sub(1) {
                         "navbar-nav-button"
                     } else {
@@ -141,6 +143,8 @@ pub fn CenterSection(
                 onclick: move |e| {
                     e.stop_propagation();
                     selected_tool.set(Tool::Polygon);
+                    tracing::info!("🎨 POLYGON TOOL CLICKED");
+                    tracing::info!("🎨 Tool set to: {:?}", selected_tool())
                 },
                 img {
                     class: "navbar-icon navbar-polygon-icon",

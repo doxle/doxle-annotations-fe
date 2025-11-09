@@ -1,19 +1,22 @@
-pub mod auth;
-pub mod client;
-pub mod projects;
-pub mod blocks;
-pub mod images;
-pub mod annotations;
-pub mod websocket;
-pub mod classes;
-pub mod uploads;
-pub mod cloudfront;
+pub mod annotations_api;
+pub mod auth_api;
+pub mod blocks_api;
+pub mod classes_api;
+pub mod client_api;
+pub mod cloudfront_api;
+pub mod images_api;
+pub mod projects_api;
+pub mod uploads_api;
+pub mod websocket_api;
 
 // Re-exports for convenience
-pub use auth::{authenticate, signup, store_token, get_token, clear_token};
-pub use client::{User, get_user};
-pub use projects::{Project, list_projects};
-pub use websocket::{init_websocket, is_websocket_connected, close_websocket};
+pub use auth_api::{
+    authenticate, clear_token, get_token, refresh_access_token, signup, store_refresh_token,
+    store_token,
+};
+pub use client_api::{get_user, User};
+pub use projects_api::{list_projects, Project};
+pub use websocket_api::{close_websocket, init_websocket, is_websocket_connected};
 
 /// Get the API URL from environment or default to localhost
 pub fn get_api_url() -> String {

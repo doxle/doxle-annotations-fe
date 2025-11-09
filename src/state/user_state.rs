@@ -10,7 +10,7 @@ pub async fn load_user() {
     if let Some(_token) = api::get_token() {
         *USER_LOADING.write() = true;
         
-        match api::client::get_current_user().await {
+        match api::client_api::get_current_user().await {
             Ok(user) => {
                 tracing::info!("✅ User loaded: {}", user.email);
                 *USER.write() = Some(user);
@@ -29,7 +29,7 @@ pub async fn load_user() {
 
 /// Create user profile
 pub async fn create_user_profile(name: String, email: String, company: Option<String>, role: String) -> Result<(), String> {
-    match api::client::create_user_profile(name, email, company, role).await {
+    match api::client_api::create_user_profile(name, email, company, role).await {
         Ok(user) => {
             tracing::info!("✅ User created: {}", user.email);
             *USER.write() = Some(user);

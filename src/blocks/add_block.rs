@@ -1,8 +1,8 @@
-use dioxus::prelude::*;
+use crate::api::uploads_api;
+use crate::state::{create_block, load_block_images};
 use dioxus::html::HasFileData;
+use dioxus::prelude::*;
 use web_sys::File;
-use crate::api::uploads;
-use crate::state::{load_block_images, create_block};
 
 #[derive(Clone)]
 pub struct BlockFormData {
@@ -28,31 +28,35 @@ pub fn AddBlockModal(show: Signal<bool>, project_id: String) -> Element {
 
     let handle_submit = move |e: Event<FormData>| {
         e.prevent_default();
-        
+
         let project_id = project_id.clone();
         let block_name_val = block_name.read().clone();
         let uploads = pending_uploads.read().clone();
-        
-        tracing::info!("Submit clicked. Block name: {}, Files: {}", block_name_val, uploads.len());
-        
+
+        tracing::info!(
+            "Submit clicked. Block name: {}, Files: {}",
+            block_name_val,
+            uploads.len()
+        );
+
         // Validation: require at least one image
         if uploads.is_empty() {
             *error.write() = Some("Block cannot be created without images".to_string());
             return;
         }
-        
+
         spawn(async move {
             *loading.write() = true;
             *error.write() = None;
-            
+
             tracing::info!("Creating block: {}", block_name_val);
-            
+
             // Create the block and get the ID directly
             let block_id = match create_block(&project_id, block_name_val).await {
                 Ok(block) => {
                     tracing::info!("✓ Block created: {}", block.block_id);
                     block.block_id
-                },
+                }
                 Err(e) => {
                     tracing::error!("✗ Failed to create block: {}", e);
                     *error.write() = Some(format!("Failed to create block: {}", e));
@@ -60,18 +64,20 @@ pub fn AddBlockModal(show: Signal<bool>, project_id: String) -> Element {
                     return;
                 }
             };
-            
+
             // Upload all files if any
             if !uploads.is_empty() {
                 tracing::info!("Starting upload of {} files", uploads.len());
                 *upload_progress.write() = Some(format!("Preparing uploads..."));
-                
+
                 for (idx, pending) in uploads.iter().enumerate() {
                     let progress_msg = format!("Uploading {} of {}...", idx + 1, uploads.len());
                     tracing::info!("{}", progress_msg);
                     *upload_progress.write() = Some(progress_msg);
-                    
-                    match uploads::upload_file(&project_id, &block_id, pending.file.clone()).await {
+
+                    match uploads_api::upload_file(&project_id, &block_id, pending.file.clone())
+                        .await
+                    {
                         Ok(image_id) => {
                             tracing::info!("✓ Uploaded image: {}", image_id);
                         }
@@ -84,13 +90,13 @@ pub fn AddBlockModal(show: Signal<bool>, project_id: String) -> Element {
                         }
                     }
                 }
-                
+
                 tracing::info!("All uploads completed!");
-                
+
                 // Reload images for the block to show them in the UI
-                load_block_images(&block_id).await;
+                load_block_images(&project_id, &block_id).await;
             }
-            
+
             // Close modal and reset
             *show.write() = false;
             *block_name.write() = String::new();
@@ -164,7 +170,7 @@ pub fn AddBlockModal(show: Signal<bool>, project_id: String) -> Element {
                             oninput: move |e| *block_name.write() = e.value(),
                         }
                     }
-                    
+
                     div {
                         class: "add-block-form-group",
                         label { "Images" }
@@ -178,17 +184,17 @@ pub fn AddBlockModal(show: Signal<bool>, project_id: String) -> Element {
                                 async move {
                                     let file_data_vec = (*e.data()).files();
                                     tracing::info!("Files dropped: {}", file_data_vec.len());
-                                    
+
                                     for file_data in file_data_vec {
                                         let file_name = file_data.name();
                                         tracing::info!("Processing dropped: {}", file_name);
-                                        
+
                                         match file_data.read_bytes().await {
                                             Ok(contents) => {
                                                 let array = js_sys::Uint8Array::from(&contents[..]);
                                                 let file_array = js_sys::Array::new();
                                                 file_array.push(&array);
-                                                
+
                                                 let mime = if file_name.ends_with(".png") {
                                                     "image/png"
                                                 } else if file_name.ends_with(".jpg") || file_name.ends_with(".jpeg") {
@@ -196,17 +202,17 @@ pub fn AddBlockModal(show: Signal<bool>, project_id: String) -> Element {
                                                 } else {
                                                     "image/*"
                                                 };
-                                                
+
                                                 let mut blob_props = web_sys::BlobPropertyBag::new();
                                                 blob_props.set_type(mime);
-                                                
+
                                                 if let Ok(blob) = web_sys::Blob::new_with_u8_array_sequence_and_options(
                                                     &file_array,
                                                     &blob_props
                                                 ) {
                                                     let mut file_props = web_sys::FilePropertyBag::new();
                                                     file_props.set_type(mime);
-                                                    
+
                                                     if let Ok(file) = web_sys::File::new_with_blob_sequence_and_options(
                                                         &js_sys::Array::of1(&blob),
                                                         &file_name,
@@ -214,12 +220,12 @@ pub fn AddBlockModal(show: Signal<bool>, project_id: String) -> Element {
                                                     ) {
                                                         let url = web_sys::Url::create_object_url_with_blob(&file)
                                                             .unwrap_or_default();
-                                                        
+
                                                         pending_uploads.write().push(PendingUpload {
                                                             file,
                                                             preview_url: url,
                                                         });
-                                                        
+
                                                         tracing::info!("Added dropped: {} to uploads", file_name);
                                                     }
                                                 }
@@ -231,25 +237,25 @@ pub fn AddBlockModal(show: Signal<bool>, project_id: String) -> Element {
                                     }
                                 }
                             },
-                            
+
                             label {
                                 class: "add-block-dropzone-label",
-                                
+
                                 input {
                                     class: "add-block-file-input-hidden",
                                     r#type: "file",
                                     multiple: true,
                                     accept: "image/*",
-                                    
+
                                     onchange: move |evt| {
                                         async move {
                                             let file_data_vec = evt.files();
                                             tracing::info!("Files selected: {}", file_data_vec.len());
-                                            
+
                                             for file_data in file_data_vec {
                                                 let file_name = file_data.name();
                                                 tracing::info!("Processing: {}", file_name);
-                                                
+
                                                 // Read file contents as bytes
                                                 match file_data.read_bytes().await {
                                                     Ok(contents) => {
@@ -257,7 +263,7 @@ pub fn AddBlockModal(show: Signal<bool>, project_id: String) -> Element {
                                                         let array = js_sys::Uint8Array::from(&contents[..]);
                                                         let file_array = js_sys::Array::new();
                                                         file_array.push(&array);
-                                                        
+
                                                         let mime = if file_name.ends_with(".png") {
                                                             "image/png"
                                                         } else if file_name.ends_with(".jpg") || file_name.ends_with(".jpeg") {
@@ -265,17 +271,17 @@ pub fn AddBlockModal(show: Signal<bool>, project_id: String) -> Element {
                                                         } else {
                                                             "image/*"
                                                         };
-                                                        
+
                                                         let mut blob_props = web_sys::BlobPropertyBag::new();
                                                         blob_props.set_type(mime);
-                                                        
+
                                                         if let Ok(blob) = web_sys::Blob::new_with_u8_array_sequence_and_options(
                                                             &file_array,
                                                             &blob_props
                                                         ) {
                                                             let mut file_props = web_sys::FilePropertyBag::new();
                                                             file_props.set_type(mime);
-                                                            
+
                                                             if let Ok(file) = web_sys::File::new_with_blob_sequence_and_options(
                                                                 &js_sys::Array::of1(&blob),
                                                                 &file_name,
@@ -283,12 +289,12 @@ pub fn AddBlockModal(show: Signal<bool>, project_id: String) -> Element {
                                                             ) {
                                                                 let url = web_sys::Url::create_object_url_with_blob(&file)
                                                                     .unwrap_or_default();
-                                                                
+
                                                                 pending_uploads.write().push(PendingUpload {
                                                                     file,
                                                                     preview_url: url,
                                                                 });
-                                                                
+
                                                                 tracing::info!("Added: {} to uploads", file_name);
                                                             }
                                                         }
@@ -301,7 +307,7 @@ pub fn AddBlockModal(show: Signal<bool>, project_id: String) -> Element {
                                         }
                                     },
                                 }
-                                
+
                                 if pending_uploads.read().is_empty() {
                                     div {
                                         class: "add-block-dropzone-content",
@@ -317,13 +323,13 @@ pub fn AddBlockModal(show: Signal<bool>, project_id: String) -> Element {
                                                 d: "M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5"
                                             }
                                         }
-                                        p { 
-                                            class: "add-block-dropzone-text", 
-                                            "Drag and drop images or click to browse" 
+                                        p {
+                                            class: "add-block-dropzone-text",
+                                            "Drag and drop images or click to browse"
                                         }
-                                        p { 
-                                            class: "add-block-dropzone-hint", 
-                                            "PNG, JPG - supports large files" 
+                                        p {
+                                            class: "add-block-dropzone-hint",
+                                            "PNG, JPG - supports large files"
                                         }
                                     }
                                 } else {
@@ -367,7 +373,7 @@ pub fn AddBlockModal(show: Signal<bool>, project_id: String) -> Element {
                             "{progress}"
                         }
                     }
-                    
+
                     if let Some(err) = error.read().as_ref() {
                         div {
                             class: "add-block-form-error",

@@ -1,6 +1,6 @@
-use crate::Route;
-use crate::api::{self, client};
+use crate::api::{self, client_api};
 use crate::shared::loading::LoadingPage;
+use crate::Route;
 use dioxus::prelude::*;
 
 #[component]
@@ -18,26 +18,32 @@ pub fn LoginPage() -> Element {
         evt.prevent_default();
         let email_value = email();
         let password_value = password();
-        
+
         spawn(async move {
             is_loading.set(true);
             error_message.set(None);
-            
+
             // Step 1: Authenticate with Cognito
             match api::authenticate(&email_value, &password_value).await {
                 Ok(auth_result) => {
                     // Step 2: Store token
                     api::store_token(&auth_result.id_token);
-                    
+                    api::store_refresh_token(&auth_result.refresh_token);
+
                     // Step 3: Request CloudFront signed cookies
                     tracing::info!("🍪 Requesting CloudFront signed cookies...");
-                    match crate::api::cloudfront::set_cloudfront_cookies(api::client::API_BASE_URL, &auth_result.id_token).await {
+                    match crate::api::cloudfront_api::set_cloudfront_cookies(
+                        api::client_api::API_BASE_URL,
+                        &auth_result.id_token,
+                    )
+                    .await
+                    {
                         Ok(_) => tracing::info!("✅ CloudFront cookies set successfully"),
                         Err(e) => tracing::error!("❌ Failed to set CloudFront cookies: {}", e),
                     }
 
                     // Step 4: Check if user profile exists in DynamoDB
-                    match client::get_current_user().await {
+                    match client_api::get_current_user().await {
                         Ok(_user) => {
                             // Success! Redirect to projects
                             nav.push(Route::ProjectsPage {});
@@ -45,7 +51,8 @@ pub fn LoginPage() -> Element {
                         Err(e) => {
                             tracing::warn!("User profile not found: {}", e);
                             // TODO: Redirect to onboarding/profile creation page
-                            error_message.set(Some("Please complete your profile setup".to_string()));
+                            error_message
+                                .set(Some("Please complete your profile setup".to_string()));
                             is_loading.set(false);
                         }
                     }
@@ -109,7 +116,7 @@ pub fn LoginPage() -> Element {
                             class: "login-password-toggle",
                             r#type: "button",
                             onclick: move |_| show_password.set(!show_password()),
-                            
+
                             if show_password() {
                                 svg {
                                     xmlns: "http://www.w3.org/2000/svg",

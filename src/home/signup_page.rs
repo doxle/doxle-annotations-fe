@@ -1,5 +1,5 @@
 use crate::Route;
-use crate::api::{self, client};
+use crate::api::{self, client_api};
 use crate::shared::loading::LoadingPage;
 use dioxus::prelude::*;
 
@@ -60,7 +60,7 @@ pub fn SignupPage() -> Element {
                             // Step 4: Create user profile in DynamoDB
                             tracing::info!("💾 Creating user profile in DynamoDB");
                             
-                            match client::create_user_profile(
+                            match client_api::create_user_profile(
                                 name_value,
                                 email_value,
                                 None, // No company field

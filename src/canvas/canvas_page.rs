@@ -34,21 +34,25 @@ pub fn CanvasPage(block_id: String) -> Element {
 
     // Use block_id from route
     let block_id_for_ann = block_id.clone();
-    
+
     // Try to get block info from BLOCKS global state
     use crate::state::BLOCKS;
-    let block_info = BLOCKS.read().iter()
+    let block_info = BLOCKS
+        .read()
+        .iter()
         .find(|b| b.block_id == block_id_for_ann)
         .cloned();
-    
-    let block_name = block_info.as_ref()
+
+    let block_name = block_info
+        .as_ref()
         .map(|b| b.name.clone())
         .unwrap_or_else(|| block_id_for_ann.clone());
-    
-    let project_id = block_info.as_ref()
+
+    let project_id = block_info
+        .as_ref()
         .map(|b| b.project_id.clone())
         .unwrap_or_else(|| "1".to_string());
-    
+
     // Clone for use inside closures without moving the original into handlers
     let project_id_for_ann = project_id.clone();
     tracing::info!(
@@ -60,6 +64,7 @@ pub fn CanvasPage(block_id: String) -> Element {
 
     // Load images on mount
     use_hook(|| {
+        let project_id = project_id_for_ann.clone();
         let block_id = block_id_for_ann.clone();
         let name = block_name.clone();
         spawn(async move {
@@ -67,7 +72,7 @@ pub fn CanvasPage(block_id: String) -> Element {
             tracing::info!("📷 Block ID: {}", block_id);
             tracing::info!("📷 Block Name: {}", name);
             tracing::info!("📷 Calling load_block_images...");
-            load_block_images(&block_id).await;
+            load_block_images(&project_id, &block_id).await;
             let images = IMAGES.read();
             tracing::info!("📷 ======================================");
             tracing::info!("📷 Images loaded for '{}': {} image(s)", name, images.len());
@@ -81,14 +86,15 @@ pub fn CanvasPage(block_id: String) -> Element {
 
     // Get current image or use fallback
     let current_image = get_current_image();
-    
+
     // Log current state every render
-    tracing::info!("🖼️ RENDER STATE: index={}, total={}, has_current={}", 
-        *CURRENT_IMAGE_INDEX.read(), 
+    tracing::info!(
+        "🖼️ RENDER STATE: index={}, total={}, has_current={}",
+        *CURRENT_IMAGE_INDEX.read(),
         IMAGES.read().len(),
         current_image.is_some()
     );
-    
+
     let image_id_for_ann = current_image
         .as_ref()
         .map(|img| img.image_id.clone())
@@ -97,28 +103,32 @@ pub fn CanvasPage(block_id: String) -> Element {
         .as_ref()
         .map(|img| img.url.clone())
         .unwrap_or_default();
-    
+
     // Blob URL for authenticated image loading
     let mut blob_url = use_signal(|| String::new());
     let mut is_loading_image = use_signal(|| false);
-    
+
     // Load image with credentials - reactive to CURRENT_IMAGE_INDEX and IMAGES
     use_effect(move || {
         let index = CURRENT_IMAGE_INDEX();
         let images = IMAGES.read();
-        
-        tracing::info!("🕵️ Effect triggered: index={}, total images={}", index, images.len());
-        
+
+        tracing::info!(
+            "🕵️ Effect triggered: index={}, total images={}",
+            index,
+            images.len()
+        );
+
         if let Some(img) = images.get(index) {
             // Convert S3 URL to CloudFront URL for cached loading
             let s3_url = img.url.clone();
-            let cloudfront_url = crate::api::client::to_cloudfront_url(&s3_url);
+            let cloudfront_url = crate::api::client_api::to_cloudfront_url(&s3_url);
             tracing::info!("⚡ Loading image [{}] via CloudFront", index + 1);
             tracing::info!("   S3 URL: {}", s3_url);
             tracing::info!("   CloudFront URL: {}", cloudfront_url);
             is_loading_image.set(true);
             blob_url.set(String::new()); // Clear previous blob
-            
+
             spawn(async move {
                 match super::image_loader::load_authenticated_image(&cloudfront_url).await {
                     Ok(blob) => {
@@ -136,7 +146,7 @@ pub fn CanvasPage(block_id: String) -> Element {
             tracing::info!("🚧 No image at index {} yet", index);
         }
     });
-    
+
     // Clone for event handlers
     let current_image_url_load = blob_url().clone();
 

@@ -4,7 +4,7 @@ use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
 use web_sys::{MessageEvent, WebSocket, CloseEvent, ErrorEvent};
 use crate::state::{add_project, remove_project};
-use crate::api::projects::Project;
+use crate::api::projects_api::Project;
 
 // WebSocket endpoint - update this when deploying
 pub const WS_URL: &str = "ws://localhost:9000"; // Will be wss://... in production

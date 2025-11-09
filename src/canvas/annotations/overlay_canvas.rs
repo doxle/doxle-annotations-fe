@@ -2,14 +2,13 @@ use std::cell::RefCell;
 use wasm_bindgen::{closure::Closure, JsCast};
 use web_sys::CanvasRenderingContext2d;
 
+use super::edit_draw::draw_edit_overlay;
 use super::polygon::{
-    draw_endpoint, draw_point, draw_polygon as draw_polyline, draw_preview_line, fill_polygon,
-    POINT_RADIUS, ZOOMED_IN_RADIUS, ZOOMED_OUT_RADIUS,
+    draw_endpoint, draw_point, draw_polygon, draw_preview_line, fill_polygon, POINT_RADIUS,
+    ZOOMED_IN_RADIUS, ZOOMED_OUT_RADIUS,
 };
 use super::shapes::{Point, Polygon};
-use super::edit_draw::draw_edit_overlay;
-use super::edit_state::is_editing;
-use crate::canvas::dom_cache::{get_overlay_context, get_window, get_document};
+use crate::canvas::dom_cache::{get_document, get_overlay_context, get_window};
 
 thread_local! {
     static RAF_PENDING: RefCell<bool> = RefCell::new(false);
@@ -43,13 +42,13 @@ fn render_overlay_once(poly: &Polygon, zoom: f64, pan_x: f64, pan_y: f64) {
         let points: Vec<Point> = poly.points.clone();
 
         if poly.is_closed {
-            fill_polygon(&ctx, &points);
+            fill_polygon(&ctx, &points, zoom);
         } else {
-            draw_polyline(&ctx, &points, false);
+            draw_polygon(&ctx, &points, false, zoom);
             let preview = PREVIEW_POINT.with(|p| *p.borrow());
             if let Some(preview) = preview {
                 if let Some(last) = points.last() {
-                    draw_preview_line(&ctx, *last, preview);
+                    draw_preview_line(&ctx, *last, preview, zoom);
                     if points.len() >= 2 {
                         if let Some(first) = points.first() {
                             // Draw closing line only when cursor is near the first point (screen distance < 30px)
@@ -57,7 +56,7 @@ fn render_overlay_once(poly: &Polygon, zoom: f64, pan_x: f64, pan_y: f64) {
                             let dy = preview.y - first.y;
                             let distance = ((dx * dx + dy * dy).sqrt() * zoom);
                             if distance < 30.0 {
-                                draw_preview_line(&ctx, preview, *first);
+                                draw_preview_line(&ctx, preview, *first, zoom);
                             }
                         }
                     }
@@ -148,11 +147,11 @@ pub fn schedule_edit_redraw(zoom: f64, pan_x: f64, pan_y: f64) {
             true
         }
     });
-    
+
     if !should_schedule {
         return;
     }
-    
+
     let closure = Closure::wrap(Box::new(move || {
         if let Some(ctx) = get_overlay_canvas_context() {
             // Clear canvas
@@ -160,13 +159,14 @@ pub fn schedule_edit_redraw(zoom: f64, pan_x: f64, pan_y: f64) {
                 let _ = ctx.set_transform(1.0, 0.0, 0.0, 1.0, 0.0, 0.0);
                 ctx.clear_rect(0.0, 0.0, canvas.width() as f64, canvas.height() as f64);
             }
-            
+
             // Apply transform
             if let Some(win) = get_window() {
                 let dpr = win.device_pixel_ratio();
-                let _ = ctx.set_transform(zoom * dpr, 0.0, 0.0, zoom * dpr, pan_x * dpr, pan_y * dpr);
+                let _ =
+                    ctx.set_transform(zoom * dpr, 0.0, 0.0, zoom * dpr, pan_x * dpr, pan_y * dpr);
             }
-            
+
             // Check theme for dark mode
             let is_dark = if let Some(doc) = get_document() {
                 if let Some(html) = doc.document_element() {
@@ -177,16 +177,16 @@ pub fn schedule_edit_redraw(zoom: f64, pan_x: f64, pan_y: f64) {
             } else {
                 false
             };
-            
+
             // Draw edit overlay
             draw_edit_overlay(&ctx, zoom, is_dark);
-            
+
             // Reset transform
             let _ = ctx.set_transform(1.0, 0.0, 0.0, 1.0, 0.0, 0.0);
         }
         RAF_PENDING.with(|flag| *flag.borrow_mut() = false);
     }) as Box<dyn FnMut()>);
-    
+
     if let Some(win) = get_window() {
         let _ = win.request_animation_frame(closure.as_ref().unchecked_ref());
     }

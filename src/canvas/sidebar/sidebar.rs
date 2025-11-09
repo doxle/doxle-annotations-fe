@@ -75,7 +75,17 @@ let up_cb = {
                 SidebarTab::Comments => rsx! { CommentsPanel {} },
             }
 
-            // Version number at bottom
+            // Logout button
+            div {
+                class: "sidebar-logout",
+                onclick: move |_| {
+                    crate::api::clear_token();
+                    crate::state::user_state::clear_user();
+                    dioxus::prelude::navigator().push(crate::Route::HomePage {});
+                },
+                "Logout"
+            }
+            
             div {
                 class: "sidebar-version",
                 "v1.06"

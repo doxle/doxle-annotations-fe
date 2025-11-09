@@ -104,6 +104,23 @@
     padding-top: 20px;
 }
 
+.app-sidebar-logout {
+    font-size: 10px;
+    color: var(--text-secondary);
+    font-family: Helvetica, Arial, sans-serif;
+    cursor: pointer;
+    padding: 8px 16px;
+    border-radius: 4px;
+    transition: all 0.2s ease;
+    text-align: center;
+    margin-bottom: 12px;
+}
+
+.app-sidebar-logout:hover {
+    color: var(--text-primary);
+    background: var(--bg-card-hover);
+}
+
 .app-sidebar-version {
     font-size: 11px;
     color: var(--text-tertiary);

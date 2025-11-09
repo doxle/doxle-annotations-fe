@@ -83,9 +83,23 @@ pub fn AppSidebar(open: Signal<bool>) -> Element {
                 }
             }
             
-            // Bottom section with version or additional info
+            // Bottom section with logout and version
             div {
                 class: "app-sidebar-bottom-section",
+                
+                // Logout button
+                div {
+                    class: "app-sidebar-logout",
+                    onclick: move |_| {
+                        // Clear auth token
+                        crate::api::clear_token();
+                        // Clear user state
+                        crate::state::user_state::clear_user();
+                        // Navigate to home
+                        nav.push(crate::Route::HomePage {});
+                    },
+                    "Logout"
+                }
                 
                 div {
                     class: "app-sidebar-version",

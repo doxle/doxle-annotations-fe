@@ -1,5 +1,5 @@
 use dioxus::prelude::*;
-use crate::api::blocks::Block;
+use crate::api::blocks_api::Block;
 use crate::state::set_current_block;
 use crate::Route;
 

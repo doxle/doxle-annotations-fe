@@ -1,10 +1,11 @@
 use super::add_block::AddBlockModal;
 use super::block_dropdown::BlockDropdown;
 use super::block_row::BlockRow;
-use crate::shared::{AppSidebar, AppNavbar, NavbarContext};
+use super::rename_block::RenameBlockModal;
+use crate::shared::{AppNavbar, AppSidebar, NavbarContext};
 use crate::state::{
-    create_block, delete_block, get_project_by_id, load_project_blocks, load_projects,
-    BLOCKS, BLOCKS_ERROR, BLOCKS_LOADING, PROJECTS,
+    create_block, get_project_by_id, load_project_blocks, load_projects, BLOCKS,
+    BLOCKS_ERROR, BLOCKS_LOADING, PROJECTS,
 };
 use crate::Route;
 use dioxus::prelude::*;
@@ -23,6 +24,9 @@ pub fn BlocksPage(project_id: String) -> Element {
     let mut block_dropdown_menu = use_signal(|| None::<(String, f64, f64)>); // (block_id, x, y)
     let mut show_add_modal = use_signal(|| false);
     let mut sidebar_open = use_signal(|| true); // Sidebar open by default
+    let mut show_rename_modal = use_signal(|| false);
+    let mut rename_block_id = use_signal(|| String::new());
+    let mut rename_block_name = use_signal(|| String::new());
 
     // Load projects and blocks on mount - runs only once
     use_hook(|| {
@@ -63,7 +67,7 @@ pub fn BlocksPage(project_id: String) -> Element {
             }
 
             // Shared sidebar
-            AppSidebar { 
+            AppSidebar {
                 open: sidebar_open
             }
 
@@ -149,9 +153,22 @@ pub fn BlocksPage(project_id: String) -> Element {
                     BlockDropdown {
                         x: x,
                         y: y,
-                        block_id: block_id,
-                        on_close: block_dropdown_menu
+                        block_id: block_id.clone(),
+                        on_close: block_dropdown_menu,
+                        on_rename: move |(bid, name)| {
+                            rename_block_id.set(bid);
+                            rename_block_name.set(name);
+                            show_rename_modal.set(true);
+                        }
                     }
+                }
+
+                // Rename block modal
+                RenameBlockModal {
+                    show_dialog: show_rename_modal,
+                    block_id: rename_block_id(),
+                    project_id: project_id.clone(),
+                    current_name: rename_block_name()
                 }
             } // Close blocks-content div
         }

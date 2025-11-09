@@ -23,7 +23,7 @@ pub fn ShareProjectModal(
                 // Fetch existing invites for this project
                 // Note: This would need a backend endpoint like GET /projects/{project_id}/invites
                 // For now, we'll just fetch all user invites
-                match api::client::get::<Vec<serde_json::Value>>("/invites").await {
+                match api::client_api::get::<Vec<serde_json::Value>>("/invites").await {
                     Ok(invites) => {
                         let pending: Vec<String> = invites
                             .iter()
@@ -60,7 +60,7 @@ pub fn ShareProjectModal(
             *error.write() = String::new();
             *email_sent.write() = false;
             
-            match api::client::post::<serde_json::Value, serde_json::Value>("/invites", &serde_json::json!({
+            match api::client_api::post::<serde_json::Value, serde_json::Value>("/invites", &serde_json::json!({
                 "email": email_value.clone(),
             })).await {
                 Ok(_) => {
@@ -129,7 +129,7 @@ pub fn ShareProjectModal(
                                         *error.write() = String::new();
                                         *copied.write() = false;
 
-                                        match api::client::post::<serde_json::Value, serde_json::Value>("/invites", &serde_json::json!({
+                                        match api::client_api::post::<serde_json::Value, serde_json::Value>("/invites", &serde_json::json!({
                                             "email": "",
                                         })).await {
                                             Ok(response) => {

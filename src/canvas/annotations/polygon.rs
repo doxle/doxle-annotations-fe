@@ -1,18 +1,18 @@
 use wasm_bindgen::JsValue;
-use web_sys::{window, CanvasRenderingContext2d, HtmlCanvasElement};
+use web_sys::CanvasRenderingContext2d;
 
 use super::shapes::{Point, Polygon};
 
 /* ---- styles (edit once here) ---- */
 pub const POINT_STROKE: &str = "rgb(51, 66, 255)";
 pub const POINT_FILL: &str = "rgba(51, 66, 255, 0.28)";
-pub const POINT_RADIUS: f64 = 7.2;
-pub const ZOOMED_IN_RADIUS: f64 = 9.0; // Radius when zoomed in (large)
-pub const ZOOMED_OUT_RADIUS: f64 = 3.0; // Radius when zoomed out (small)
+pub const POINT_RADIUS: f64 = 1.0;
+pub const ZOOMED_IN_RADIUS: f64 = 3.0; // Radius when zoomed in (large)
+pub const ZOOMED_OUT_RADIUS: f64 = 1.0; // Radius when zoomed out (small)
 pub const ENDPOINT_STROKE: &str = "rgb(0, 255, 0)";
 pub const ENDPOINT_FILL: &str = "rgba(0, 255, 0, 0.28)";
 pub const LINE_COLOR: &str = "rgb(51, 66, 255)";
-pub const LINE_WIDTH: f64 = 1.0;
+pub const LINE_WIDTH: f64 = 2.5;
 pub const FILL_COLOR: &str = "rgba(51, 66, 255, 0.35)";
 pub const PREVIEW_LINE_COLOR: &str = "rgba(51, 66, 255, 1)";
 
@@ -50,7 +50,7 @@ pub fn draw_endpoint(ctx: &CanvasRenderingContext2d, p: Point, radius: f64) {
     ctx.stroke();
 }
 
-pub fn draw_polygon(ctx: &CanvasRenderingContext2d, pts: &[Point], close_shape: bool) {
+pub fn draw_polygon(ctx: &CanvasRenderingContext2d, pts: &[Point], close_shape: bool, zoom: f64) {
     // Draw polyline connecting points
     if pts.is_empty() {
         return;
@@ -62,7 +62,7 @@ pub fn draw_polygon(ctx: &CanvasRenderingContext2d, pts: &[Point], close_shape: 
     }
 
     // Set line style for continuous polyline
-    ctx.set_line_width(LINE_WIDTH);
+    ctx.set_line_width(LINE_WIDTH / zoom);
     ctx.set_stroke_style(&JsValue::from_str(LINE_COLOR));
     ctx.set_line_cap("round");
     ctx.set_line_join("round");
@@ -79,8 +79,8 @@ pub fn draw_polygon(ctx: &CanvasRenderingContext2d, pts: &[Point], close_shape: 
 }
 
 // Draw preview line from last point to cursor
-pub fn draw_preview_line(ctx: &CanvasRenderingContext2d, from: Point, to: Point) {
-    ctx.set_line_width(LINE_WIDTH);
+pub fn draw_preview_line(ctx: &CanvasRenderingContext2d, from: Point, to: Point, zoom: f64) {
+    ctx.set_line_width(LINE_WIDTH / zoom);
     ctx.set_stroke_style(&JsValue::from_str(PREVIEW_LINE_COLOR));
     ctx.set_line_cap("round");
 
@@ -90,13 +90,13 @@ pub fn draw_preview_line(ctx: &CanvasRenderingContext2d, from: Point, to: Point)
     ctx.stroke();
 }
 
-pub fn fill_polygon(ctx: &CanvasRenderingContext2d, pts: &[Point]) {
+pub fn fill_polygon(ctx: &CanvasRenderingContext2d, pts: &[Point], zoom: f64) {
     if pts.len() < 3 {
         return;
     }
 
     // Set styles for filled polygon with outline
-    ctx.set_line_width(LINE_WIDTH);
+    ctx.set_line_width(LINE_WIDTH / zoom);
     ctx.set_stroke_style(&JsValue::from_str(LINE_COLOR));
     ctx.set_fill_style(&JsValue::from_str(FILL_COLOR));
     ctx.set_line_cap("round");
@@ -133,10 +133,10 @@ pub fn redraw_polygon(
 
     if poly.is_closed {
         // If poly is closed, fill with 50% opacity
-        fill_polygon(ctx, &screen_points);
+        fill_polygon(ctx, &screen_points, zoom);
     } else {
         // Draw polyline connecting all points
-        draw_polygon(ctx, &screen_points, false);
+        draw_polygon(ctx, &screen_points, false, zoom);
 
         // Note: Preview is now handled via overlay_canvas.rs + thread_local
     }
@@ -172,9 +172,9 @@ pub fn draw_polygon_overlay(
         .collect();
 
     if poly.is_closed {
-        fill_polygon(ctx, &screen_points);
+        fill_polygon(ctx, &screen_points, zoom);
     } else {
-        draw_polygon(ctx, &screen_points, false);
+        draw_polygon(ctx, &screen_points, false, zoom);
         // Note: Preview is now handled via overlay_canvas.rs + thread_local
     }
 

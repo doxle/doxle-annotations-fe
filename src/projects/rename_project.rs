@@ -1,18 +1,17 @@
-use dioxus::prelude::*;
-use crate::api::{self, projects::Project};
+use crate::api::{self, projects_api::Project};
 use crate::state::load_projects;
+use dioxus::prelude::*;
+
+const RENAME_PROJECT_CSS: &str = include_str!("rename_project.css");
 
 #[component]
-pub fn RenameProjectModal(
-    show: Signal<bool>,
-    project_id: String,
-    current_name: String,
-) -> Element {
+pub fn RenameProjectModal(show: Signal<bool>, project_id: String, current_name: String) -> Element {
     let mut project_name = use_signal(|| current_name.clone());
     let original_name = use_signal(|| current_name.clone());
     let mut error = use_signal(|| None::<String>);
     let mut loading = use_signal(|| false);
 
+    tracing::info!("Current name : {current_name}");
     let pid = project_id.clone();
     let handle_submit = move |e: Event<FormData>| {
         e.prevent_default();
@@ -23,15 +22,17 @@ pub fn RenameProjectModal(
 
             let new_name = project_name.read().clone();
             tracing::info!("Renaming project {} to {}", pid, new_name);
-            
+
             let update_req = serde_json::json!({
                 "name": new_name,
             });
 
-            match api::client::patch::<serde_json::Value, Project>(
+            match api::client_api::patch::<serde_json::Value, Project>(
                 &format!("/projects/{}", pid),
-                &update_req
-            ).await {
+                &update_req,
+            )
+            .await
+            {
                 Ok(_) => {
                     tracing::info!("Rename successful, reloading projects");
                     load_projects().await;
@@ -52,8 +53,9 @@ pub fn RenameProjectModal(
     }
 
     rsx! {
+        style { {RENAME_PROJECT_CSS} }
         div {
-            class: "modal-overlay",
+            class: "rename-project-overlay",
             onclick: move |_| {
                 *show.write() = false;
                 *error.write() = None;
@@ -61,14 +63,14 @@ pub fn RenameProjectModal(
             },
 
             div {
-                class: "modal-content",
+                class: "rename-project-content",
                 onclick: move |e| e.stop_propagation(),
 
                 div {
-                    class: "modal-header",
+                    class: "rename-project-header",
                     h2 { "Rename Project" }
                     button {
-                        class: "modal-close",
+                        class: "rename-project-close",
                         onclick: move |_| {
                             *show.write() = false;
                             *error.write() = None;
@@ -79,20 +81,20 @@ pub fn RenameProjectModal(
                 }
 
                 form {
-                    class: "modal-body",
+                    class: "rename-project-body",
                     onsubmit: handle_submit,
 
                     div {
-                        class: "form-group",
+                        class: "rename-project-form-group",
                         label {
                             r#for: "project-name",
                             "Project Name"
                         }
                         input {
                             id: "project-name",
-                            class: "form-input",
+                            class: "rename-project-input",
                             r#type: "text",
-                            placeholder: "Enter project name",
+                            placeholder: current_name,
                             value: "{project_name}",
                             required: true,
                             oninput: move |e| *project_name.write() = e.value(),
@@ -101,16 +103,16 @@ pub fn RenameProjectModal(
 
                     if let Some(err) = error.read().as_ref() {
                         div {
-                            class: "form-error",
+                            class: "rename-project-error",
                             "{err}"
                         }
                     }
 
                     div {
-                        class: "modal-footer",
+                        class: "rename-project-footer",
                         button {
                             r#type: "button",
-                            class: "btn-secondary",
+                            class: "rename-project-btn-secondary",
                             onclick: move |_| {
                                 *show.write() = false;
                                 *error.write() = None;
@@ -120,7 +122,7 @@ pub fn RenameProjectModal(
                         }
                         button {
                             r#type: "submit",
-                            class: "btn-primary",
+                            class: "rename-project-btn-primary",
                             disabled: *loading.read(),
                             if *loading.read() {
                                 "Renaming..."
