@@ -1,0 +1,27 @@
+/* Fullscreen, non-interactive overlay */
+.grid-overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-size: var(--grid-step) var(--grid-step);
+  background-position: var(--grid-off-x) var(--grid-off-y);
+  opacity: var(--grid-opacity, 0.25);
+  image-rendering: pixelated;
+}
+
+/* Region-based grid (positioned via inline styles) */
+.grid-overlay.grid-region {
+  inset: unset;
+}
+
+.grid-minor {
+  background-image:
+    repeating-linear-gradient(to right, var(--grid-minor-color) 0 1px, transparent 1px var(--grid-step)),
+    repeating-linear-gradient(to bottom, var(--grid-minor-color) 0 1px, transparent 1px var(--grid-step));
+}
+
+.grid-major {
+  background-image:
+    repeating-linear-gradient(to right, var(--grid-major-color) 0 2px, transparent 2px var(--grid-step)),
+    repeating-linear-gradient(to bottom, var(--grid-major-color) 0 2px, transparent 2px var(--grid-step));
+}

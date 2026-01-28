@@ -1,6 +1,6 @@
 use crate::Route;
-use crate::api::{self, client_api};
-use crate::shared::loading::LoadingPage;
+use crate::api;
+use crate::shell::loading::LoadingPage;
 use dioxus::prelude::*;
 
 #[component]
@@ -55,12 +55,12 @@ pub fn SignupPage() -> Element {
                             tracing::info!("✅ Authentication successful");
                             
                             // Step 3: Store token
-                            api::store_token(&auth_result.id_token);
+                            api::store_access_token(&auth_result.access_token);
                             
                             // Step 4: Create user profile in DynamoDB
                             tracing::info!("💾 Creating user profile in DynamoDB");
                             
-                            match client_api::create_user_profile(
+                            match api::create_user_profile(
                                 name_value,
                                 email_value,
                                 None, // No company field
@@ -69,7 +69,7 @@ pub fn SignupPage() -> Element {
                                 Ok(_) => {
                                     tracing::info!("✅ User profile created successfully");
                                     // Success! Redirect to projects
-                                    nav.push(Route::ProjectsPage {});
+                                    nav.push(Route::DashboardPage {});
                                 }
                                 Err(e) => {
                                     tracing::error!("❌ Failed to create user profile: {}", e);
@@ -273,7 +273,7 @@ pub fn SignupPage() -> Element {
                         }
                         a {
                             class: "signup-link",
-                            onclick: move |_| { nav.push(Route::LoginPage {}); },
+onclick: move |_| { nav.push(Route::SignInPage {}); },
                             "Sign in"
                         }
                     }

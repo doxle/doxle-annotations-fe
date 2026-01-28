@@ -121,7 +121,7 @@
         display: inline-block;
         animation: blink 0.5s infinite;
         font-weight: 400;
-        color: #3342ff;
+        color: #ff0000;
         margin-left: 2px;
       }
       @keyframes blink {

@@ -1,0 +1,83 @@
+/* Crosshair drawn at viewport (screen) coords. Static CSS only. */
+:root {
+  --crosshair-color: #333333;        /* dark grey for light theme */
+  --crosshair-guide-color: #666666;  /* lighter grey guides */
+  --crosshair-gap: 9px;
+}
+html.dark :root, html.dark {
+  --crosshair-color: #cccccc;        /* light grey for dark theme */
+  --crosshair-guide-color: #999999;  /* darker grey guides */
+  --crosshair-gap: 9px;
+}
+
+.crosshair-overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 200; /* above event-layer (100) */
+}
+
+/* Continuous guides spanning full viewport */
+.crosshair-overlay::before { /* horizontal guide */
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: var(--cy);
+  height: 1px;
+  background: linear-gradient(
+    to right,
+    var(--crosshair-guide-color) 0 calc(var(--cx) - var(--crosshair-gap)/2),
+    transparent calc(var(--cx) - var(--crosshair-gap)/2) calc(var(--cx) + var(--crosshair-gap)/2),
+    var(--crosshair-guide-color) calc(var(--cx) + var(--crosshair-gap)/2) 100%
+  );
+  z-index: 0;
+}
+.crosshair-overlay::after { /* vertical guide */
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: var(--cx);
+  width: 1px;
+  background: linear-gradient(
+    to bottom,
+    var(--crosshair-guide-color) 0 calc(var(--cy) - var(--crosshair-gap)/2),
+    transparent calc(var(--cy) - var(--crosshair-gap)/2) calc(var(--cy) + var(--crosshair-gap)/2),
+    var(--crosshair-guide-color) calc(var(--cy) + var(--crosshair-gap)/2) 100%
+  );
+  z-index: 0;
+}
+
+/* Center cross (longer, skinnier) */
+.crosshair-overlay .h,
+.crosshair-overlay .v {
+  position: absolute;
+  z-index: 1; /* ensure center cross sits above guides */
+}
+
+.crosshair-overlay .h {
+  width: 35px;     /* ~+10% longer */
+  height: 2px;     /* slightly thicker for visibility */
+  left: calc(var(--cx) - 17.5px);
+  top: calc(var(--cy) - 1px);
+  background: linear-gradient(
+    to right,
+    var(--crosshair-color) 0 calc(50% - var(--crosshair-gap)/2),
+    transparent calc(50% - var(--crosshair-gap)/2) calc(50% + var(--crosshair-gap)/2),
+    var(--crosshair-color) calc(50% + var(--crosshair-gap)/2) 100%
+  );
+}
+
+.crosshair-overlay .v {
+  width: 2px;      /* slightly thicker for visibility */
+  height: 35px;    /* ~+10% longer */
+  left: calc(var(--cx) - 1px);
+  top: calc(var(--cy) - 17.5px);
+  background: linear-gradient(
+    to bottom,
+    var(--crosshair-color) 0 calc(50% - var(--crosshair-gap)/2),
+    transparent calc(50% - var(--crosshair-gap)/2) calc(50% + var(--crosshair-gap)/2),
+    var(--crosshair-color) calc(50% + var(--crosshair-gap)/2) 100%
+  );
+}

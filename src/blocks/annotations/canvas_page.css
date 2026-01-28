@@ -1,0 +1,21 @@
+.annotation-canvas-page {
+    display: flex;
+    flex-direction: column;
+    height: calc(100vh - 40px);
+    /*background: red;*/
+    width: 100%;
+}
+
+.canvas-area {
+    flex: 1;
+    position: relative;
+    overflow: hidden;
+}
+
+.no-image-text {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    color: var(--text-secondary);
+}

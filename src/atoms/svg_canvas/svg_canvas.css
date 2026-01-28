@@ -1,0 +1,50 @@
+/* SvgCanvas styles moved to static CSS */
+
+.svg-canvas-viewport {
+    margin:0;
+    padding: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    background: var(--bg-primary);
+    position: relative;
+    cursor: grab;
+    touch-action: none;
+    overscroll-behavior: none;
+    user-select: none;
+    -webkit-user-select: none;
+}
+/* remove focus ring (the “border” you saw) */
+.svg-canvas-viewport:focus {
+    outline: none;
+}
+
+.svg-canvas-viewport:active {
+    cursor: grabbing;
+}
+
+.world-container {
+    transform-origin: 0 0; /* Scale from top-left */
+    position: absolute;
+    top: 0;
+    left: 0;
+}
+
+/* Theme-based treatment for background image only */
+/* Default (light): no filter, white background images look normal */
+.svg-canvas-viewport .canvas-bg-image {
+    filter: none;
+    width:50vw;
+    height:auto;
+}
+
+/* Dark theme: invert image so white drawings become dark-friendly */
+/* Requires <html class="dark"> to be present (already used elsewhere). */
+html.dark .svg-canvas-viewport .canvas-bg-image {
+    filter: invert(1) hue-rotate(180deg);
+}
+
+/* Dark theme: invert the v2 canvas image */
+html.dark .svg-canvas-v2 .canvas-image {
+    filter: invert(1) hue-rotate(180deg);
+}

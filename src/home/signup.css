@@ -15,11 +15,15 @@
     width: 100%;
     max-width: min(550px, 90%);
 }
+.signin-logo {
+     margin-bottom: 10px !important;
+}
 
 .signup-title {
     font-size: 24px;
     font-weight: 300;
     color: var(--text-primary);
+    margin-top: 10px !important;
     margin-bottom: 10px;
     text-align: center;
     font-family: Helvetica, Arial, sans-serif;

@@ -1,16 +1,35 @@
-use dioxus::prelude::*;
+#![allow(dead_code, unused_imports, unused_variables, unused_mut, deprecated)]
 
-mod admin;
-mod api;
+use dioxus::prelude::*;
+use blocks::{DashboardPage, CreateBlockPage};
+use atoms::tasks::{TasksListPage, CreateTaskPage};
+use blocks::annotations::AnnotationCanvasPage;
+use home::upload::UploadPage;
+use home::{HomePage, Home3Page, SignInPage, Navbar, OurStoryPage, SayHelloPage, SignupPage, VisionPage, GeometricGridPage, DotsPage, ConstellationPage, SquareGridPage};
+use matrix::MatrixPage;
+use stacking_bricks::StackingBricksPage;
+use letter_cycle::LetterCyclePage;
+use api::auth_api::get_access_token;
+use users::state::{USER, load_user};
+
 mod blocks;
-mod canvas;
+mod atoms;
+// mod old2; // Disabled (legacy)
 mod home;
 mod matrix;
-mod projects;
-mod shared;
-mod state;
+mod stacking_bricks;
+mod letter_cycle;
+mod api;
+// mod old;  // Temporarily disabled
+// mod projects;
+// mod shared;
+mod shell;
+mod users;
+// mod core;
+// mod state;
 
-use shared::{apply_theme_class, load_theme_preference, setup_global_keyboard_shortcuts, THEME};
+use shell::theme::{apply_theme_class, load_theme_preference, save_theme_preference, THEME};
+use shell::global_keyboard::setup_global_keyboard_shortcuts;
 
 // Font assets
 const HELVETICA_REGULAR: Asset = asset!("/assets/fonts/HelveticaNeue.woff2");
@@ -19,6 +38,9 @@ const HELVETICA_LIGHT: Asset = asset!("/assets/fonts/HelveticaNeue-Light.woff2")
 const HELVETICA_THIN: Asset = asset!("/assets/fonts/HelveticaNeue-Thin.woff2");
 const HELVETICA_ULTRALIGHT: Asset = asset!("/assets/fonts/HelveticaNeue-UltraLight.woff2");
 const HELVETICA_MEDIUM: Asset = asset!("/assets/fonts/HelveticaNeue-Medium.woff2");
+const MODULAR_HOUSEPLANT_REGULAR: Asset = asset!("/assets/fonts/ModularHouseplantRegular.woff2");
+const MODULAR_HOUSEPLANT_BOLD: Asset = asset!("/assets/fonts/ModularHouseplantBold.woff2");
+const MODULAR_HOUSEPLANT_SERIF: Asset = asset!("/assets/fonts/ModularHouseplantSerif.woff2");
 
 // CSS assets and content
 const TAILWIND_CSS: Asset = asset!("/public/tailwind.css");
@@ -37,26 +59,14 @@ const MAIN_CSS_CONTENT: &str = r#"
 const FONTS_CSS_TEMPLATE: &str = include_str!("font.css");
 const THEME_CSS: &str = include_str!("theme.css");
 const HOME_CSS: &str = include_str!("home/home.css");
-const LOGIN_CSS: &str = include_str!("home/login.css");
+const HOME3_CSS: &str = include_str!("home/home3.css");
+const SIGN_IN_CSS: &str = include_str!("home/sign_in.css");
 const SIGNUP_CSS: &str = include_str!("home/signup.css");
 const OURSTORY_CSS: &str = include_str!("home/ourstory.css");
 const VISION_CSS: &str = include_str!("home/vision.css");
-const PROJECTS_CSS: &str = include_str!("projects/projects.css");
-const BLOCK_CSS: &str = include_str!("blocks/blocks.css");
-const ADD_PROJECT_CSS: &str = include_str!("projects/add_project.css");
-const ADD_BLOCK_CSS: &str = include_str!("blocks/add_block.css");
-const CANVAS_CSS: &str = include_str!("canvas/canvas.css");
-const CANVAS_NAVBAR_CSS: &str = include_str!("canvas/canvas_navbar.css");
-const NAVBAR_LEFT_CSS: &str = include_str!("canvas/navbar/left_section.css");
-const NAVBAR_CENTER_CSS: &str = include_str!("canvas/navbar/center_section.css");
-const NAVBAR_RIGHT_CSS: &str = include_str!("canvas/navbar/right_section.css");
-const AVATAR_MENU_CSS: &str = include_str!("canvas/navbar/avatar_dropdown.css");
-const SIDEBAR_CSS: &str = include_str!("canvas/sidebar/sidebar.css");
-const APP_SIDEBAR_CSS: &str = include_str!("shared/app_sidebar/app_sidebar.css");
-const PROJECT_DROPDOWN_CSS: &str = include_str!("projects/project_dropdown.css");
-const BLOCK_DROPDOWN_CSS: &str = include_str!("blocks/block_dropdown.css");
-const SHARE_PROJECT_CSS: &str = include_str!("projects/share_project.css");
-const ADMIN_INVITES_CSS: &str = include_str!("admin/invites.css");
+const APP_SIDEBAR_CSS: &str = include_str!("shell/app_sidebar/app_sidebar.css");
+const APP_NAVBAR_CSS: &str = include_str!("shell/app_navbar/app_navbar.css");
+const DOTS_CSS: &str = include_str!("home/dots.css");
 
 fn main() {
     // Initialize tracing and filter out noisy warnings
@@ -71,37 +81,57 @@ fn main() {
 
 #[component]
 fn App() -> Element {
-    // Load saved theme on app startup
+    // Load saved theme on app startup AND apply immediately
     use_hook(|| {
         if let Some(saved_theme) = load_theme_preference() {
             *THEME.write() = saved_theme;
         }
+        // Apply theme class immediately (before first render)
+        let theme = *THEME.read();
+        apply_theme_class(theme);
+        save_theme_preference(theme);
     });
 
     // Setup global keyboard shortcuts (works on all pages)
     setup_global_keyboard_shortcuts();
 
-    // Watch THEME signal and apply to HTML element (force light on home page)
-    use_effect(move || {
-        #[cfg(target_arch = "wasm32")]
-        {
-            if let Some(win) = web_sys::window() {
-                if let Ok(path) = win.location().pathname() {
-                    if path == "/" {
-                        if let Some(document) = win.document() {
-                            if let Some(html) = document.document_element() {
-                                use wasm_bindgen::JsCast;
-                                use web_sys::HtmlElement;
-                                if let Ok(html_el) = html.dyn_into::<HtmlElement>() {
-                                    html_el.set_class_name("light");
-                                }
-                            }
-                        }
-                        return;
-                    }
+     // Load user from API if token exists but USER signal is empty (e.g., new tab)
+    use_hook(|| {
+        if get_access_token().is_some() && USER.read().is_none() {
+            spawn(async move {
+                load_user().await;
+            });
+        }
+    });
+
+    // Background refresh token every 25 minutes
+    // Background refresh token based on access token expiry
+    use_future(move || async move {
+        loop {
+            let delay_ms = if let Some(token) = get_access_token() {
+                if let Some(exp) = crate::api::auth_api::get_access_token_exp(&token) {
+                    let now = (js_sys::Date::now() / 1000.0) as i64;
+                    let mut secs = exp - now - 120; // refresh 2 min early
+                    if secs < 5 { secs = 5; }
+                    ((secs as u64) * 1000).min(u32::MAX as u64) as u32
+                } else {
+                    60_000
                 }
+            } else {
+                60_000
+            };
+
+            gloo_timers::future::TimeoutFuture::new(delay_ms).await;
+
+            if crate::api::auth_api::get_refresh_token().is_some() {
+                let _ = crate::api::refresh_access_token().await;
             }
         }
+    });
+    
+
+    // Watch THEME signal and apply to HTML element
+    use_effect(move || {
         let theme = *THEME.read();
         apply_theme_class(theme);
     });
@@ -121,39 +151,29 @@ fn App() -> Element {
                 document::Style { {MAIN_CSS_CONTENT} }
                 document::Style { {THEME_CSS} }
                 document::Style { {HOME_CSS} }
-                document::Style { {LOGIN_CSS} }
+                document::Style { {HOME3_CSS} }
+                document::Style { {SIGN_IN_CSS} }
                 document::Style { {SIGNUP_CSS} }
                 document::Style { {OURSTORY_CSS} }
                 document::Style { {VISION_CSS} }
-                document::Style { {PROJECTS_CSS} }
-                document::Style { {ADD_PROJECT_CSS} }
-                document::Style { {BLOCK_CSS} }
-                document::Style { {ADD_BLOCK_CSS} }
-                document::Style { {CANVAS_CSS} }
-                document::Style { {CANVAS_NAVBAR_CSS} }
-                document::Style { {NAVBAR_LEFT_CSS} }
-                document::Style { {NAVBAR_CENTER_CSS} }
-                document::Style { {NAVBAR_RIGHT_CSS} }
-                document::Style { {AVATAR_MENU_CSS} }
-                document::Style { {SIDEBAR_CSS} }
                 document::Style { {APP_SIDEBAR_CSS} }
-                document::Style { {PROJECT_DROPDOWN_CSS} }
-                document::Style { {BLOCK_DROPDOWN_CSS} }
-                document::Style { {SHARE_PROJECT_CSS} }
-                document::Style { {ADMIN_INVITES_CSS} }
+                document::Style { {APP_NAVBAR_CSS} }
+                document::Style { {DOTS_CSS} }
 
-                // Force light theme always
-                // script {
-                //     {
-                //         r#"
-                //             (function(){
-                //                 var html = document.documentElement;
-                //                 html.classList.remove('dark');
-                //                 html.classList.add('light');
-                //             })();
-                //         "#
-                //     }
-                // }
+               
+                // Theme script in head - runs before body renders
+                script {
+                    dangerous_inner_html: {
+                        r#"(function(){
+                            var html = document.documentElement;
+                            var saved = localStorage.getItem('doxle_theme');
+                            if (saved === 'dark') html.classList.add('dark');
+                            else if (saved === 'light') html.classList.add('light');
+                            else if (window.matchMedia('(prefers-color-scheme:dark)').matches) html.classList.add('dark');
+                            else html.classList.add('light');
+                        })();"#
+                    }
+                }
 
                 // Fonts from template with asset URLs
                 document::Style {
@@ -165,6 +185,9 @@ fn App() -> Element {
                             .replace("{HELVETICA_THIN}", &HELVETICA_THIN.to_string())
                             .replace("{HELVETICA_ULTRALIGHT}", &HELVETICA_ULTRALIGHT.to_string())
                             .replace("{HELVETICA_MEDIUM}", &HELVETICA_MEDIUM.to_string())
+                            .replace("{MODULAR_HOUSEPLANT_REGULAR}", &MODULAR_HOUSEPLANT_REGULAR.to_string())
+                            .replace("{MODULAR_HOUSEPLANT_BOLD}", &MODULAR_HOUSEPLANT_BOLD.to_string())
+                            .replace("{MODULAR_HOUSEPLANT_SERIF}", &MODULAR_HOUSEPLANT_SERIF.to_string())
                     }
                 }
         Router::<Route> {}
@@ -176,10 +199,12 @@ enum Route {
     #[layout(NavBar)]
     #[route("/")]
     HomePage {},
+    #[route("/home3")]
+    Home3Page {},
     #[route("/ourstory")]
     OurStoryPage {},
-    #[route("/login")]
-    LoginPage {},
+    #[route("/signin")]
+    SignInPage {},
     #[route("/signup")]
     SignupPage {},
     #[route("/vision")]
@@ -189,27 +214,34 @@ enum Route {
     #[route("/sayhello")]
     SayHelloPage {},
     #[end_layout]
-    // Authenticated pages without navbar
-    #[route("/projects")]
-    ProjectsPage {},
-    #[route("/block/:project_id")]
-    BlocksPage { project_id: String },
-    #[route("/canvas/:block_id")]
-    CanvasPage { block_id: String },
-    #[route("/admin/invites")]
-    AdminInvitesPage {},
+    // App pages (no layout - each page includes AppNavbar directly)
+    #[route("/blocks")]
+    DashboardPage{},
+    #[route("/blocks/new")]
+    CreateBlockPage{},
+    #[route("/blocks/:block_id/tasks/new")]
+    CreateTaskPage { block_id: String },
+    #[route("/blocks/:block_id/tasks")]
+    TasksListPage { block_id: String },
+    #[route("/blocks/:block_id/:block_name/tasks/:task_id/:task_name/:image_id/:image_name/drawing")]
+    AnnotationCanvasPage { block_id: String, block_name: String, task_id: String, task_name: String, image_id: String, image_name: String },
     #[route("/matrix")]
     MatrixPage {},
+    #[route("/bricks")]
+    StackingBricksPage {},
+    #[route("/letters")]
+    LetterCyclePage {},
+    #[route("/geometric")]
+    GeometricGridPage {},
+    #[route("/dots")]
+    DotsPage {},
+    #[route("/constellation")]
+    ConstellationPage {},
+    #[route("/squares")]
+    SquareGridPage {},
 }
 
-// Page imports
-use admin::AdminInvitesPage;
-use blocks::BlocksPage;
-use canvas::CanvasPage;
-use home::upload::UploadPage;
-use home::{HomePage, LoginPage, Navbar, OurStoryPage, SayHelloPage, SignupPage, VisionPage};
-use matrix::MatrixPage;
-use projects::ProjectsPage;
+
 
 #[component]
 fn NavBar() -> Element {

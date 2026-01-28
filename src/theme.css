@@ -1,24 +1,40 @@
 /* Theme CSS with Light/Dark Mode Support */
 
+html, body {
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    height: 100vh;
+    width: 100vw;
+}
+
 :root {
     /* Light theme colors (default) */
     --bg-primary: #ffffff;
     --bg-secondary: rgb(245, 245, 245);
     --bg-card: #ffffff;
-    --bg-card-hover: rgb(247, 247, 247);
+    --bg-card-hover: rgb(250, 250, 252);
     --text-primary: #000000;
     --text-secondary: #666666;
     --text-tertiary: #999999;
-    --border-color: #e5e5e5;
+    --border-color: rgb(220,220,220);
+    --border-subtle:rgb(230,230,230);
+    --border-color-hover: rgb(180, 180, 180);
     --shadow: rgba(0, 0, 0, 0.05);
     --shadow-hover: rgba(0, 0, 0, 0.1);
-    --accent-blue: #3342ff;
+    --dx-blue: rgb(0,122,255);
     --accent-red: #ff4444;
     --button-secondary-bg: #000;
     --button-secondary-text: #fff;
     --shimmer-color: rgba(255, 255, 255, 0.75);
-    --dot-color: rgb(180, 180, 180);
-    --navbar-bg: rgb(51, 55, 61);
+    --dot-color: rgb(230, 230, 230);
+    --grid-color: rgb(200, 200, 200);
+    --grid-minor-color: rgba(230, 230, 230, 1.0);
+    --grid-major-color: rgba(120, 124, 255, 0.2);
+    /*--navbar-bg: rgb(51, 55, 61);*/
+    --navbar-bg: #ffffff;
+    --navbar-text: rgba(255, 255, 255, 0.9);
+    --navbar-text-secondary: rgba(255, 255, 255, 0.6);
     --sidebar-bg: #ffffff;
     --sidebar-border: rgb(230, 230, 230);
     --sidebar-text: #000000;
@@ -34,6 +50,8 @@
     --hover-blue: rgb(99, 138, 255);
     --focus-blue: #4f5bf8;
     --outline-blue: rgba(51, 66, 255, 0.4);
+    --breadcrumb-hover: rgb(79,91,248);
+
 
     /* Error colors */
     --error-bg: #fee;
@@ -81,7 +99,9 @@
     --project-dropdown-hover-bg: rgb(68, 151, 248);
 
     /* Modal colors */
-    --modal-overlay-bg: rgba(0, 0, 0, 0.5);
+    /*--modal-overlay-bg: rgba(0, 0, 0, 0.5);*/
+    /*--menu-overlay-bg: rgba(250, 250, 255, 0.3);*/
+    --menu-overlay-bg: rgba(0, 0, 0, 0.02);
     --modal-bg: #ffffff;
     --modal-border: #e5e5e5;
     --modal-text: #000000;
@@ -100,6 +120,7 @@
     --navbar-separator: rgba(255, 255, 255, 0.2);
     --navbar-tool-active: rgba(255, 255, 255, 0.15);
     --tooltip-bg: rgb(51, 55, 61);
+    --tooltip-border: rgb(30,30,30);
     
     /* Canvas navbar breadcrumb colors */
     --navbar-breadcrumb-link: rgba(255, 255, 255, 0.65);
@@ -113,10 +134,13 @@
     --annotation-point-stroke: rgb(51, 66, 255);
     --annotation-stroke-width: 2;
 
-    /* Login page colors */
-    --login-input-text: #000000;
-    --login-input-placeholder: #999999;
-    --login-navbar-text: #333333;
+    /* Table colors */
+    --table-header-bg: rgb(230, 230, 230);
+
+    /* Sign-in page colors */
+    --signin-input-text: #000000;
+    --signin-input-placeholder: #999999;
+    --signin-navbar-text: #333333;
 
     /* Our Story page colors */
     --ourstory-bg: #ffffff;
@@ -127,43 +151,55 @@
     --vision-bg: #ffffff;
     --vision-card-bg: #ffffff;
     --vision-title: #333333;
+
+    --node-color: black;
+
 }
 
 /* Manual dark theme override via .dark class only */
 html.dark {
     /* Dark theme colors */
-    --bg-primary: #1a1a1a;
-    --bg-secondary: rgb(27, 27, 27);
-    --bg-card: #252525;
-    --bg-card-hover: #2f2f2f;
+    --bg-primary: #000;
+    --bg-secondary: rgb(15, 15, 18);
+    --bg-card: #000;
+    --bg-card-hover: rgb(15,15,18);
     --text-primary: #e5e5e5;
-    --text-secondary: #b0b0b0;
+    --text-secondary: rgba(255, 255, 255, 0.6);
     --text-tertiary: #808080;
-    --border-color: #404040;
+    --border-subtle:rgb(30,30,30);
+    --border-color: rgb(45,45,45);
+    --border-color-hover: rgb(60, 60, 60);
     --shadow: rgba(0, 0, 0, 0.3);
     --shadow-hover: rgba(0, 0, 0, 0.5);
-    --accent-blue: #3342ff;
+    --dx-blue: rgb(0,122,255);
     --accent-red: #ff4444;
     --button-secondary-bg: #fff;
     --button-secondary-text: #000;
     --shimmer-color: rgba(20, 16, 37, 0.75);
-    --dot-color: rgb(70, 70, 90);
-    --navbar-bg: rgb(21, 21, 21);
-    --sidebar-bg: rgb(30, 30, 30);
+    --dot-color: rgb(30, 30, 30);
+    --grid-color: rgb(69, 69, 69);
+    --grid-minor-color: rgba(30, 30, 30, 0.8);
+    --grid-major-color: rgba(30, 30, 30, 0.6);
+    --navbar-bg: rgb(0, 0, 0);
+    --navbar-border:rgb(0,0,0);
+    --navbar-text: rgba(255, 255, 255, 0.9);
+    --navbar-text-secondary: rgba(255, 255, 255, 0.6);
+    --sidebar-bg: rgb(12, 12, 18);
     --sidebar-border: rgb(60, 60, 60);
     --sidebar-text: #ffffff;
     --sidebar-row-hover: rgb(50, 50, 50);
     --sidebar-version-text: #ffffff;
 
     /* UI element colors (dark mode) */
-    --primary-button-bg: #4f5bf8;
-    --primary-button-text: #ffffff;
+    --primary-button-bg: rgb(221,228, 242);
+    --primary-button-text: #000;
     --primary-button-hover: rgba(79, 91, 248, 0.9);
 
     /* Hover and focus colors (dark mode) */
     --hover-blue: rgb(99, 138, 255);
     --focus-blue: #4f5bf8;
     --outline-blue: rgba(51, 66, 255, 0.4);
+    --breadcrumb-hover: rgb(79,91,248);
 
     /* Error colors (dark mode) */
     --error-bg: rgba(255, 68, 68, 0.1);
@@ -212,6 +248,7 @@ html.dark {
 
     /* Modal colors (dark mode) */
     --modal-overlay-bg: rgba(0, 0, 0, 0.7);
+    --menu-overlay-bg: rgba(0, 0, 0, 0.5);
     --modal-bg: #1f2937;
     --modal-border: #374151;
     --modal-text: #ffffff;
@@ -229,7 +266,8 @@ html.dark {
     --navbar-text-bright: rgba(255, 255, 255, 0.9);
     --navbar-separator: rgba(255, 255, 255, 0.2);
     --navbar-tool-active: rgba(255, 255, 255, 0.15);
-    --tooltip-bg: #000000;
+    --tooltip-bg: rgb(40,40,40);
+    --tooltip-border: rgb(45,45,45);
     
     /* Canvas navbar breadcrumb colors (dark mode) */
     --navbar-breadcrumb-link: rgba(255, 255, 255, 0.65);
@@ -243,10 +281,13 @@ html.dark {
     --annotation-point-stroke: rgb(51, 66, 255);
     --annotation-stroke-width: 2;
 
-    /* Login page colors (dark mode) */
-    --login-input-text: #ffffff;
-    --login-input-placeholder: #808080;
-    --login-navbar-text: #ffffff;
+    /* Table colors (dark mode) */
+    --table-header-bg: rgb(45, 45, 45);
+
+    /* Sign-in page colors (dark mode) */
+    --signin-input-text: #ffffff;
+    --signin-input-placeholder: #808080;
+    --signin-navbar-text: #ffffff;
 
     /* Our Story page colors (dark mode) */
     --ourstory-bg: #1a1a1a;
@@ -257,4 +298,6 @@ html.dark {
     --vision-bg: #1a1a1a;
     --vision-card-bg: #252525;
     --vision-title: #ffffff;
+
+    --node-color: white;
 }

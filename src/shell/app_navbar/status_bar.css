@@ -1,0 +1,49 @@
+.status-bar-pill {
+    position: fixed;
+    right: 60px;
+    top: 10px;
+    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    font-size: 12px;
+    font-weight: 400;
+    color: #DC2626;
+    z-index: 500;
+    text-align: right;
+    animation: status-fade-in 0.3s ease-out;
+}
+
+/* Remove all the type-specific classes - just show red text */
+
+.status-error {
+    color: rgb(211 0 0 / 1.0);
+}
+
+.status-success {
+    color: rgb(1 73 32 / 1.0);
+}
+
+.status-info {
+    color: rgb(93 78 78 / 1.0);
+}
+
+/* Dark mode - keep red */
+html.dark .status-error {
+    color: rgb(185 2 22 / 1.0);
+}
+
+html.dark .status-info {
+    color: rgb(155 135 135 / 1.0);
+}
+
+html.dark .status-success {
+    color: rgb(89 154 119);
+}
+
+
+@keyframes status-fade-in {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}

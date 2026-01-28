@@ -47,3 +47,27 @@
     font-style: normal;
     font-display: swap;
 }
+
+@font-face {
+    font-family: "ModularHouseplant";
+    src: url({MODULAR_HOUSEPLANT_REGULAR}) format("woff2");
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: "ModularHouseplant";
+    src: url({MODULAR_HOUSEPLANT_BOLD}) format("woff2");
+    font-weight: 700;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: "ModularHouseplantSerif";
+    src: url({MODULAR_HOUSEPLANT_SERIF}) format("woff2");
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+}

@@ -1,16 +1,7 @@
-use crate::Route;
 use dioxus::prelude::*;
 
 #[component]
 pub fn SayHelloPage() -> Element {
-    let mut email = use_signal(|| String::new());
-    let mut password = use_signal(|| String::new());
-
-    let handle_submit = move |evt: Event<FormData>| {
-        evt.prevent_default();
-        // TODO: Implement authentication with backend
-        println!("Login attempt - Email: {}, Password: [REDACTED]", email());
-    };
 
     rsx! {
         div { 

@@ -1,0 +1,62 @@
+.context-menu-backdrop {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    z-index: 999;
+}
+
+.annotation-context-menu {
+    z-index: 1000;  /* Make sure menu is above backdrop */
+    position: fixed;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    padding: 24px;
+    min-width: 140px;
+    z-index: 1000;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    font-family: "ModularHouseplant";
+}
+
+.context-menu-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 12px;
+    cursor: pointer;
+    font-size: 13px;
+    color: var(--text-primary);
+}
+
+.context-menu-item:hover {
+    background: var(--sidebar-row-hover);
+}
+
+.context-menu-item.delete {
+    color: var(--text-primary);
+    display: flex;
+    align-items: center;
+}
+
+.context-menu-item.delete span {
+    margin-top: 4px;
+}
+
+.context-menu-item .radio-icon {
+    width: 14px;
+    text-align: center;
+}
+
+.context-menu-divider {
+    height: 1px;
+    background: var(--border-color);
+    margin: 12px 0;
+}
+
+.trash-icon {
+    width: 13px;
+    height: 13px;
+    object-fit: contain;
+}

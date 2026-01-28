@@ -1,0 +1,306 @@
+@import url('https://fonts.googleapis.com/css2?family=Source+Code+Pro:wght@200;300;400;500;600;700&display=swap');
+
+/* Apply Source Code Pro font to all text */
+* {
+  font-family: 'Source Code Pro', monospace;
+  font-weight: 300;
+}
+
+/* Center all content on the page */
+.tasks-page {
+  background: var(--bg-primary);
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+}
+
+/* Container for header and list - centered */
+.tasks-list-container {
+  width: 100%;
+  max-width: 800px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  padding: 0 20px;
+}
+
+/* Header with title and add button */
+.tasks-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  margin-bottom: 30px;
+}
+
+/* Title row with icon */
+.tasks-title-row {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  color:var(--text-primary);
+}
+
+/* TASKS title - 40px, light, left aligned */
+.tasks-title {
+  font-size: 40px;
+  font-weight: 300;
+  text-align: left;
+  margin: 0;
+}
+
+/* Tasks icon next to title */
+.tasks-title-icon {
+  width: 40px;
+  height: 40px;
+}
+
+/* Add task button */
+.tasks-add-button {
+  height: 33px;
+  padding: 0 16px;
+  background-color: var(--primary-button-bg);
+  color: var(--primary-button-text);
+  border: none;
+  border-radius: 4px;
+  font-family: 'Source Code Pro', monospace;
+  font-weight: 300;
+  cursor: pointer;
+  transition: opacity 0.2s;
+  white-space: nowrap;
+}
+
+.tasks-add-button:hover {
+  opacity: 0.8;
+}
+
+/* Empty state page - centered button only */
+.tasks-empty-page {
+  background: var(--bg-primary);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+}
+
+.tasks-create-button-centered {
+  height: auto;
+  padding: 6px 18px;
+  border-radius: 4px;
+  font-family: 'HelveticaNeue', Helvetica, Arial, sans-serif;
+  font-size: 14px;
+  font-weight: 300;
+  cursor: pointer;
+  transition: all 0.2s;
+  background-color: transparent;
+  border: 1px solid var(--dx-blue);
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.tasks-create-icon {
+  width: 14px;
+  height: 14px;
+}
+
+.tasks-create-button-centered:hover {
+  border-color: var(--text-primary);
+}
+
+html.dark .tasks-create-button-centered {
+  background-color: transparent;
+  border: 1px solid var(--dx-blue);
+  color: var(--text-secondary);
+}
+
+html.dark .tasks-create-button-centered:hover {
+  border-color: var(--text-primary);
+}
+
+/* Tasks list */
+.tasks-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* Task list item */
+.tasks-list-item {
+  padding: 16px 20px;
+  background-color: var(--bg-card);
+border: 0.8px solid rgb(240, 240, 240);
+  border-radius: 4px;
+  font-size: 16px;
+  font-weight: 400;
+  color: var(--text-primary);
+  transition: all 0.2s;
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  position: relative;
+}
+
+.tasks-list-item:hover {
+  background-color: var(--bg-card);
+  border-color: rgb(200, 200, 200);
+}
+
+/* Dark theme overrides */
+html.dark .tasks-list-item {
+  background-color: var(--bg-card);
+  color: var(--text-primary);
+border: 0.8px solid rgb(20, 20, 20);
+}
+
+html.dark .tasks-list-item:hover {
+  background-color: var(--bg-card);
+  border-color: rgb(60, 60, 60);
+}
+
+/* Task Card */
+.task-card {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  gap: 12px;
+}
+
+/* Task name - 18px as requested */
+.task-name {
+  font-size: 18px;
+  font-weight: 400;
+  color: var(--text-primary);
+}
+
+/* Meta row for assignee/reviewer */
+.task-meta-row {
+  display: flex;
+  flex-direction: row;
+  gap: 20px;
+}
+
+/* Dropdown group */
+.task-dropdown-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.task-dropdown-label {
+  font-size: 12px;
+  color: var(--text-tertiary);
+  font-weight: 300;
+}
+
+.task-dropdown {
+  height: 28px;
+  min-width: 120px;
+  padding: 0 8px;
+  border: 1px solid var(--border-color);
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  border-radius: 4px;
+  font-family: 'Source Code Pro', monospace;
+  font-size: 12px;
+  font-weight: 300;
+  cursor: pointer;
+  outline: none;
+}
+
+.task-dropdown:focus {
+  border-color: var(--dx-blue);
+}
+
+.task-dropdown:hover {
+  border-color: var(--text-secondary);
+}
+
+/* Task state badge */
+.task-state {
+  position: absolute;
+  top: 16px;
+  right: 20px;
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+/* Divider */
+.task-divider {
+  width: 100%;
+  height: 0.6px;
+  background-color: rgb(200, 200, 200);
+  margin: 8px 0;
+}
+
+html.dark .task-divider {
+  background-color: rgb(60, 60, 60);
+}
+
+/* Image rectangles */
+.task-image-rects {
+  display: flex;
+  flex-direction: row;
+  gap: 2px;
+  margin: 4px 0;
+}
+
+.task-image-rect-wrapper {
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+}
+
+.task-image-rect {
+  width: 10px;
+  height: 53px;
+  background-color: var(--text-primary);
+  border-radius: 2px;
+}
+
+.task-image-marker {
+  position: absolute;
+  top: -9px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 5px;
+  height: 5px;
+  background-color: var(--dx-blue);
+  border-radius: 50%;
+}
+
+/* Info row (last updated + counts) */
+.task-info-row {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.task-updated-info {
+  font-weight: 300;
+}
+
+.task-counts {
+  display: flex;
+  gap: 6px;
+  font-weight: 300;
+}
+
+.task-count-item {
+  color: var(--text-secondary);
+}
+
+.task-count-divider {
+  color: var(--text-tertiary);
+}

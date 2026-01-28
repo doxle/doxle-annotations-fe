@@ -1,0 +1,17 @@
+.dot-overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image: radial-gradient(
+    circle,
+    var(--dot-color) var(--dot-size, 2px),
+    transparent var(--dot-size, 2px)
+  );
+  background-size: var(--dot-step) var(--dot-step);
+  background-position: var(--dot-off-x) var(--dot-off-y);
+  opacity: var(--dot-opacity, 0.5);
+}
+
+.dot-overlay.dot-region {
+  inset: unset;
+}

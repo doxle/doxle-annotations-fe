@@ -1,20 +1,25 @@
-/* Home Page Styles */
+/* Home Page Styles - Rectangle Matrix Effect */
 
-
+/* Force dark background */
+html, body {
+    background: #000000 !important;
+    background-color: #000000 !important;
+    color-scheme: dark !important;
+}
 
 .home-container {
     position: relative;
     display: flex;
-    align-items: center;
-    justify-content: center;
+    align-items: flex-end;
+    justify-content: flex-start;
     width: 100%;
     min-height: 100vh;
     font-family: HelveticaNeue, Helvetica, Arial, sans-serif;
-    background-color: #ffffff !important; /* Force white background */
+    background-color: #000000 !important; /* Black background */
     overflow: hidden;
 }
 
-.home-dots-layer {
+.home-rects-layer {
     position: absolute;
     top: 0;
     left: 0;
@@ -30,46 +35,45 @@
     z-index: 10;
     text-align: left;
     max-width: 800px;
-    margin: 0 auto;
-    padding: 0 20px;
+    margin: 0;
+    margin-left: 1%;
+    margin-bottom: clamp(220px, 30vh, 450px);
+    padding: 40px 20px;
+    opacity: 0;
+    transition: opacity 0.5s;
 }
 
 .home-title {
     font-size: clamp(65px, 8vw, 90px);
-    font-weight: 400;
+    font-weight: 700 !important; /* Bold */
     line-height: 1;
-    color: #3342ff !important; /* Force accent blue */
+    color: #ffffff !important; /* White text */
     margin: 0;
-}
-
-.home-subtitle {
-    font-size: clamp(65px, 8vw, 90px);
-    font-weight: 400;
-    line-height: 1;
-    color: #3342ff !important; /* Force accent blue */
-    margin: 0 0 24px 0;
+    margin-bottom: 12px;
+    text-align: left;
 }
 
 .home-description {
     display: block;
-    max-width: 600px;
-    font-weight: 300;
+    max-width: 720px;
+    font-family: 'ModularHouseplant', HelveticaNeue, Helvetica, Arial, sans-serif;
+    font-weight: 200;
     line-height: 20px;
-    font-size: clamp(18px, 2.5vw, 18px);
-    margin: 0px 0 32px 0;
-    color: #333333 !important; /* Force text-primary */
+    font-size: clamp(15px, 2.5vw, 15px);
+    margin: 0px 0 15px 0;
+    color: rgb(240, 240, 240) !important;
     text-align: left;
 }
 
-.home-button {
+.upload-button {
     width: min(215px, 100%);
-    height: 70px;
+    height: 60px;
     display: flex;
     align-items: center;
     justify-content: space-between;
     padding: 0 20px;
-    background-color: #000 !important; /* button-secondary-bg */
-    color: #fff !important; /* button-secondary-text */
+    background-color: #A9C8F2 !important; /* Light blue by default */
+    color: #000 !important; /* Black text */
     border-radius: 0px;
     border: none;
     transition:
@@ -82,9 +86,9 @@
     cursor: pointer;
 }
 
-.home-button:hover {
-    background-color: #3342ff !important; /* accent-blue on hover */
-    color: #ffffff !important; /* White text on hover */
+.upload-button:hover {
+    background-color: #ffffff !important;
+    color: #000000 !important;
 }
 
 .home-button-text {
@@ -100,30 +104,27 @@
 /* Force show correct upload button logos */
 /* Note: floorplan-light.svg is BLACK, floorplan-dark.svg is WHITE */
 .upload-logo-light {
-    display: none !important; /* This is the BLACK logo */
+    display: block !important; /* Show BLACK logo on white button */
 }
 
 .upload-logo-dark {
-    display: block !important; /* This is the WHITE logo */
+    display: none !important; /* Hide WHITE logo */
 }
 
-.home-button:hover .upload-logo-light {
-    display: none !important;
+.upload-button:hover .upload-logo-light {
+    display: block !important; /* Keep BLACK logo on hover */
 }
 
-.home-button:hover .upload-logo-dark {
-    display: block !important; /* Keep WHITE logo on hover */
+.upload-button:hover .upload-logo-dark {
+    display: none !important; /* Hide WHITE logo on hover */
 }
 
-/* Dot animation styles */
-.dot {
+/* Rectangle styles */
+.rect {
     position: absolute;
-    width: 3px;
-    height: 3px;
-    background-color: var(--dot-color);
-    border-radius: 50%;
-    will-change: transform;
-    transform: translate3d(0, 0, 0);
+    width: 151px;
+    height: 64px;
+    background-color: #ff0000;
+    border-radius: 0px;
     pointer-events: none;
-    backface-visibility: hidden;
 }

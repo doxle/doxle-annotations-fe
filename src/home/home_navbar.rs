@@ -1,7 +1,8 @@
 use crate::Route;
 use dioxus::prelude::*;
-const LOGO_LIGHT: Asset = asset!("/assets/icons/dog-light.svg");
-const LOGO_DARK: Asset = asset!("/assets/icons/dog-dark.svg");
+// const LOGO: Asset = asset!("/assets/icons/d-flag1.svg");
+const LOGO: Asset = asset!("/assets/icons/dx-walker-dark.svg");
+const LOGO_HOVER: Asset = asset!("/assets/icons/dx-walker-dark.svg");
 const NAVBAR_CSS: &str = include_str!("home_navbar.css");
 
 #[component]
@@ -11,58 +12,58 @@ pub fn Navbar() -> Element {
     let route = use_route::<Route>();
     let is_ourstory = matches!(route, Route::OurStoryPage {});
     let is_vision = matches!(route, Route::VisionPage {});
-    let is_signin = matches!(route, Route::LoginPage {});
+let is_signin = matches!(route, Route::SignInPage {});
 
     rsx! {
-        document::Style { {NAVBAR_CSS} }
+        style { {NAVBAR_CSS} }
 
         nav {
-            class: "navbar",
+            class: "home-navbar",
 
             // Left side - Logo
             div {
-                class: "navbar-logo",
+                class: "home-navbar-logo",
                 onclick: move |_| { nav.push(Route::HomePage {}); },
                 img {
-                    class: "logo-img logo-light",
-                    src: LOGO_LIGHT,
+                    class: "home-logo-img home-logo-default",
+                    src: LOGO,
                     alt: "Doxle Logo",
                 }
                 img {
-                    class: "logo-img logo-dark",
-                    src: LOGO_DARK,
-                    alt: "Doxle Logo",
+                    class: "home-logo-img home-logo-hover",
+                    src: LOGO_HOVER,
+                    alt: "Doxle Logo Hover",
                 }
             }
 
             // Right side container
             div {
-                class: "navbar-right",
+                class: "home-navbar-right",
 
                 // Desktop navigation buttons
                 div {
-                    class: "nav-buttons",
+                    class: "home-nav-buttons",
 
                     button {
-                        class: if is_ourstory { "nav-btn active" } else { "nav-btn" },
+                        class: if is_ourstory { "home-nav-btn home-nav-btn--red active" } else { "home-nav-btn home-nav-btn--red" },
                         onclick: move |_| { nav.push(Route::OurStoryPage {}); },
                         "Our Story"
                     }
 
                     button {
-                        class: if is_vision { "nav-btn active" } else { "nav-btn" },
+                        class: if is_vision { "home-nav-btn home-nav-btn--red active" } else { "home-nav-btn home-nav-btn--red" },
                         onclick: move |_| { nav.push(Route::VisionPage {}); },
                         "Vision"
                     }
 
                     button {
-                        class: if is_signin { "nav-btn active" } else { "nav-btn" },
-                        onclick: move |_| { nav.push(Route::LoginPage {}); },
+                        class: if is_signin { "home-nav-btn home-nav-btn--red active" } else { "home-nav-btn home-nav-btn--red" },
+                        onclick: move |_| { nav.push(Route::SignInPage {}); },
                         "Sign In"
                     }
 
                     button {
-                        class: "say-hello-btn",
+                        class: "home-say-hello-btn",
                         onclick: move |_| { nav.push(Route::SayHelloPage {}); },
                         "Say Hello"
                     }
@@ -70,14 +71,14 @@ pub fn Navbar() -> Element {
 
                 // Mobile hamburger button
                 button {
-                    class: "mobile-menu-btn",
+                    class: "home-mobile-menu-btn",
                     onclick: move |_| menu_open.set(!menu_open()),
                     // Hamburger icon
                     div {
-                        class: "hamburger",
-                        div { class: "hamburger-line" }
-                        div { class: "hamburger-line" }
-                        div { class: "hamburger-line" }
+                        class: "home-hamburger",
+                        div { class: "home-hamburger-line" }
+                        div { class: "home-hamburger-line" }
+                        div { class: "home-hamburger-line" }
                     }
                 }
             }
@@ -86,32 +87,32 @@ pub fn Navbar() -> Element {
         // Mobile menu
         if menu_open() {
             div {
-                class: "mobile-menu",
+                class: "home-mobile-menu",
                 onclick: move |_| menu_open.set(false),
 
                 div {
-                    class: "mobile-menu-items",
+                    class: "home-mobile-menu-items",
 
                     button {
-                        class: "mobile-menu-item",
+                        class: "home-mobile-menu-item",
                         onclick: move |_| { menu_open.set(false); nav.push(Route::OurStoryPage {}); },
                         "Our Story"
                     }
 
                     button {
-                        class: "mobile-menu-item",
+                        class: "home-mobile-menu-item",
                         onclick: move |_| { menu_open.set(false); nav.push(Route::VisionPage {}); },
                         "Vision"
                     }
 
                     button {
-                        class: "mobile-menu-item",
-                        onclick: move |_| { menu_open.set(false); nav.push(Route::LoginPage {}); },
+                        class: "home-mobile-menu-item",
+                        onclick: move |_| { menu_open.set(false); nav.push(Route::SignInPage {}); },
                         "Sign In"
                     }
 
                     button {
-                        class: "mobile-menu-item say-hello",
+                        class: "home-mobile-menu-item home-say-hello",
                         onclick: move |_| { menu_open.set(false); nav.push(Route::SayHelloPage {}); },
                         "Say Hello"
                     }

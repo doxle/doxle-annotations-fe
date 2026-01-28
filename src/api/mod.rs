@@ -1,25 +1,21 @@
-pub mod annotations_api;
 pub mod auth_api;
-pub mod blocks_api;
-pub mod classes_api;
-pub mod client_api;
-pub mod cloudfront_api;
-pub mod images_api;
-pub mod projects_api;
-pub mod uploads_api;
-pub mod websocket_api;
+// client_api moved to users module
 
-// Re-exports for convenience
+// Re-exports so callers can just `use crate::api::*;`
 pub use auth_api::{
-    authenticate, clear_token, get_token, refresh_access_token, signup, store_refresh_token,
-    store_token,
+    AuthResult,
+    authenticate,
+    signup,
+    get_access_token,
+    store_access_token,
+    store_refresh_token,
+    clear_access_token,
+    refresh_access_token,
+    is_access_token_expired,
 };
-pub use client_api::{get_user, User};
-pub use projects_api::{list_projects, Project};
-pub use websocket_api::{close_websocket, init_websocket, is_websocket_connected};
 
-/// Get the API URL from environment or default to localhost
-pub fn get_api_url() -> String {
-    // TODO: Make this configurable via environment
-    "https://api.doxle.ai".to_string()
-}
+pub use crate::users::api::{
+    User,
+    get_current_user,
+    create_user_profile,
+};

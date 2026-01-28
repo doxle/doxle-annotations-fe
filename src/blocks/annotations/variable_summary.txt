@@ -1,0 +1,24 @@
+
+Variable Summary
+
+Canvas State (atoms/svg_canvas):
+•  transform — Current pan (x, y) and zoom level
+•  selected_tool — Which tool is active (Polygon, Select, Pan, Rect)
+
+Annotation State (blocks/annotations):
+•  annotations — Saved annotations loaded from BE (Vec of completed polygons)
+•  active_drawing — Points of the polygon being drawn right now (None if not drawing, Some(vec) if in progress)
+
+UI State (local to components):
+•  is_dragging — Is user currently dragging to pan?
+•  last_mouse_pos — Last mouse position (for calculating pan delta)
+•  cursor_pos — Current cursor screen position (for crosshair)
+•  cursor_inside — Is cursor inside the canvas? (show/hide crosshair)
+
+
+
+Flow:
+1. User clicks → point added to active_drawing
+2. AnnotationsLayer renders active_drawing as red preview polyline
+3. User closes polygon → active_drawing saved to BE → added to annotations → active_drawing cleared
+4. AnnotationsLayer renders annotations as green filled polygons
