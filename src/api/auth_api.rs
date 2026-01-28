@@ -1,45 +1,9 @@
 use dioxus::prelude::*;
 use serde::{Deserialize, Serialize};
-use serde_json::json;
-use web_sys::window;
-
-// fn ss_set(key:&str, val:&str){
-//     if let Some(win) = window(){
-//         if let Ok(Some(ss)) = win.session_storage(){
-//             let _ = ss.set_item(key, val);
-//         }
-//     }
-// }
-
-// fn ss_get(key:&str)->Option<String>{
-//     window()
-//     .and_then(|w| w.session_storage().ok().flatten())
-//     .and_then(|ss| ss.get_item(key).ok().flatten())
-
-// }
-
-fn ls_set(key:&str, val:&str){
-    if let Some(win) = window(){
-        if let Ok(Some(ls)) = win.local_storage(){
-            let _ = ls.set_item(key, val);
-        }
-    }
-}
-
-fn ls_get(key:&str)->Option<String>{
-    window()
-    .and_then(|w| w.local_storage().ok().flatten())
-    .and_then(|ls| ls.get_item(key).ok().flatten())
-
-}
-
-
-
+use gloo_net::http::Request;
+use web_sys::{window, RequestCredentials};
 
 const API_BASE_URL: &str = "https://api.doxle.ai";
-
-pub static ACCESS_TOKEN: GlobalSignal<Option<String>> = Signal::global(|| None);
-pub static REFRESH_TOKEN: GlobalSignal<Option<String>> = Signal::global(|| None);
 
 #[derive(Debug, Serialize)]
 struct SignInRequest {
@@ -69,6 +33,7 @@ pub struct AuthResult {
 }
 
 // POST /login (backend endpoint)
+// Cookies are set automatically by the browser from Set-Cookie headers
 pub async fn authenticate(email: &str, password: &str) -> Result<AuthResult, String> {
     tracing::info!("🔐 Starting authentication for: {}", email);
 
@@ -78,17 +43,17 @@ pub async fn authenticate(email: &str, password: &str) -> Result<AuthResult, Str
     };
 
     let endpoint = format!("{}/login", API_BASE_URL);
-    let client = reqwest::Client::new();
 
-    let response = client
-        .post(&endpoint)
+    let response = Request::post(&endpoint)
+        .credentials(RequestCredentials::Include)
         .header("Content-Type", "application/json")
         .json(&request)
+        .map_err(|e| format!("Failed to serialize: {}", e))?
         .send()
         .await
         .map_err(|e| format!("Network error: {}", e))?;
 
-    if !response.status().is_success() {
+    if !response.ok() {
         let error_text = response
             .text()
             .await
@@ -118,17 +83,17 @@ pub async fn signup(email: &str, password: &str, invite_code: &str) -> Result<()
     };
 
     let endpoint = format!("{}/signup", API_BASE_URL);
-    let client = reqwest::Client::new();
 
-    let response = client
-        .post(&endpoint)
+    let response = Request::post(&endpoint)
+        .credentials(RequestCredentials::Include)
         .header("Content-Type", "application/json")
         .json(&request)
+        .map_err(|e| format!("Failed to serialize: {}", e))?
         .send()
         .await
         .map_err(|e| format!("Network error: {}", e))?;
 
-    if !response.status().is_success() {
+    if !response.ok() {
         let error_text = response
             .text()
             .await
@@ -142,129 +107,59 @@ pub async fn signup(email: &str, password: &str, invite_code: &str) -> Result<()
     Ok(())
 }
 
-// Token storage
-pub fn store_access_token(access_token: &str) {
-    *ACCESS_TOKEN.write() = Some(access_token.to_string());
-     ls_set("access_token", access_token);
-}
+// With httpOnly cookies, we don't need to store tokens in localStorage
+// The browser handles cookie storage automatically
+// These functions are kept for backward compatibility but are mostly no-ops now
 
 pub fn get_access_token() -> Option<String> {
-    if let Some(t) = ACCESS_TOKEN.read().clone() {
-        return Some(t);
-    }
-    if let Some(t) = ls_get("access_token") {
-        *ACCESS_TOKEN.write() = Some(t.clone());
-        return Some(t);
-    }
-    None
-}
-
-pub fn is_access_token_expired(token:&str) -> bool {
-    let parts: Vec<&str> = token.split('.').collect();
-    tracing::info!("jwt parts: {}", parts.len());
-    if parts.len() != 3 {
-        return true;
-    }
-
-    use base64::{engine::general_purpose, Engine as _};
-
-    // header log
-    if let Ok(hdr_bytes) = general_purpose::URL_SAFE_NO_PAD.decode(parts[0]) {
-        if let Ok(hdr_str) = String::from_utf8(hdr_bytes) {
-            tracing::info!("jwt header: {}", hdr_str);
+    // Access token is now in a cookie - we can read it from document.cookie
+    // since it's not httpOnly (for user_id extraction)
+    #[cfg(target_arch = "wasm32")]
+    {
+        if let Some(document) = window().and_then(|w| w.document()) {
+            if let Ok(cookies) = document.cookie() {
+                for cookie in cookies.split(';') {
+                    let cookie = cookie.trim();
+                    if cookie.starts_with("access_token=") {
+                        return cookie.strip_prefix("access_token=").map(|s| s.to_string());
+                    }
+                }
+            }
         }
     }
-
-    // payload decode (used for both logging + exp)
-    let payload_bytes = match general_purpose::URL_SAFE_NO_PAD.decode(parts[1]) {
-        Ok(d) => d,
-        Err(_) => return true,
-    };
-    let payload_str = match String::from_utf8(payload_bytes) {
-        Ok(s) => s,
-        Err(_) => return true,
-    };
-    let json: serde_json::Value = match serde_json::from_str(&payload_str) {
-        Ok(j) => j,
-        Err(_) => return true,
-    };
-
-    let keys: Vec<_> = json.as_object()
-        .map(|o| o.keys().cloned().collect())
-        .unwrap_or_default();
-    let exp = json.get("exp").and_then(|x| x.as_i64());
-    tracing::info!("jwt payload keys: {:?}, exp: {:?}", keys, exp);
-
-    let exp = match exp {
-        Some(e) => e,
-        None => return true,
-    };
-    let now = (js_sys::Date::now() / 1000.0) as i64;
-    exp <= now
-}
-
-pub fn get_access_token_exp(token: &str) -> Option<i64> {
-    let parts: Vec<&str> = token.split('.').collect();
-    if parts.len() != 3 {
-        return None;
-    }
-
-    use base64::{engine::general_purpose, Engine as _};
-
-    let payload_bytes = general_purpose::URL_SAFE_NO_PAD.decode(parts[1]).ok()?;
-    let payload_str = String::from_utf8(payload_bytes).ok()?;
-    let json: serde_json::Value = serde_json::from_str(&payload_str).ok()?;
-    json.get("exp").and_then(|x| x.as_i64())
+    None
 }
 
 pub fn clear_access_token() {
-    *ACCESS_TOKEN.write() = None;
-    *REFRESH_TOKEN.write() = None;
-    // Also clear from local storage
-    if let Some(win) = window() {
-        if let Ok(Some(ls)) = win.local_storage() {
-            let _ = ls.remove_item("access_token");
-            let _ = ls.remove_item("refresh_token");
+    // Clear cookies by setting them to expire
+    #[cfg(target_arch = "wasm32")]
+    {
+        if let Some(document) = window().and_then(|w| w.document()) {
+            // Clear access_token cookie
+            let _ = document.set_cookie("access_token=; Domain=.doxle.ai; Path=/; Max-Age=0; SameSite=None; Secure");
+            // Note: refresh_token is httpOnly so we can't clear it from JS
+            // It will be cleared by the backend on logout
         }
     }
 }
 
-pub fn store_refresh_token(refresh_token: &str) {
-    *REFRESH_TOKEN.write() = Some(refresh_token.to_string());
-    ls_set("refresh_token", refresh_token);
-}
-
-pub fn get_refresh_token() -> Option<String> {
-    if let Some(t) = REFRESH_TOKEN.read().clone() {
-        return Some(t);
-    }
-    if let Some(t) = ls_get("refresh_token") {
-        *REFRESH_TOKEN.write() = Some(t.clone());
-        return Some(t);
-    }
-    None
-}
-
-
-// POST /refresh
+// POST /refresh - now relies on httpOnly cookie
 pub async fn refresh_access_token() -> Result<AuthResult, String> {
     tracing::info!("🔄 Refreshing access token");
 
-    let refresh_token = get_refresh_token().ok_or("No refresh token found")?;
-    let request = json!({ "refresh_token": refresh_token });
-
     let endpoint = format!("{}/refresh", API_BASE_URL);
-    let client = reqwest::Client::new();
 
-    let response = client
-        .post(&endpoint)
+    // Send empty body - refresh token is in httpOnly cookie
+    let response = Request::post(&endpoint)
+        .credentials(RequestCredentials::Include)
         .header("Content-Type", "application/json")
-        .json(&request)
+        .body("{}")
+        .map_err(|e| format!("Failed to create request: {}", e))?
         .send()
         .await
         .map_err(|e| format!("Network error: {}", e))?;
 
-    if !response.status().is_success() {
+    if !response.ok() {
         let error_text = response
             .text()
             .await
@@ -277,9 +172,7 @@ pub async fn refresh_access_token() -> Result<AuthResult, String> {
         .await
         .map_err(|e| format!("Failed to parse JSON response: {}", e))?;
 
-    store_access_token(&auth_result.access_token);
-    store_refresh_token(&auth_result.refresh_token);
-
+    // Cookies are automatically set by browser from Set-Cookie headers
     Ok(auth_result)
 }
 

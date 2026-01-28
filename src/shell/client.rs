@@ -1,54 +1,25 @@
-use crate::api::auth_api::{get_access_token, refresh_access_token};
+use crate::api::auth_api::get_access_token;
 use serde::{Deserialize, Serialize};
 use gloo_net::http::Request;
 use web_sys::RequestCredentials;
 
 // Shared API configuration
-// Local: http://localhost:9000
-// Production: https://api.doxle.ai
 pub const API_BASE_URL: &str = "https://api.doxle.ai";
-// For local backend development, temporarily switch to:
-// pub const API_BASE_URL: &str = "http://localhost:9000";
 
 // CloudFront CDN for image caching
 pub const CLOUDFRONT_URL: &str = "https://d1flb4kxeu5kb6.cloudfront.net";
 
-
-
 /// Handle 401 Unauthorized by clearing token and redirecting to login
-pub fn handle_unauthorized(){
+pub fn handle_unauthorized() {
     tracing::warn!("🔒 Received 401 Unauthorized, redirecting to login");
     crate::api::clear_access_token();
-    #[cfg(target_arch="wasm32")]
+    #[cfg(target_arch = "wasm32")]
     {
-        if let Some(win) = web_sys::window(){
+        if let Some(win) = web_sys::window() {
             let _ = win.location().set_href("/signin");
         }
     }
 }
-
-
-/// Check response status and handle auth errors
-/// Returns Ok(response) if successful, Err if failed
-
-async fn check_response(response:reqwest::Response)-> Result<reqwest::Response, String>{
-    let status = response.status();
-    if status == reqwest::StatusCode::UNAUTHORIZED {
-        handle_unauthorized();
-        return Err("Unauthorized - please log in again".to_string());
-    }
-
-    if !status.is_success(){
-       let error_text = response
-            .text()
-            .await
-            .unwrap_or_else(|_| "Unknown error".to_string());
-        return Err(format!("Request failed ({}): {}", status.as_u16(), error_text)); 
-    }
-    Ok(response)
-}
-
-
 
 // Convert S3 URL to CloudFront URL for cached image loading
 pub fn to_cloudfront_url(s3_url: &str) -> String {
@@ -65,14 +36,7 @@ pub fn to_cloudfront_url(s3_url: &str) -> String {
     }
 }
 
-// Helper to get auth header
-pub fn auth_header() -> Result<String, String> {
-    get_access_token()
-        .map(|token| format!("Bearer {}", token))
-        .ok_or_else(|| "No auth token found".to_string())
-}
-
-// Helper to get user_id from JWT token
+// Helper to get user_id from JWT token (reads access_token from cookie)
 pub fn get_user_id() -> Option<String> {
     get_access_token().and_then(|token| {
         // Decode JWT (split by '.' and get payload)
