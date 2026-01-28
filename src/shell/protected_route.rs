@@ -14,34 +14,21 @@ pub fn ProtectedRoute(children: Element) -> Element {
         let mut auth_checked = auth_checked.clone();
 
         spawn(async move {
-            let token = api::get_access_token();
-            if let Some(t) = token.as_deref() {
-                // Access token is expired
-                if api::is_access_token_expired(t) {
-                     match api::refresh_access_token().await{
-                        Ok(_) => {
-                            tracing::info!("✅ Token refreshed successfully");
-                        }
-                        Err(_)=>{
-                            tracing::info!("Refresh failed - redirecting to sign-in");
-                            api::clear_access_token();
-                            nav.push(Route::SignInPage {});
-                        }
-                     }
-                }        
-            }
-            else {
-                // No access token: try refresh using refresh token
-                match api::refresh_access_token().await{
+            // With httpOnly cookies, we can only check if access_token cookie exists
+            // The browser sends cookies automatically with requests
+            let has_token = api::get_access_token().is_some();
+            
+            if !has_token {
+                // No access token cookie - try to refresh (refresh token is httpOnly)
+                match api::refresh_access_token().await {
                     Ok(_) => {
                         tracing::info!("✅ Token refreshed successfully");
                     }
-                    Err(_)=>{
-                        tracing::info!("Refresh failed - redirecting to sign-in");
-                        api::clear_access_token();
+                    Err(_) => {
+                        tracing::info!("No valid session - redirecting to sign-in");
                         nav.push(Route::SignInPage {});
                     }
-                 }
+                }
             }
             auth_checked.set(true);
         });
@@ -51,15 +38,9 @@ pub fn ProtectedRoute(children: Element) -> Element {
         return rsx! { div {} };
     }
 
-
-    // If we have a valid token, render the protected content
-    let token = api::get_access_token();
-    if let Some(t) = token.as_deref() {
-        if !api::is_access_token_expired(t) {
-            rsx! { {children} }
-        } else {
-            rsx! { div {} }
-        }
+    // If we have a token cookie, render the protected content
+    if api::get_access_token().is_some() {
+        rsx! { {children} }
     } else {
         rsx! { div {} }
     }

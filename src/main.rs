@@ -105,25 +105,14 @@ fn App() -> Element {
     });
 
     // Background refresh token every 25 minutes
-    // Background refresh token based on access token expiry
+    // With httpOnly cookies, we just refresh periodically since we can't read expiry
     use_future(move || async move {
         loop {
-            let delay_ms = if let Some(token) = get_access_token() {
-                if let Some(exp) = crate::api::auth_api::get_access_token_exp(&token) {
-                    let now = (js_sys::Date::now() / 1000.0) as i64;
-                    let mut secs = exp - now - 120; // refresh 2 min early
-                    if secs < 5 { secs = 5; }
-                    ((secs as u64) * 1000).min(u32::MAX as u64) as u32
-                } else {
-                    60_000
-                }
-            } else {
-                60_000
-            };
+            // Refresh every 25 minutes (Cognito tokens typically expire in 60 min)
+            gloo_timers::future::TimeoutFuture::new(25 * 60 * 1000).await;
 
-            gloo_timers::future::TimeoutFuture::new(delay_ms).await;
-
-            if crate::api::auth_api::get_refresh_token().is_some() {
+            // Try to refresh - will fail silently if no refresh token cookie
+            if get_access_token().is_some() {
                 let _ = crate::api::refresh_access_token().await;
             }
         }

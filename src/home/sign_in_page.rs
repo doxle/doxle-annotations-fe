@@ -40,14 +40,11 @@ pub fn SignInPage() -> Element {
             is_loading.set(true);
             error_message.set(None);
 
-            // Step 1: Authenticate with Cognito
+            // Step 1: Authenticate with Cognito (cookies are set automatically)
             match api::authenticate(&email_value, &password_value).await {
-                Ok(auth_result) => {
-                    // Step 2: Store token
-                    api::store_access_token(&auth_result.access_token);
-                    api::store_refresh_token(&auth_result.refresh_token);
-
-                    // Step 3: Check if user profile exists in DynamoDB (non-blocking for sign-in)
+                Ok(_auth_result) => {
+                    // Cookies are automatically set by browser from Set-Cookie headers
+                    // Step 2: Check if user profile exists in DynamoDB (non-blocking for sign-in)
                     match api::get_current_user().await {
                         Ok(user) => {
                             tracing::info!("✅ User logged in: {}", user.user_name);

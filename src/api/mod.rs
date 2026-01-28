@@ -7,11 +7,8 @@ pub use auth_api::{
     authenticate,
     signup,
     get_access_token,
-    store_access_token,
-    store_refresh_token,
     clear_access_token,
     refresh_access_token,
-    is_access_token_expired,
 };
 
 pub use crate::users::api::{

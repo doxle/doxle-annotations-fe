@@ -2,6 +2,7 @@ use dioxus::prelude::*;
 use serde::{Deserialize, Serialize};
 use gloo_net::http::Request;
 use web_sys::{window, RequestCredentials};
+use wasm_bindgen::JsCast;
 
 const API_BASE_URL: &str = "https://api.doxle.ai";
 
@@ -117,11 +118,14 @@ pub fn get_access_token() -> Option<String> {
     #[cfg(target_arch = "wasm32")]
     {
         if let Some(document) = window().and_then(|w| w.document()) {
-            if let Ok(cookies) = document.cookie() {
-                for cookie in cookies.split(';') {
-                    let cookie = cookie.trim();
-                    if cookie.starts_with("access_token=") {
-                        return cookie.strip_prefix("access_token=").map(|s| s.to_string());
+            // Cast Document to HtmlDocument to access cookie methods
+            if let Ok(html_doc) = document.dyn_into::<web_sys::HtmlDocument>() {
+                if let Ok(cookies) = html_doc.cookie() {
+                    for cookie in cookies.split(';') {
+                        let cookie = cookie.trim();
+                        if cookie.starts_with("access_token=") {
+                            return cookie.strip_prefix("access_token=").map(|s| s.to_string());
+                        }
                     }
                 }
             }
@@ -135,10 +139,13 @@ pub fn clear_access_token() {
     #[cfg(target_arch = "wasm32")]
     {
         if let Some(document) = window().and_then(|w| w.document()) {
-            // Clear access_token cookie
-            let _ = document.set_cookie("access_token=; Domain=.doxle.ai; Path=/; Max-Age=0; SameSite=None; Secure");
-            // Note: refresh_token is httpOnly so we can't clear it from JS
-            // It will be cleared by the backend on logout
+            // Cast Document to HtmlDocument to access cookie methods
+            if let Ok(html_doc) = document.dyn_into::<web_sys::HtmlDocument>() {
+                // Clear access_token cookie
+                let _ = html_doc.set_cookie("access_token=; Domain=.doxle.ai; Path=/; Max-Age=0; SameSite=None; Secure");
+                // Note: refresh_token is httpOnly so we can't clear it from JS
+                // It will be cleared by the backend on logout
+            }
         }
     }
 }

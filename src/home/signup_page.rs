@@ -48,16 +48,14 @@ pub fn SignupPage() -> Element {
                 Ok(_) => {
                     tracing::info!("✅ Cognito signup successful");
                     
-                    // Step 2: Authenticate to get token
-                    tracing::info!("🔐 Authenticating to get token");
+                    // Step 2: Authenticate (cookies set automatically)
+                    tracing::info!("🔐 Authenticating");
                     match api::authenticate(&email_value, &password_value).await {
-                        Ok(auth_result) => {
+                        Ok(_auth_result) => {
                             tracing::info!("✅ Authentication successful");
+                            // Cookies are automatically set by browser
                             
-                            // Step 3: Store token
-                            api::store_access_token(&auth_result.access_token);
-                            
-                            // Step 4: Create user profile in DynamoDB
+                            // Step 3: Create user profile in DynamoDB
                             tracing::info!("💾 Creating user profile in DynamoDB");
                             
                             match api::create_user_profile(

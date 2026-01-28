@@ -28,7 +28,8 @@ web-sys = { version = "0.3", features = [
     "HtmlHeadElement", "Storage", "HtmlCanvasElement", "CanvasRenderingContext2d", "CanvasPattern",
     "CssStyleDeclaration", "HtmlElement", "HtmlImageElement", "MouseEvent", "DragEvent",
     "WebSocket", "MessageEvent", "CloseEvent", "ErrorEvent", "BinaryType",
-    "File", "FileList", "FileReader", "Blob", "BlobPropertyBag", "FilePropertyBag", "Url", "HtmlInputElement", "DataTransfer"
+    "File", "FileList", "FileReader", "Blob", "BlobPropertyBag", "FilePropertyBag", "Url", "HtmlInputElement", "DataTransfer",
+    "RequestCredentials", "HtmlDocument"
 ] }
 js-sys = "0.3"
 wasm-bindgen = "0.2"
