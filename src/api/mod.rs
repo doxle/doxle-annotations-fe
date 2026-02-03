@@ -3,12 +3,11 @@ pub mod auth_api;
 
 // Re-exports so callers can just `use crate::api::*;`
 pub use auth_api::{
-    AuthResult,
+    SessionResponse,
     authenticate,
     signup,
-    get_access_token,
-    clear_access_token,
-    refresh_access_token,
+    send_contact,
+    logout,
 };
 
 pub use crate::users::api::{

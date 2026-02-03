@@ -9,7 +9,6 @@ use home::{HomePage, Home3Page, SignInPage, Navbar, OurStoryPage, SayHelloPage, 
 use matrix::MatrixPage;
 use stacking_bricks::StackingBricksPage;
 use letter_cycle::LetterCyclePage;
-use api::auth_api::get_access_token;
 use users::state::{USER, load_user};
 
 mod blocks;
@@ -95,29 +94,6 @@ fn App() -> Element {
     // Setup global keyboard shortcuts (works on all pages)
     setup_global_keyboard_shortcuts();
 
-     // Load user from API if token exists but USER signal is empty (e.g., new tab)
-    use_hook(|| {
-        if get_access_token().is_some() && USER.read().is_none() {
-            spawn(async move {
-                load_user().await;
-            });
-        }
-    });
-
-    // Background refresh token every 25 minutes
-    // With httpOnly cookies, we just refresh periodically since we can't read expiry
-    use_future(move || async move {
-        loop {
-            // Refresh every 25 minutes (Cognito tokens typically expire in 60 min)
-            gloo_timers::future::TimeoutFuture::new(25 * 60 * 1000).await;
-
-            // Try to refresh - will fail silently if no refresh token cookie
-            if get_access_token().is_some() {
-                let _ = crate::api::refresh_access_token().await;
-            }
-        }
-    });
-    
 
     // Watch THEME signal and apply to HTML element
     use_effect(move || {
@@ -208,10 +184,10 @@ enum Route {
     DashboardPage{},
     #[route("/blocks/new")]
     CreateBlockPage{},
-    #[route("/blocks/:block_id/tasks/new")]
-    CreateTaskPage { block_id: String },
-    #[route("/blocks/:block_id/tasks")]
-    TasksListPage { block_id: String },
+    #[route("/blocks/:block_id/:block_name/tasks/new")]
+    CreateTaskPage { block_id: String, block_name: String },
+    #[route("/blocks/:block_id/:block_name/tasks")]
+    TasksListPage { block_id: String, block_name: String },
     #[route("/blocks/:block_id/:block_name/tasks/:task_id/:task_name/:image_id/:image_name/drawing")]
     AnnotationCanvasPage { block_id: String, block_name: String, task_id: String, task_name: String, image_id: String, image_name: String },
     #[route("/matrix")]

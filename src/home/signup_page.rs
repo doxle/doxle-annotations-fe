@@ -1,11 +1,13 @@
 use crate::Route;
 use crate::api;
+use crate::home::home_navbar::Navbar;
 use crate::shell::loading::LoadingPage;
 use dioxus::prelude::*;
 
 #[component]
 pub fn SignupPage() -> Element {
     const LOGO: Asset = asset!("/assets/icons/send.svg");
+    const DOG_LOGO: Asset = asset!("/assets/icons/dog-dark.svg");
 
     let mut name = use_signal(|| String::new());
     let mut email = use_signal(|| String::new());
@@ -93,11 +95,20 @@ pub fn SignupPage() -> Element {
     };
 
     rsx! {
+        Navbar {}
+
         div {
             class: "signup-container",
 
             div {
                 class: "signup-box",
+
+                img {
+                    class: "signup-logo",
+                    src: "{DOG_LOGO}",
+                    alt: "Logo",
+                    onclick: move |_| { nav.push(Route::HomePage {}); },
+                }
 
                 h2 {
                     class: "signup-title",
@@ -123,6 +134,7 @@ pub fn SignupPage() -> Element {
 
                     // Email field
                     div {
+                        class: "signup-field",
                         input {
                             class: "signup-input signup-input-middle",
                             r#type: "email",
@@ -135,6 +147,7 @@ pub fn SignupPage() -> Element {
 
                     // Invite Code field
                     div {
+                        class: "signup-field",
                         input {
                             class: "signup-input signup-input-middle",
                             r#type: "text",

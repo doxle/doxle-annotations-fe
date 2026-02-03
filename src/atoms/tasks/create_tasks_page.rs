@@ -1,7 +1,7 @@
 use dioxus::prelude::*;
 use crate::shell::{THEME, Theme, AppNavbar};
 use dioxus::logger::tracing::error;
-use crate::atoms::tasks::controller::{handle_create_task, PendingUpload};
+use crate::atoms::tasks::create_task_handler::{handle_create_task, PendingUpload};
 use crate::Route;
 
 const CREATE_TASKS_CSS: &str = include_str!("create_tasks_page.css");
@@ -32,6 +32,7 @@ fn format_size(bytes: f64) -> String {
 #[derive(Props, Clone, PartialEq)]
 pub struct CreateTaskPageProps {
     pub block_id: String,
+    pub block_name: String,
 }
 
 #[component]
@@ -39,10 +40,14 @@ pub fn CreateTaskPage(props: CreateTaskPageProps) -> Element {
     let mut task_name = use_signal(String::new);
     let mut pending_uploads = use_signal(|| Vec::<PendingUpload>::new());
     let mut is_submitting = use_signal(|| false);
+    let mut upload_current = use_signal(|| 0usize);
+    let mut upload_total = use_signal(|| 0usize);
     let nav = use_navigator();
     
     let block_id = props.block_id.clone();
+    let block_name = props.block_name.clone();
     let block_id_for_back = block_id.clone();
+    let block_name_for_back = block_name.clone();
 
     let is_dark = THEME() == Theme::Dark;
     let tasks_icon = if is_dark { TASKS_ICON_DARK } else { TASKS_ICON_LIGHT };
@@ -72,15 +77,19 @@ pub fn CreateTaskPage(props: CreateTaskPageProps) -> Element {
         }
 
         let block_id_clone = block_id.clone();
+        let block_name_clone = block_name.clone();
         let nav = nav.clone();
 
         spawn(async move {
             handle_create_task(
                 block_id_clone,
+                block_name_clone,
                 name,
                 images_to_upload,
                 nav,
-                is_submitting
+                is_submitting,
+                upload_current,
+                upload_total,
             ).await;
         });
     };
@@ -194,21 +203,40 @@ pub fn CreateTaskPage(props: CreateTaskPageProps) -> Element {
                         }
                     }
 
+                    // Upload progress bar
+                    if *is_submitting.read() && *upload_total.read() > 0 {
+                        div {
+                            class: "upload-progress-container",
+                            div {
+                                class: "upload-progress-bar",
+                                div {
+                                    class: "upload-progress-fill",
+                                    style: "width: {(*upload_current.read() as f64 / *upload_total.read() as f64 * 100.0) as u32}%",
+                                }
+                            }
+                            span {
+                                class: "upload-progress-text",
+                                "Uploading {upload_current}/{upload_total}"
+                            }
+                        }
+                    }
+
                     div {
                         class: "form-actions",
                         button {
                             r#type: "button",
                             class: "tasks-back-button",
+                            disabled: *is_submitting.read(),
                             onclick: move |_| {
-                                nav.push(Route::TasksListPage { block_id: block_id_for_back.clone() });
+                                nav.push(Route::TasksListPage { block_id: block_id_for_back.clone(), block_name: block_name_for_back.clone() });
                             },
                             "Back"
                         }
                         button {
                             r#type: "submit",
                             class: "tasks-create-button",
-                            // disabled: *is_submitting.read() || pending_uploads.read().is_empty(),
-                            if *is_submitting.read() { "Creating..." } else { "Create Task" }
+                            disabled: *is_submitting.read() || pending_uploads.read().is_empty(),
+                            if *is_submitting.read() { "Uploading..." } else { "Create Task" }
                         }
                     }
                 }

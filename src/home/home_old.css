@@ -1,4 +1,4 @@
-/* Home Page Styles - Dots Effect */
+/* Home Page Styles - Rectangle Matrix Effect */
 
 /* Force dark background */
 html, body {
@@ -10,7 +10,7 @@ html, body {
 .home-container {
     position: relative;
     display: flex;
-    align-items: center;
+    align-items: flex-end;
     justify-content: flex-start;
     width: 100%;
     min-height: 100vh;
@@ -19,44 +19,15 @@ html, body {
     overflow: hidden;
 }
 
-.home-dots-layer {
+.home-rects-layer {
     position: absolute;
     top: 0;
     left: 0;
     width: 100%;
     height: 100%;
+    pointer-events: none;
     contain: layout paint style;
     transform: translateZ(0);
-}
-
-.dot {
-    position: absolute;
-    width: 3px;
-    height: 3px;
-    background-color: rgba(255, 255, 255, 0.4);
-    border-radius: 50%;
-    transition: transform 0.1s ease-out;
-    pointer-events: none;
-}
-
-/* Gentle breeze animation for mobile */
-.dot-breeze {
-    animation: breeze 8s ease-in-out infinite;
-}
-
-@keyframes breeze {
-    0%, 100% {
-        transform: translate(0, 0);
-    }
-    25% {
-        transform: translate(2px, -1.5px);
-    }
-    50% {
-        transform: translate(-1.5px, 2px);
-    }
-    75% {
-        transform: translate(1.5px, 1.5px);
-    }
 }
 
 .home-content {
@@ -65,47 +36,21 @@ html, body {
     text-align: left;
     max-width: 800px;
     margin: 0;
-    margin-left: 21%;
-    margin-bottom: 0;
+    margin-left: 1%;
+    margin-bottom: clamp(220px, 30vh, 450px);
     padding: 40px 20px;
-}
-
-.home-description,
-.upload-button {
     opacity: 0;
-}
-
-.home-container ~ .home-navbar,
-.home-container + .home-navbar,
-body:has(.home-container) .home-navbar {
-    opacity: 0;
+    transition: opacity 0.5s;
 }
 
 .home-title {
-    font-size: 120px;
+    font-size: clamp(96px, 8vw, 90px);
     font-weight: 700 !important; /* Bold */
-    line-height: 96px;
+    line-height: 1;
     color: #ffffff !important; /* White text */
     margin: 0;
-    margin-bottom: 40px;
+    margin-bottom: 12px;
     text-align: left;
-}
-
-.home-title-line {
-    display: block;
-    margin-bottom: 16px;
-}
-
-.typewriter-cursor {
-    display: inline-block;
-    color: #ff0000;
-    font-weight: 400;
-    animation: blink 0.5s infinite;
-}
-
-@keyframes blink {
-    0%, 49% { opacity: 1; }
-    50%, 100% { opacity: 0; }
 }
 
 .home-description {
@@ -115,7 +60,7 @@ body:has(.home-container) .home-navbar {
     font-weight: 200;
     line-height: 20px;
     font-size: clamp(15px, 2.5vw, 15px);
-    margin: 0px 0 30px 0;
+    margin: 0px 0 15px 0;
     color: rgb(240, 240, 240) !important;
     text-align: left;
 }
@@ -174,54 +119,12 @@ body:has(.home-container) .home-navbar {
     display: none !important; /* Hide WHITE logo on hover */
 }
 
-/* Tablet (iPad) */
-@media (max-width: 1024px) {
-    .home-content {
-        margin-left: 10%;
-        max-width: 700px;
-    }
-    
-    .home-title {
-        font-size: 90px;
-        line-height: 76px;
-    }
-}
-
-/* Mobile (iPhone) */
-@media (max-width: 480px) {
-    .home-container {
-        min-height: 100vh;
-        min-height: 100dvh;
-        height: 100vh;
-        height: 100dvh;
-    }
-    
-    .home-content {
-        margin-left: 5%;
-        margin-right: 5%;
-        padding: 20px 16px;
-        max-width: 100%;
-    }
-    
-    .home-title {
-        font-size: 48px;
-        line-height: 44px;
-        margin-bottom: 24px;
-    }
-    
-    .home-title-line {
-        margin-bottom: 8px;
-    }
-    
-    .home-description {
-        font-size: 14px;
-        line-height: 18px;
-        margin-bottom: 20px;
-    }
-    
-    .upload-button {
-        width: 100%;
-        height: 50px;
-        font-size: 16px;
-    }
+/* Rectangle styles */
+.rect {
+    position: absolute;
+    width: 151px;
+    height: 64px;
+    background-color: #ff0000;
+    border-radius: 0px;
+    pointer-events: none;
 }

@@ -1,4 +1,5 @@
 use crate::api;
+use crate::home::home_navbar::Navbar;
 use crate::shell::loading::LoadingPage;
 use crate::users::state::USER;
 use crate::Route;
@@ -7,7 +8,7 @@ use dioxus::prelude::*;
 #[component]
 pub fn SignInPage() -> Element {
     // const SIGN_IN_LOGO: Asset = asset!("/assets/icons/d-flag2.svg");
-    const SIGN_IN_LOGO: Asset = asset!("/assets/icons/dx-walker-dark.svg");
+    const SIGN_IN_LOGO: Asset = asset!("/assets/icons/dog-dark.svg");
     const SIGN_IN_CSS:&str = include_str!("sign_in.css");
 
     let mut email = use_signal(|| String::new());
@@ -74,6 +75,8 @@ pub fn SignInPage() -> Element {
     rsx! {
         style { {SIGN_IN_CSS} }
 
+        Navbar {}
+
         div {
             class: "signin-container",
 
@@ -84,6 +87,7 @@ pub fn SignInPage() -> Element {
                     class: "signin-logo",
                     src: "{SIGN_IN_LOGO}",
                     alt: "Logo",
+                    onclick: move |_| { nav.push(Route::HomePage {}); },
                 }
 
                 h2 {

@@ -1,7 +1,9 @@
 use dioxus::prelude::*;
 use crate::Route;
-use crate::blocks::dashboard::state::{state_set_current_block, state_get_current_block};
-use crate::atoms::tasks::state::{state_load_tasks, TASKS_LOADING, TASKS_ERROR, TASKS};
+use crate::blocks::dashboard::state::state_set_current_block;
+use crate::atoms::tasks::state::{state_load_tasks, state_delete_task, state_rename_task, TASKS_LOADING, TASKS_ERROR, TASKS};
+use super::task_menu::TaskMenu;
+use super::edit_task_modal::EditTaskModal;
 
 use crate::shell::{THEME, Theme, AppNavbar};
 use dioxus::logger::tracing::info;
@@ -20,12 +22,14 @@ const ADD_ICON_DARK: Asset = asset!("/assets/icons/add-dark.svg");
 /// Top-level page for an Annotation Block: shows tasks for a given block,
 /// with a simple "create + list" flow similar to blocks.
 #[component]
-pub fn TasksListPage(block_id: String) -> Element {
+pub fn TasksListPage(block_id: String, block_name: String) -> Element {
 
     let block_id_for_hook = block_id.clone();
     let block_id_for_resource = block_id.clone();
     let block_id_for_navbar = block_id.clone();
-     let block_id_for_create_task = block_id.clone();
+    let block_id_for_create_task = block_id.clone();
+    let block_name_for_create_task = block_name.clone();
+    let block_name_for_nav = block_name.clone();
 
     let nav = use_navigator();
 
@@ -49,9 +53,12 @@ pub fn TasksListPage(block_id: String) -> Element {
     
 
     let _creating = use_signal(|| false);
+    let mut deleting_task_id: Signal<Option<String>> = use_signal(|| None);
     let is_dark = THEME() == Theme::Dark;
     let tasks_icon = if is_dark { BLOCKS_ICON_DARK } else { BLOCKS_ICON_LIGHT };
     let add_icon = if is_dark { ADD_ICON_DARK } else { ADD_ICON_LIGHT };
+    let mut open_menu_id: Signal<Option<String>> = use_signal(|| None);
+    let mut editing_task: Signal<Option<(String, String)>> = use_signal(|| None); // (task_id, current_name)
     
 
     // Show loading 
@@ -87,7 +94,7 @@ pub fn TasksListPage(block_id: String) -> Element {
                 button {
                     class: "tasks-create-button-centered",
                     onclick: move |_| {
-                        nav.push(Route::CreateTaskPage { block_id: block_id_for_create_task.clone() });
+                        nav.push(Route::CreateTaskPage { block_id: block_id_for_create_task.clone(), block_name: block_name_for_create_task.clone() });
                     },
                     img { src: add_icon, class: "tasks-create-icon" }
                     "New Task"
@@ -103,13 +110,20 @@ pub fn TasksListPage(block_id: String) -> Element {
             button {
                 class: "app-navbar-center-button",
                 onclick: move |_| {
-                    nav.push(Route::CreateTaskPage { block_id: block_id_for_navbar.clone() });
+                    nav.push(Route::CreateTaskPage { block_id: block_id_for_navbar.clone(), block_name: block_name.clone() });
                 },
                 img { src: add_icon, class: "app-navbar-center-button-icon" }
                 "New Task"
             }
         }
-        div { class: "tasks-page",
+        div { 
+            class: "tasks-page",
+            // Close dropdown menu when clicked outside
+            onclick: move |_| {
+                if open_menu_id().is_some() {
+                    open_menu_id.set(None);
+                }
+            },
             div { class: "tasks-list-container",
                 ul { class: "tasks-list",
                     for task in &*TASKS.read() {
@@ -119,20 +133,23 @@ pub fn TasksListPage(block_id: String) -> Element {
                             let task_name_for_nav = task.task_name.clone();
                             let task_state = task.task_state.clone();
                             let block_id_for_nav = block_id.clone();
-                            // Get block name from current block
-                            let block_name = state_get_current_block()
-                                .map(|b| b.block_name)
-                                .unwrap_or_else(|| "Block".to_string());
+                            let block_name = block_name_for_nav.clone();
                             // Get first image info (or defaults if no images)
                             let (image_id, image_name) = task.images.first()
                                 .map(|img| (img.image_id.clone(), extract_filename(&img.url)))
                                 .unwrap_or_else(|| ("no-image".to_string(), "No Image".to_string()));
 
+                            let is_deleting = deleting_task_id() == Some(task.task_id.clone());
                             rsx! {
                                 li {
                                     key: "{task.task_id}",
-                                    class: "tasks-list-item",
+                                    class: if is_deleting { "tasks-list-item deleting" } else { "tasks-list-item" },
                                     onclick: move |_| {
+                                        // Don't navigate if menu is open
+                                        if open_menu_id().is_some() {
+                                            open_menu_id.set(None);
+                                            return;
+                                        }
                                         nav.push(Route::AnnotationCanvasPage { 
                                             block_id: block_id_for_nav.clone(),
                                             block_name: block_name.clone(),
@@ -145,10 +162,59 @@ pub fn TasksListPage(block_id: String) -> Element {
                                     
                                     // Task card content
                                     div { class: "task-card",
-                                        // Task name
-                                        div { 
-                                            class: "task-name",
-                                            "{task_name}" 
+                                        // Row 1: Task name + three dots menu
+                                        div {
+                                            class: "task-row-1",
+                                            div { 
+                                                class: "task-name",
+                                                "{task_name}" 
+                                            }
+                                            // Task dropdown menu
+                                            div {
+                                                class: "task-actions",
+                                                {
+                                                    let tid = task.task_id.clone();
+                                                    let tid_toggle = task.task_id.clone();
+                                                    let tid_delete = task.task_id.clone();
+                                                    let bid_delete = block_id.clone();
+                                                    rsx!{
+                                                        TaskMenu {
+                                                            task_id: tid.clone(),
+                                                            is_open: open_menu_id() == Some(task.task_id.clone()),
+                                                            on_toggle: move |_| {
+                                                                let t = tid_toggle.clone();
+                                                                if open_menu_id() == Some(t.clone()) {
+                                                                    open_menu_id.set(None);
+                                                                } else {
+                                                                    open_menu_id.set(Some(t));
+                                                                }
+                                                            },
+                                                            on_edit: {
+                                                                let tid_edit = task.task_id.clone();
+                                                                let tname_edit = task.task_name.clone();
+                                                                move |_| {
+                                                                    editing_task.set(Some((tid_edit.clone(), tname_edit.clone())));
+                                                                    open_menu_id.set(None);
+                                                                }
+                                                            },
+                                                            on_archive: move |_| {
+                                                                // TODO: archive task
+                                                                open_menu_id.set(None);
+                                                            },
+                                                            on_delete: move |_| {
+                                                                let id = tid_delete.clone();
+                                                                let bid = bid_delete.clone();
+                                                                deleting_task_id.set(Some(id.clone()));
+                                                                spawn(async move {
+                                                                    state_delete_task(&bid, &id).await;
+                                                                    deleting_task_id.set(None);
+                                                                });
+                                                                open_menu_id.set(None);
+                                                            },
+                                                        }
+                                                    }
+                                                }
+                                            }
                                         }
                                         
                                         // Assignee and Reviewer row
@@ -193,9 +259,7 @@ pub fn TasksListPage(block_id: String) -> Element {
                                         
                                         // Image rectangles
                                         div { class: "task-image-rects",
-                                            // TODO: Backend should provide total image count
-                                            // For now showing 30 rectangles as placeholder
-                                            for i in 0..30 {
+                                            for i in 0..task.images.len() {
                                                 div { 
                                                     key: "{i}",
                                                     class: if (i + 1) % 10 == 0 { "task-image-rect-wrapper with-marker" } else { "task-image-rect-wrapper" },
@@ -218,15 +282,35 @@ pub fn TasksListPage(block_id: String) -> Element {
                                             div { class: "task-counts",
                                                 span { class: "task-count-item", "{task.images.len()} images" }
                                                 span { class: "task-count-divider", "/" }
-                                                span { class: "task-count-item", "45,000 annotations" }
+                                                span { class: "task-count-item", "{task.annotation_count} annotations" }
                                             }
                                         }
-                                        
-                                        // Task state (right side)
-                                        span { class: "task-state", "{task_state}" }
                                     }
                                 }
                             }
+                        }
+                    }
+                }
+            }
+        }
+        // Edit modal
+        if let Some((task_id, current_name)) = editing_task() {
+            {
+                let bid = block_id.clone();
+                rsx! {
+                    EditTaskModal {
+                        task_id: task_id.clone(),
+                        current_name: current_name.clone(),
+                        on_save: move |new_name: String| {
+                            let tid = task_id.clone();
+                            let bid = bid.clone();
+                            spawn(async move {
+                                state_rename_task(&bid, &tid, new_name).await;
+                            });
+                            editing_task.set(None);
+                        },
+                        on_cancel: move |_| {
+                            editing_task.set(None);
                         }
                     }
                 }

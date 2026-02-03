@@ -174,11 +174,25 @@ html.dark .tasks-list-item:hover {
   gap: 12px;
 }
 
+/* Row 1: Task name + three dots */
+.task-row-1 {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+}
+
 /* Task name - 18px as requested */
 .task-name {
   font-size: 18px;
   font-weight: 400;
   color: var(--text-primary);
+}
+
+/* Task actions (three dots menu) */
+.task-actions {
+  display: flex;
+  align-items: center;
 }
 
 /* Meta row for assignee/reviewer */
@@ -303,4 +317,38 @@ html.dark .task-divider {
 
 .task-count-divider {
   color: var(--text-tertiary);
+}
+
+/* Deleting state */
+.tasks-list-item.deleting {
+  opacity: 0.5;
+  pointer-events: none;
+  position: relative;
+  overflow: hidden;
+}
+
+.tasks-list-item.deleting::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  height: 3px;
+  width: 30%;
+  background: linear-gradient(90deg, var(--dx-blue), var(--dx-blue));
+  animation: deleting-progress 1s ease-in-out infinite;
+}
+
+@keyframes deleting-progress {
+  0% {
+    left: 0;
+    width: 30%;
+  }
+  50% {
+    left: 35%;
+    width: 30%;
+  }
+  100% {
+    left: 70%;
+    width: 30%;
+  }
 }

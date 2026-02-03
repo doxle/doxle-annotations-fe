@@ -196,11 +196,12 @@ form:has(.signin-input-email:focus) .signin-input-password {
     margin: 0 auto 12px;
     width: 54px;
     height: auto;
-    opacity: 0.8;
+    opacity: 1;
     transform: translateY(10px);
+    cursor: pointer;
 }
 
-/* Mobile responsive */
+/* Tablet (iPad) */
 @media (max-width: 768px) {
     .signin-box {
         padding: 40px 24px;
@@ -208,5 +209,41 @@ form:has(.signin-input-email:focus) .signin-input-password {
     
     .signin-container {
         padding: 20px 16px;
+    }
+}
+
+/* Mobile (iPhone) */
+@media (max-width: 480px) {
+    .signin-container {
+        padding: 20px 16px;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    .signin-box {
+        padding: 30px 20px;
+        width: 100%;
+        max-width: 100%;
+    }
+    
+    .signin-field,
+    .signin-password-wrapper,
+    .signin-input,
+    .signin-submit-button {
+        width: 100%;
+    }
+    
+    .signin-title {
+        font-size: 24px;
+    }
+    
+    .signin-input {
+        height: 45px;
+        font-size: 16px;
+    }
+    
+    .signin-submit-button {
+        height: 50px;
+        font-size: 15px;
     }
 }

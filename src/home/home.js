@@ -1,211 +1,164 @@
-(function () {
-  let currentResizeHandler = null;
-  
-  function ready(fn) {
-    if (document.readyState !== 'loading') fn();
-    else document.addEventListener('DOMContentLoaded', fn, { once: true });
-  }
-
-  function init() {
-    const existing = document.getElementById('rects-container');
-    if (existing && existing.children.length === 0) {
-      initWithContainer(existing);
+window.__dotsInit = function() {
+    const dotsContainer = document.getElementById('dots-container');
+    if (!dotsContainer) return;
+    
+    // Detect mobile/touch device
+    const isMobile = window.innerWidth <= 768 || 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+    
+    // Clear existing dots
+    dotsContainer.innerHTML = '';
+    
+    const spacing = 30;
+    const dotsX = Math.ceil(window.innerWidth / spacing) + 2;
+    const dotsY = Math.ceil(window.innerHeight / spacing) + 2;
+    
+    // Create dots (but keep them hidden initially)
+    for (let x = 0; x < dotsX; x++) {
+        for (let y = 0; y < dotsY; y++) {
+            const dot = document.createElement('div');
+            dot.className = 'dot';
+            dot.style.left = (x * spacing) + 'px';
+            dot.style.top = (y * spacing) + 'px';
+            dot.dataset.baseX = x * spacing;
+            dot.dataset.baseY = y * spacing;
+            dot.style.opacity = '0';
+            
+            // Add breeze animation class with random delay (both mobile and desktop)
+            dot.classList.add('dot-breeze');
+            dot.style.animationDelay = (Math.random() * 4) + 's';
+            
+            dotsContainer.appendChild(dot);
+        }
     }
-  }
-  
-  // Watch for rects-container appearing (handles SPA navigation)
-  // MutationObserver is efficient - only fires on actual DOM changes, not polling
-  const domObserver = new MutationObserver((mutations) => {
-    // Only check if mutations involve added nodes
-    for (const mutation of mutations) {
-      if (mutation.addedNodes.length > 0) {
-        const el = document.getElementById('rects-container');
-        if (el && el.children.length === 0) {
-          initWithContainer(el);
-          return;
-        }
-      }
-    }
-  });
-  
-  function startObserving() {
-    // Observe body with subtree for SPA route changes
-    domObserver.observe(document.body, { childList: true, subtree: true });
-  }
-
-  function initWithContainer(container) {
-    const ASPECT_RATIO = 151 / 64; // Width to height ratio
-    const PADDING = 2;
-    const PALETTE = ['#DAC8FB', '#FFA5D2', '#049D56', '#FBFB52', '#A4E6F0'];
-    const ANIMATION_DELAY = 30; // ms between each block appearing
-
-    function buildGrid() {
-      container.innerHTML = '';
-      const rect = container.getBoundingClientRect();
-      const w = rect.width || window.innerWidth;
-      const h = rect.height || window.innerHeight;
-      
-      // Responsive configuration based on screen width
-      let targetCols, blockWidth, targetBlockCount;
-      
-      if (w <= 480) {
-        // Mobile: fewer larger blocks
-        targetCols = 4;
-        blockWidth = Math.floor((w - (targetCols + 1) * PADDING) / targetCols);
-        targetBlockCount = 10;
-      } else if (w <= 768) {
-        // Tablet portrait: medium blocks
-        targetCols = 5;
-        blockWidth = Math.floor((w - (targetCols + 1) * PADDING) / targetCols);
-        targetBlockCount = 12;
-      } else if (w <= 1024) {
-        // Tablet landscape / small desktop: slightly smaller blocks
-        targetCols = 7;
-        blockWidth = Math.floor((w - (targetCols + 1) * PADDING) / targetCols);
-        targetBlockCount = 13;
-      } else {
-        // Desktop: more columns, standard blocks
-        targetCols = Math.min(10, Math.floor(w / 180));
-        blockWidth = Math.floor((w - (targetCols + 1) * PADDING) / targetCols);
-        targetBlockCount = 21;
-      }
-      
-      const RECT_WIDTH = blockWidth;
-      const RECT_HEIGHT = Math.floor(RECT_WIDTH / ASPECT_RATIO);
-      
-      // Distribute blocks with varied stacking (20% have 1, 40% have 2, 40% have 3)
-      const columnStacks = [];
-      
-      // Initialize columns with weighted random heights
-      for (let i = 0; i < targetCols; i++) {
-        const rand = Math.random();
-        if (rand < 0.2) {
-          columnStacks.push(1); // 20% chance of 1 block
-        } else if (rand < 0.6) {
-          columnStacks.push(2); // 40% chance of 2 blocks
-        } else {
-          columnStacks.push(3); // 40% chance of 3 blocks
-        }
-      }
-      
-      // Adjust to match target block count
-      let currentTotal = columnStacks.reduce((a, b) => a + b, 0);
-      
-      // Add or remove blocks to reach target
-      while (currentTotal !== targetBlockCount) {
-        if (currentTotal < targetBlockCount) {
-          // Need more blocks - find columns with less than 3
-          const availableCols = columnStacks.map((v, i) => v < 3 ? i : -1).filter(i => i >= 0);
-          if (availableCols.length === 0) break;
-          const col = availableCols[Math.floor(Math.random() * availableCols.length)];
-          columnStacks[col]++;
-          currentTotal++;
-        } else {
-          // Too many blocks - find columns with more than 1
-          const availableCols = columnStacks.map((v, i) => v > 1 ? i : -1).filter(i => i >= 0);
-          if (availableCols.length === 0) break;
-          const col = availableCols[Math.floor(Math.random() * availableCols.length)];
-          columnStacks[col]--;
-          currentTotal--;
-        }
-      }
-      
-      // Create all rectangles data
-      const allRects = [];
-      
-      // For each column, create the stacked blocks
-      for (let col = 0; col < targetCols; col++) {
-        const stackHeight = columnStacks[col];
-        const x = PADDING + col * (RECT_WIDTH + PADDING);
+    
+    // Only add mouse tracking on desktop
+    if (!isMobile) {
+        // Handle mouse movement
+        const handleMouseMove = (e) => {
+            const mx = e.clientX;
+            const my = e.clientY;
+            const pushRadius = 180;
+            
+            const dots = dotsContainer.querySelectorAll('.dot');
+            dots.forEach(dot => {
+                const baseX = parseFloat(dot.dataset.baseX);
+                const baseY = parseFloat(dot.dataset.baseY);
+                
+                const dx = baseX - mx;
+                const dy = baseY - my;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+                
+                if (distance < pushRadius) {
+                    const pushStrength = ((pushRadius - distance) / pushRadius) * 50;
+                    const offsetX = distance > 0 ? (dx / distance) * pushStrength : 0;
+                    const offsetY = distance > 0 ? (dy / distance) * pushStrength : 0;
+                    
+                    dot.style.transform = `translate(${offsetX}px, ${offsetY}px)`;
+                    dot.style.animation = 'none';
+                } else {
+                    dot.style.transform = '';
+                    dot.style.animation = '';
+                }
+            });
+        };
         
-        // Stack rectangles from bottom up
-        for (let i = 0; i < stackHeight; i++) {
-          const y = h - (RECT_HEIGHT + PADDING) * (i + 1);
-          allRects.push({ x, y });
+        // Remove old listener if exists
+        if (window.__dotsMouseHandler) {
+            document.removeEventListener('mousemove', window.__dotsMouseHandler);
         }
-      }
-      
-      // Shuffle the rectangles for random appearance
-      for (let i = allRects.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [allRects[i], allRects[j]] = [allRects[j], allRects[i]];
-      }
-      
-      // Create all rectangles hidden initially
-      const rectElements = [];
-      for (const rectData of allRects) {
-        const r = document.createElement('div');
-        r.className = 'rect';
-        r.style.left = rectData.x + 'px';
-        r.style.top = rectData.y + 'px';
-        r.style.width = RECT_WIDTH + 'px';
-        r.style.height = RECT_HEIGHT + 'px';
-        r.style.backgroundColor = '#2B7CFF'; // Start blue
-        r.style.opacity = '0';
-        r.style.transition = 'opacity 0.2s';
-        container.appendChild(r);
-        rectElements.push(r);
-      }
-      
-      // Animate blocks appearing
-      let currentBlock = 0;
-      const appearInterval = setInterval(() => {
-        if (currentBlock < rectElements.length) {
-          rectElements[currentBlock].style.opacity = '1';
-          currentBlock++;
+        
+        // Add new listener to document for smooth tracking
+        window.__dotsMouseHandler = handleMouseMove;
+        document.addEventListener('mousemove', handleMouseMove);
+    } else {
+        // Clean up any existing mouse handler on mobile
+        if (window.__dotsMouseHandler) {
+            document.removeEventListener('mousemove', window.__dotsMouseHandler);
+            window.__dotsMouseHandler = null;
+        }
+    }
+    
+    // Start the sequence
+    startHomeSequence();
+};
+
+function startHomeSequence() {
+    const titleLines = document.querySelectorAll('.home-title-line');
+    const description = document.querySelector('.home-description');
+    const uploadButton = document.querySelector('.upload-button');
+    const dots = document.querySelectorAll('.dot');
+    const nav = document.querySelector('.home-navbar');
+    
+    // Hide everything initially but reserve space
+    titleLines.forEach((line, index) => {
+        line.dataset.fullText = line.textContent;
+        if (index === 0) {
+            line.textContent = '';
         } else {
-          clearInterval(appearInterval);
-          // All blocks loaded, show content
-          showContent();
-          // Then change blocks to multi-color
-          setTimeout(() => {
-            changeToMultiColor(rectElements);
-          }, 500);
+            // Reserve space with invisible placeholder
+            line.innerHTML = '&nbsp;';
+            line.style.visibility = 'hidden';
         }
-      }, ANIMATION_DELAY);
+    });
+    if (description) description.style.opacity = '0';
+    if (uploadButton) uploadButton.style.opacity = '0';
+    
+    // Typewriter function with red cursor
+    function typewrite(element, text, callback, showCursorFirst) {
+        let i = 0;
+        element.innerHTML = '<span class="typewriter-cursor">_</span>';
+        
+        function type() {
+            if (i < text.length) {
+                element.innerHTML = text.substring(0, i + 1) + '<span class="typewriter-cursor">_</span>';
+                i++;
+                setTimeout(type, 60);
+            } else {
+                // Remove cursor when done
+                element.textContent = text;
+                if (callback) setTimeout(callback, 200);
+            }
+        }
+        
+        if (showCursorFirst) {
+            // Blink cursor twice before typing (2 blinks = 1000ms at 500ms per blink)
+            setTimeout(type, 1000);
+        } else {
+            type();
+        }
     }
-
-    function showContent() {
-      const contentEl = document.querySelector('.home-content');
-      if (contentEl) {
-        contentEl.style.opacity = '1';
-      }
+    
+    // Fade in function
+    function fadeIn(element, duration) {
+        if (!element) return;
+        element.style.transition = `opacity ${duration}ms ease`;
+        element.style.opacity = '1';
     }
-
-    function changeToMultiColor(rectElements) {
-      rectElements.forEach((rect, index) => {
-        setTimeout(() => {
-          const color = PALETTE[Math.floor(Math.random() * PALETTE.length)];
-          rect.style.transition = 'background-color 0.3s';
-          rect.style.backgroundColor = color;
-        }, index * 15); // Fast sequential color change
-      });
+    
+    // Show title immediately (for typewriter visibility)
+    const homeContent = document.querySelector('.home-content');
+    if (homeContent) homeContent.style.opacity = '1';
+    
+    // Sequence: typewrite "Building", then "Intelligence.", then fade in rest
+    if (titleLines[0]) {
+        typewrite(titleLines[0], titleLines[0].dataset.fullText, () => {
+            if (titleLines[1]) {
+                titleLines[1].style.visibility = 'visible';
+                typewrite(titleLines[1], titleLines[1].dataset.fullText, () => {
+                        // After typewriter done, fade in everything else
+                        setTimeout(() => {
+                            fadeIn(description, 1500);
+                            fadeIn(uploadButton, 1500);
+                            if (nav) fadeIn(nav, 1500);
+                            
+                            // Fade in dots
+                            dots.forEach(dot => {
+                                dot.style.transition = 'opacity 1500ms ease';
+                                dot.style.opacity = '1';
+                            });
+                    }, 400);
+                });
+            }
+        }, true); // true = show cursor blinking first
     }
-
-    buildGrid();
-
-    // Rebuild on resize
-    let resizeTimer = 0;
-    function onResize() {
-      clearTimeout(resizeTimer);
-      resizeTimer = setTimeout(() => {
-        buildGrid();
-      }, 150);
-    }
-
-    window.addEventListener('resize', onResize, { passive: true });
-
-    // Expose cleanup if your router unmounts this page
-    window.__rectsCleanup = function () {
-      window.removeEventListener('resize', onResize);
-    };
-  }
-
-  // Expose init function globally for re-initialization on navigation
-  window.__rectsInit = init;
-  
-  ready(() => {
-    init();
-    startObserving();
-  });
-})();
+};

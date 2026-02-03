@@ -1,25 +1,55 @@
-use crate::api::auth_api::get_access_token;
 use serde::{Deserialize, Serialize};
+use serde_json::json;
 use gloo_net::http::Request;
 use web_sys::RequestCredentials;
 
 // Shared API configuration
-pub const API_BASE_URL: &str = "https://api.doxle.ai";
+// ========== TOGGLE FOR LOCAL vs DEPLOYED ==========
+// Uncomment ONE of these:
+// pub const API_BASE_URL: &str = "https://api.doxle.ai";      // DEPLOYED
+pub const API_BASE_URL: &str = "http://localhost:9000";  // LOCAL (cargo lambda watch)
 
 // CloudFront CDN for image caching
 pub const CLOUDFRONT_URL: &str = "https://d1flb4kxeu5kb6.cloudfront.net";
 
-/// Handle 401 Unauthorized by clearing token and redirecting to login
+
+// If we get 401 we need to call refresh to refresh cookie from BE
+async fn refresh_session() -> Result<(), String> {
+    let url = format!("{}/refresh", API_BASE_URL);
+    let resp = Request::post(&url)
+        .credentials(RequestCredentials::Include)
+        .header("Content-Type", "application/json")
+        .json(&json!({}))
+        .map_err(|e| format!("Failed to serialize refresh body: {}", e))?
+        .send()
+        .await
+        .map_err(|e| format!("Network error during refresh: {}", e))?;
+    if resp.ok() { Ok(()) } else {
+        let txt = resp.text().await.unwrap_or_else(|_| "Unknown error".into());
+        Err(format!("Refresh failed ({}): {}", resp.status(), txt))
+    }
+
+}
+
+/// Handle 401 Unauthorized by clearing cookies (server-side) and redirecting to login
 pub fn handle_unauthorized() {
     tracing::warn!("🔒 Received 401 Unauthorized, redirecting to login");
-    crate::api::clear_access_token();
+
     #[cfg(target_arch = "wasm32")]
     {
+        // Clear httpOnly cookies via backend
+        dioxus::prelude::spawn(async {
+            let _ = crate::api::logout().await;
+        });
+
         if let Some(win) = web_sys::window() {
             let _ = win.location().set_href("/signin");
         }
     }
 }
+
+
+
 
 // Convert S3 URL to CloudFront URL for cached image loading
 pub fn to_cloudfront_url(s3_url: &str) -> String {
@@ -36,56 +66,32 @@ pub fn to_cloudfront_url(s3_url: &str) -> String {
     }
 }
 
-// Helper to get user_id from JWT token (reads access_token from cookie)
-pub fn get_user_id() -> Option<String> {
-    get_access_token().and_then(|token| {
-        // Decode JWT (split by '.' and get payload)
-        let parts: Vec<&str> = token.split('.').collect();
-        if parts.len() != 3 {
-            return None;
-        }
-
-        // Decode base64 payload
-        use base64::{engine::general_purpose, Engine as _};
-        let decoded = general_purpose::URL_SAFE_NO_PAD.decode(parts[1]).ok()?;
-        let json_str = String::from_utf8(decoded).ok()?;
-
-        // Parse JSON and extract 'sub' claim
-        let json: serde_json::Value = serde_json::from_str(&json_str).ok()?;
-        json.get("sub")
-            .and_then(|v| v.as_str())
-            .map(|s| s.to_string())
-    })
-}
 
 // Generic GET helper
 pub async fn get<R: for<'de> Deserialize<'de>>(endpoint: &str) -> Result<R, String> {
-   
-    
     let url = format!("{}{}", API_BASE_URL, endpoint);
+    let mut tried_refresh = false;
 
+    loop{
+        let resp = Request::get(&url)
+            .credentials(RequestCredentials::Include)
+            .send()
+            .await
+            .map_err(|e| format!("Network error: {}", e))?;
 
-
-   let response = gloo_net::http::Request::get(&url)
-        .credentials(web_sys::RequestCredentials::Include)
-        .send()
-        .await
-        .map_err(|e| format!("Network error: {}", e))?;
-
-    if response.status() == 401 {
-        handle_unauthorized();
-        return Err("Unauthorized - please log in again".to_string());
+        // If 401 try to get refresh from BE
+        if resp.status() == 401 && !tried_refresh {
+            tried_refresh = true;
+            if refresh_session().await.is_ok() { continue; }
+            handle_unauthorized();
+            return Err("Unauthorized - please log in again".into());
+        }
+        if !resp.ok() {
+            let txt = resp.text().await.unwrap_or_else(|_| "Unknown error".into());
+            return Err(format!("Request failed ({}): {}", resp.status(), txt));
+        }
+        return resp.json().await.map_err(|e| format!("Failed to parse response: {}", e));
     }
-
-    if !response.ok() {
-        let error_text = response.text().await.unwrap_or_else(|_| "Unknown error".to_string());
-        return Err(format!("Request failed ({}): {}", response.status(), error_text));
-    }
-
-    response
-        .json()
-        .await
-        .map_err(|e| format!("Failed to parse response: {}", e))
 }
 
 // Generic POST helper
@@ -95,31 +101,33 @@ pub async fn post<T: Serialize, R: for<'de> Deserialize<'de>>(
 ) -> Result<R, String> {
     
     let url = format!("{}{}", API_BASE_URL, endpoint);
+    let mut tried_refresh = false;
 
-    let response = Request::post(&url)
-        .credentials(RequestCredentials::Include)
-        .header("Content-Type", "application/json")
-        .json(body)
-        .map_err(|e| format!("Failed to serialize body: {}", e))?
-        .send()
-        .await
-        .map_err(|e| format!("Network error: {}", e))?;
+    loop {
+        let resp = Request::post(&url)
+            .credentials(RequestCredentials::Include)
+            .header("Content-Type", "application/json")
+            .json(body)
+            .map_err(|e| format!("Failed to serialize body: {}", e))?
+            .send()
+            .await
+            .map_err(|e| format!("Network error: {}", e))?;
 
-    if response.status() == 401 {
-        handle_unauthorized();
-        return Err("Unauthorized - please log in again".to_string());
+        if resp.status() == 401 && !tried_refresh {
+            tried_refresh = true;
+            if refresh_session().await.is_ok() {
+                continue;
+            }
+            handle_unauthorized();
+            return Err("Unauthorized - please log in again".into());
+        }
+        if !resp.ok() {
+            let txt = resp.text().await.unwrap_or_else(|_| "Unknown error".into());
+            return Err(format!("Request failed ({}): {}", resp.status(), txt));
+        }
+        return resp.json().await.map_err(|e| format!("Failed to parse response: {}", e));
     }
 
-    if !response.ok() {
-        let error_text = response.text().await.unwrap_or_else(|_| "Unknown error".to_string());
-        return Err(format!("Request failed ({}): {}", response.status(), error_text));
-    }
-
-    
-    response
-        .json()
-        .await
-        .map_err(|e| format!("Failed to parse response: {}", e))
 }
 
 // Generic PATCH helper
@@ -130,28 +138,33 @@ pub async fn patch<T: Serialize, R: for<'de> Deserialize<'de>>(
     
     let url = format!("{}{}", API_BASE_URL, endpoint);
     
-    let response = Request::patch(&url)
-        .credentials(RequestCredentials::Include)
-        .header("Content-Type", "application/json")
-        .json(body)
-        .map_err(|e| format!("Failed to serialize body: {}", e))?
-        .send()
-        .await
-        .map_err(|e| format!("Network error: {}", e))?;
+    let mut tried_refresh = false;
 
-    if response.status() == 401 {
-        handle_unauthorized();
-        return Err("Unauthorized - please log in again".to_string());
-    }
+    loop {
+        let resp = Request::patch(&url)
+            .credentials(RequestCredentials::Include)
+            .header("Content-Type", "application/json")
+            .json(body)
+            .map_err(|e| format!("Failed to serialize body: {}", e))?
+            .send()
+            .await
+            .map_err(|e| format!("Network error: {}", e))?;
 
-    if !response.ok() {
-        let error_text = response.text().await.unwrap_or_else(|_| "Unknown error".to_string());
-        return Err(format!("Request failed ({}): {}", response.status(), error_text));
+        if resp.status() == 401 && !tried_refresh {
+            tried_refresh = true;
+            if refresh_session().await.is_ok() {
+                continue;
+            }
+            handle_unauthorized();
+            return Err("Unauthorized - please log in again".into());
+        }
+        if !resp.ok() {
+            let txt = resp.text().await.unwrap_or_else(|_| "Unknown error".into());
+            return Err(format!("Request failed ({}): {}", resp.status(), txt));
+        }
+
+        return resp.json().await.map_err(|e| format!("Failed to parse response: {}", e));
     }
-    response
-        .json()
-        .await
-        .map_err(|e| format!("Failed to parse response: {}", e))
 
 }
 
@@ -160,25 +173,33 @@ pub async fn patch<T: Serialize, R: for<'de> Deserialize<'de>>(
 pub async fn patch_no_response<T: Serialize>(endpoint: &str, body: &T) -> Result<(), String> {
     let url = format!("{}{}", API_BASE_URL, endpoint);
 
-    let response = Request::patch(&url)
-        .credentials(RequestCredentials::Include)
-        .header("Content-Type", "application/json")
-        .json(body)
-        .map_err(|e| format!("Failed to serialize body: {}", e))?
-        .send()
-        .await
-        .map_err(|e| format!("Network error: {}", e))?;
+    let mut tried_refresh = false;
 
-    if response.status() == 401 {
-        handle_unauthorized();
-        return Err("Unauthorized - please log in again".to_string());
-    }
+    loop {
+        let resp = Request::patch(&url)
+            .credentials(RequestCredentials::Include)
+            .header("Content-Type", "application/json")
+            .json(body)
+            .map_err(|e| format!("Failed to serialize body: {}", e))?
+            .send()
+            .await
+            .map_err(|e| format!("Network error: {}", e))?;
 
-    if response.ok() || response.status() == 204 {
-        Ok(())
-    } else {
-        let error_text = response.text().await.unwrap_or_else(|_| "Unknown error".to_string());
-        Err(format!("Patch failed: {}", error_text))
+        if resp.status() == 401 && !tried_refresh {
+            tried_refresh = true;
+            if refresh_session().await.is_ok() {
+                continue;
+            }
+            handle_unauthorized();
+            return Err("Unauthorized - please log in again".into());
+        }
+
+        if resp.ok() || resp.status() == 204 {
+            return Ok(());
+        } else {
+            let txt = resp.text().await.unwrap_or_else(|_| "Unknown error".into());
+            return Err(format!("Patch failed: {}", txt));
+        }
     }
 
 }
@@ -188,24 +209,32 @@ pub async fn patch_no_response<T: Serialize>(endpoint: &str, body: &T) -> Result
 pub async fn delete(endpoint: &str) -> Result<(), String> {
     let url = format!("{}{}", API_BASE_URL, endpoint);
 
-    let response = Request::delete(&url)
-        .credentials(RequestCredentials::Include)
-        .send()
-        .await
-        .map_err(|e| format!("Network error: {}", e))?;
+    let mut tried_refresh = false;
 
-    if response.status() == 401 {
-        handle_unauthorized();
-        return Err("Unauthorized - please log in again".to_string());
+    loop {
+        let resp = Request::delete(&url)
+            .credentials(RequestCredentials::Include)
+            .send()
+            .await
+            .map_err(|e| format!("Network error: {}", e))?;
+
+        if resp.status() == 401 && !tried_refresh {
+            tried_refresh = true;
+            if refresh_session().await.is_ok() {
+                continue;
+            }
+            handle_unauthorized();
+            return Err("Unauthorized - please log in again".into());
+        }
+
+        if resp.ok() || resp.status() == 204 {
+            return Ok(());
+        } else {
+            let txt = resp.text().await.unwrap_or_else(|_| "Unknown error".into());
+            return Err(format!("Delete failed: {}", txt));
+        }
     }
-
-    if response.ok() || response.status() == 204 {
-        Ok(())
-    } else {
-        let error_text = response.text().await.unwrap_or_else(|_| "Unknown error".to_string());
-        Err(format!("Delete failed: {}", error_text))
-    }
-
 
    
 }
+

@@ -1,8 +1,8 @@
 use crate::Route;
 use dioxus::prelude::*;
 // const LOGO: Asset = asset!("/assets/icons/d-flag1.svg");
-const LOGO: Asset = asset!("/assets/icons/dx-walker-dark.svg");
-const LOGO_HOVER: Asset = asset!("/assets/icons/dx-walker-dark.svg");
+const LOGO: Asset = asset!("/assets/icons/dog-dark.svg");
+const LOGO_HOVER: Asset = asset!("/assets/icons/dog-dark.svg");
 const NAVBAR_CSS: &str = include_str!("home_navbar.css");
 
 #[component]
@@ -51,12 +51,6 @@ let is_signin = matches!(route, Route::SignInPage {});
                     }
 
                     button {
-                        class: if is_vision { "home-nav-btn home-nav-btn--red active" } else { "home-nav-btn home-nav-btn--red" },
-                        onclick: move |_| { nav.push(Route::VisionPage {}); },
-                        "Vision"
-                    }
-
-                    button {
                         class: if is_signin { "home-nav-btn home-nav-btn--red active" } else { "home-nav-btn home-nav-btn--red" },
                         onclick: move |_| { nav.push(Route::SignInPage {}); },
                         "Sign In"
@@ -84,11 +78,18 @@ let is_signin = matches!(route, Route::SignInPage {});
             }
         }
 
+        // Mobile menu backdrop (click to close)
+        if menu_open() {
+            div {
+                class: "home-mobile-menu-backdrop",
+                onclick: move |_| menu_open.set(false),
+            }
+        }
+
         // Mobile menu
         if menu_open() {
             div {
                 class: "home-mobile-menu",
-                onclick: move |_| menu_open.set(false),
 
                 div {
                     class: "home-mobile-menu-items",
@@ -97,12 +98,6 @@ let is_signin = matches!(route, Route::SignInPage {});
                         class: "home-mobile-menu-item",
                         onclick: move |_| { menu_open.set(false); nav.push(Route::OurStoryPage {}); },
                         "Our Story"
-                    }
-
-                    button {
-                        class: "home-mobile-menu-item",
-                        onclick: move |_| { menu_open.set(false); nav.push(Route::VisionPage {}); },
-                        "Vision"
                     }
 
                     button {

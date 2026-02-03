@@ -3,10 +3,10 @@ use crate::shell::{THEME, Theme};
 use crate::Route;
 use crate::atoms::tasks::state::TASKS;
 use crate::atoms::media::Image;
-use crate::blocks::dashboard::state::state_get_current_block;
 use crate::users::state::{USER, USER_LOADING, load_user};
 use super::status_bar::StatusBar;
 use crate::api;
+use crate::blocks::dashboard::state::state_load_blocks;
 
 
 // const D_FLAG2: Asset = asset!("/assets/icons/d-flag2.svg");
@@ -37,9 +37,8 @@ pub fn AppNavbar(children:Element) -> Element {
     let (block_id, block_name, task_id, task_name, image_name, prev_img, next_img, current_idx, total_imgs): (
         Option<String>, Option<String>, Option<String>, Option<String>, Option<String>, Option<Image>, Option<Image>, usize, usize
     ) = match &route {
-        Route::TasksListPage { block_id } => {
-            let name = state_get_current_block().map(|b| b.block_name);
-            (Some(block_id.clone()), name, None, None, None, None, None, 0, 0)
+        Route::TasksListPage { block_id, block_name } => {
+            (Some(block_id.clone()), Some(block_name.clone()), None, None, None, None, None, 0, 0)
         }
         Route::AnnotationCanvasPage { block_id, block_name, task_id, task_name, image_id, image_name } => {
             let mut prev_img: Option<Image> = None;
@@ -94,14 +93,17 @@ pub fn AppNavbar(children:Element) -> Element {
                      div {
                          class: "logo-menu-dropdown",
                          onclick: move |e| e.stop_propagation(),
-                         div {
-                             class: "logo-menu-item",
-                             onclick: move |_| {
-                                 nav.push(Route::DashboardPage {});
-                                 logo_menu_open.set(false);
-                             },
-                             "Dashboard"
-                         }
+                        div {
+                            class: "logo-menu-item",
+                            onclick: move |_| {
+                                spawn(async move {
+                                    state_load_blocks().await;
+                                });
+                                nav.push(Route::DashboardPage {});
+                                logo_menu_open.set(false);
+                            },
+                            "Dashboard"
+                        }
                          div {
                              class: "logo-menu-item",
                              onclick: move |_| {
@@ -138,7 +140,9 @@ pub fn AppNavbar(children:Element) -> Element {
                         div {
                              class: "logo-menu-item",
                              onclick: move |_| {
-                                 api::clear_access_token();
+                                 spawn(async {
+                                     let _ = api::logout().await;
+                                 });
                                  nav.push(Route::SignInPage {});
                                  logo_menu_open.set(false);
                              },
@@ -156,7 +160,12 @@ pub fn AppNavbar(children:Element) -> Element {
                         // Not on dashboard - show clickable username
                         span {
                             class: "app-navbar-username clickable",
-                            onclick: move |_| { nav.push(Route::DashboardPage {}); },
+                            onclick: move |_| {
+                                spawn(async move {
+                                    state_load_blocks().await;
+                                });
+                                nav.push(Route::DashboardPage {});
+                            },
                             "@{user.user_name}"
                         }
                     } else {
@@ -168,27 +177,18 @@ pub fn AppNavbar(children:Element) -> Element {
                     }
                 }
                 // Breadcrumb
-                // Block name - clickable to go back to tasks list (only show when on task list, not on image view)
+                // Block name - clickable to go back to dashboard (to load all blocks)
                 if let Some(name) = &block_name {
-                    if task_name.is_some() && image_name.is_none() {
-                        // On task list - show block name
-                        {
-                            let bid = bid.clone();
-                            rsx! {
-                                div { 
-                                    class: "app-breadcrumb-item clickable",
-                                    onclick: move |_| {
-                                        nav.push(Route::TasksListPage { block_id: bid.clone() });
-                                    },
-                                    "{name}"
-                                }
-                            }
-                        }
-                    } else if task_name.is_none() {
-                        // On block page (no task selected)
-                        div { class: "app-breadcrumb-item current", "{name}" }
+                    div { 
+                        class: "app-breadcrumb-item clickable",
+                        onclick: move |_| {
+                            spawn(async move {
+                                state_load_blocks().await;
+                            });
+                            nav.push(Route::DashboardPage {});
+                        },
+                        "{name}"
                     }
-                    // When viewing image - don't show block name
                 }
 
                 // Task name
@@ -204,11 +204,12 @@ pub fn AppNavbar(children:Element) -> Element {
                         // When viewing image - make task name clickable to go back to task list
                         {
                             let bid = bid.clone();
+                            let bname = bname.clone();
                             rsx! {
                                 div { 
                                     class: "app-breadcrumb-item clickable",
                                     onclick: move |_| {
-                                        nav.push(Route::TasksListPage { block_id: bid.clone() });
+                                    nav.push(Route::TasksListPage { block_id: bid.clone(), block_name: bname.clone() });
                                     },
                                     "{name}" 
                                 }

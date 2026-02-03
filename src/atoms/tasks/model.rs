@@ -9,6 +9,7 @@ pub struct Task {
 	pub task_state:String, // "todo" | "in_progress" | "done"
 	pub created_at:String,
 	pub images:Vec<Image>,
+	pub annotation_count:u32,
 	pub assignee:String,
 	pub reviewer:String,
 	pub locked:bool,

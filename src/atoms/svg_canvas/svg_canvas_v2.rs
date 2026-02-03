@@ -123,12 +123,15 @@ pub fn SvgCanvasV2(
 	let selected_label_id_for_draw_area = selected_label_id.clone();
 	
 
+	// Auto save feature for annotators
+	let block_id_for_save = block_id.clone();
 	let image_id_for_save = image_id.clone();
 	let last_dirty_tick_save = last_dirty_tick.clone();
 	let annotations_save = annotations.clone();
 	let mut dirty_ann_ids_save = dirty_ann_ids.clone();
 
 	use_future (move || {
+		let blk_id = block_id_for_save.clone();
 		let img_id = image_id_for_save.clone();
 		async move{
 			loop{
@@ -147,7 +150,7 @@ pub fn SvgCanvasV2(
 						annotations_save.read().iter().find(|a| a.id == aid).map(|a| a.geometry.clone())
 					};
 					if let Some(g) = geom {
-						state_update_annotation_geometry(&img_id, &aid, g, annotations_save).await;
+						state_update_annotation_geometry(&blk_id, &img_id, &aid, g, annotations_save).await;
 					} 
 					
 				}

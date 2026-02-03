@@ -24,7 +24,6 @@ pub fn AppSidebar(
     labels:Vec<BlockLabel>,
     annotations:Vec<Annotation>,
     hidden_label_ids:Signal<HashSet<String>>,
-
     ) -> Element {
     let is_dark = THEME() == Theme::Dark;
     let labels_icon = if is_dark { LABELS_ICON_DARK } else { LABELS_ICON_LIGHT };

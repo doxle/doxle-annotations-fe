@@ -2,7 +2,7 @@
 
 .signup-container {
     min-height: 100vh;
-    background: var(--bg-primary);
+    background: #000000 !important;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -15,26 +15,32 @@
     width: 100%;
     max-width: min(550px, 90%);
 }
-.signin-logo {
-     margin-bottom: 10px !important;
-}
 
 .signup-title {
-    font-size: 24px;
-    font-weight: 300;
-    color: var(--text-primary);
-    margin-top: 10px !important;
+    font-size: 30px;
+    font-weight: 100;
+    color: #ffffff !important;
+    margin-top: 20px !important;
     margin-bottom: 10px;
     text-align: center;
     font-family: Helvetica, Arial, sans-serif;
 }
 
 .signup-field {
+    width: 405px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.signup-field:first-of-type {
     margin-top: 21px;
 }
 
 .signup-password-wrapper {
     position: relative;
+    width: 405px;
+    margin-left: auto;
+    margin-right: auto;
 }
 
 .signup-input-with-icon {
@@ -68,23 +74,24 @@
 }
 
 .signup-input {
-    width: 100%;
-    height: 70px;
-    padding: 14px 16px;
-    background: var(--bg-primary);
-    border: 1px solid var(--border-color);
-    font-size: 15px;
+    width: 405px;
+    height: 50px;
+    padding: 12px 16px;
+    background: #000000 !important;
+    border: 1px solid #464646 !important;
+    font-size: 18px;
     box-sizing: border-box;
     outline: none;
-    color: #000;
+    color: #ffffff !important;
     font-weight: 400;
-    font-family: Helvetica, Arial, sans-serif;
+    font-family: 'ModularHouseplant', Helvetica, Arial, sans-serif;
 }
 
 .signup-input::placeholder {
-    color: #999;
+    color: #B0B0B0;
+    font-size: 18px;
     font-weight: 300;
-    font-family: Helvetica, Arial, sans-serif;
+    font-family: 'ModularHouseplant', Helvetica, Arial, sans-serif;
 }
 
 /* Stack inputs by removing bottom border from all except last */
@@ -95,15 +102,17 @@
 
 /* Focus states */
 .signup-input:focus {
-    border-color: var(--focus-blue) !important;
+    border-color: #A9C8F2 !important;
+    color: #ffffff !important;
+    caret-color: #ffffff;
 }
 
 .signup-input-first:focus {
-    border-bottom: 1px solid var(--focus-blue) !important;
+    border-bottom: 1px solid #A9C8F2 !important;
 }
 
 .signup-input-middle:focus {
-    border-bottom: 1px solid var(--focus-blue) !important;
+    border-bottom: 1px solid #A9C8F2 !important;
 }
 
 /* Show blue border on bottom when focused */
@@ -119,26 +128,29 @@ form:has(.signup-input-middle:focus) + div .signup-input-last {
 
 .signup-submit-button {
     margin-top: 21px;
-    width: 100%;
-    height: 70px;
-    padding: 16px;
-    background: var(--primary-button-bg);
-    color: var(--primary-button-text);
+    width: 405px;
+    height: 60px;
+    padding: 12px 16px;
+    background: #007aff !important;
+    color: #ffffff !important;
     border: none;
     font-size: 16px;
     cursor: pointer;
-    transition: background 0.2s;
-    font-weight: 400;
+    transition: background 0.2s, color 0.2s;
+    font-weight: 300;
     font-family: Helvetica, Arial, sans-serif;
     position: relative;
     display: flex;
     align-items: center;
     justify-content: center;
     gap: 12px;
+    margin-left: auto;
+    margin-right: auto;
 }
 
 .signup-submit-button:hover {
-    background: var(--primary-button-hover);
+    background: #ffffff !important;
+    color: #000000 !important;
 }
 
 .signup-submit-logo {
@@ -184,7 +196,17 @@ form:has(.signup-input-middle:focus) + div .signup-input-last {
     text-align: center;
 }
 
-/* Mobile responsive */
+.signup-logo {
+    display: block;
+    margin: 0 auto 12px;
+    width: 54px;
+    height: auto;
+    opacity: 1;
+    transform: translateY(10px);
+    cursor: pointer;
+}
+
+/* Tablet (iPad) */
 @media (max-width: 768px) {
     .signup-box {
         padding: 40px 24px;
@@ -192,5 +214,41 @@ form:has(.signup-input-middle:focus) + div .signup-input-last {
     
     .signup-container {
         padding: 20px 16px;
+    }
+}
+
+/* Mobile (iPhone) */
+@media (max-width: 480px) {
+    .signup-container {
+        padding: 20px 16px;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    .signup-box {
+        padding: 30px 20px;
+        width: 100%;
+        max-width: 100%;
+    }
+    
+    .signup-field,
+    .signup-password-wrapper,
+    .signup-input,
+    .signup-submit-button {
+        width: 100%;
+    }
+    
+    .signup-title {
+        font-size: 24px;
+    }
+    
+    .signup-input {
+        height: 45px;
+        font-size: 16px;
+    }
+    
+    .signup-submit-button {
+        height: 50px;
+        font-size: 15px;
     }
 }

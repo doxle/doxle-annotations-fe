@@ -63,11 +63,10 @@ pub async fn api_create_annotation(block_id:&str, image_id:&str, label_id:&str, 
     }
 }
 
-pub async fn api_update_annotation_label(image_id:&str, annotation_id:&str, label_id:&str) -> Result<(), String>{
-    let endpoint = format!("/images/{}/annotations/{}", image_id, annotation_id);
+pub async fn api_update_annotation_label(block_id:&str, image_id:&str, annotation_id:&str, label_id:&str) -> Result<(), String>{
+    let endpoint = format!("/images/{}/annotations/{}?block_id={}", image_id, annotation_id, block_id);
     let payload = UpdateAnnotationPayload {label_id:label_id.to_string()};
     client::patch_no_response(&endpoint, &payload).await
-
 }
 
 pub async fn api_delete_annotation(block_id:&str, image_id:&str, annotation_id:&str)->Result<(),String>{
@@ -75,8 +74,8 @@ pub async fn api_delete_annotation(block_id:&str, image_id:&str, annotation_id:&
     client::delete(&endpoint).await
 }
 
-pub async fn api_update_geometry(image_id:&str, annotation_id:&str, geometry:Geometry)-> Result<(), String>{
-    let endpoint = format!("/images/{}/annotations/{}", image_id, annotation_id);
+pub async fn api_update_geometry(block_id:&str, image_id:&str, annotation_id:&str, geometry:Geometry)-> Result<(), String>{
+    let endpoint = format!("/images/{}/annotations/{}?block_id={}", image_id, annotation_id, block_id);
     let payload = UpdateGeometryPayload {geometry};
     client::patch_no_response(&endpoint, &payload).await
 }

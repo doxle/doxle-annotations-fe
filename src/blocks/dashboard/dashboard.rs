@@ -31,9 +31,9 @@ pub fn DashboardPage()->Element{
 
     info!("Loading dashboard page: ");
 
-    // ONLY RUN ONCE ON MOUNT
-    use_resource(move ||async move{
-         info!("from use resource - Loading dashboard page: ");
+    // Load blocks on mount
+    use_resource(move || async move {
+        info!("Loading dashboard page - fetching blocks");
         state_load_blocks().await;
     });
 
@@ -123,7 +123,7 @@ pub fn DashboardPage()->Element{
                                         }
                                         let id = block_id.clone();
                                         state_set_current_block(&id.clone());
-                                        navigator.push(Route::TasksListPage { block_id: id });
+                                        navigator.push(Route::TasksListPage { block_id: id, block_name: block_name.clone() });
                                     },
                                     
                                     // Row 1: Block name + three dots

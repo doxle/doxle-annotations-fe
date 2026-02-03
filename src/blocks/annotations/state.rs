@@ -61,7 +61,7 @@ pub async fn state_create_annotation(block_id:&str, image_id:&str, label_id:&str
 }
 
 /// Update annotation label
-pub async fn state_update_annotation_label(image_id:&str, annotation_id:&str, new_label_id:&str, mut annotations:Signal<Vec<Annotation>>) {
+pub async fn state_update_annotation_label(block_id:&str, image_id:&str, annotation_id:&str, new_label_id:&str, mut annotations:Signal<Vec<Annotation>>) {
 	// Save old label id for rollback
 	let old_label_id = annotations.read().iter().find(|a| a.id == annotation_id).map(|a| a.label_id.clone());
 
@@ -74,7 +74,7 @@ pub async fn state_update_annotation_label(image_id:&str, annotation_id:&str, ne
 	});
 
 	// API call
-	match api::api_update_annotation_label(image_id, annotation_id, new_label_id).await {
+	match api::api_update_annotation_label(block_id, image_id, annotation_id, new_label_id).await {
 		Ok(_)=> {
 			
 			tracing::info!("✅ Annotation updated on server");
@@ -102,7 +102,7 @@ pub async fn state_delete_annotation(block_id:&str, image_id:&str, annotation_id
 	tracing::info!("del is being called");
 	match api::api_delete_annotation(block_id, image_id, annotation_id).await {
 		Ok(_)=>{
-			// // Update the signal so it removes the annotation once be is updated without refresh
+			// Update the signal so it removes the annotation once be is updated without refresh
 			annotations.write().retain(|a| a.id != annotation_id);
 			tracing::info!("✅ Annotation deleted on server");
 		},
@@ -119,7 +119,7 @@ pub async fn state_delete_annotation(block_id:&str, image_id:&str, annotation_id
 }
 
 /// Update annotation geometry
-pub async fn state_update_annotation_geometry(image_id:&str, annotation_id:&str, geometry:Geometry, mut annotations:Signal<Vec<Annotation>>) {
+pub async fn state_update_annotation_geometry(block_id:&str, image_id:&str, annotation_id:&str, geometry:Geometry, mut annotations:Signal<Vec<Annotation>>) {
 	
 	// // Old geomtry for rollback
 	// let old_geometry = annotations.read().iter().find(|a| a.id == annotation_id).map(|a| a.geometry.clone());
@@ -131,7 +131,7 @@ pub async fn state_update_annotation_geometry(image_id:&str, annotation_id:&str,
 
 	// annotations.write().iter_mut().find(|a| a.id == annotation_id).map(|a| a.geometry = geometry.clone());
 
-	match api::api_update_geometry(image_id, annotation_id, geometry).await {
+	match api::api_update_geometry(block_id, image_id, annotation_id, geometry).await {
 		Ok(_) => {
 			  tracing::info!("✅ Annotation geometry updated on server");
 		}

@@ -18,26 +18,25 @@ pub struct PendingUpload {
 
 pub async fn handle_create_task(
     block_id: String,
+    block_name: String,
     task_name: String,
     uploads: Vec<PendingUpload>,
     nav: Navigator,
     mut is_submitting: Signal<bool>,
+    mut upload_current: Signal<usize>,
+    mut upload_total: Signal<usize>,
 ) {
     is_submitting.set(true);
+    let total_uploads = uploads.len();
+    upload_total.set(total_uploads);
+    upload_current.set(0);
 
     match state_create_task(&block_id, task_name.clone()).await {
         Ok(task) => {
             info!("✅ Task created: {}", task.task_name);
 
-            // Prepare data for detached upload task
-            // let block_for_uploads = block_id.clone();
-            // let task_id_for_uploads = task.task_id.clone();
-            // let _t_name = task.task_name.clone();
-
-            // let upload_logic = async move {
              if !uploads.is_empty() {
                 info!("Uploading {} images for task {}", uploads.len(), task.task_id);
-                // crate::shell::status::show_info(&format!("Uploading {} images for task {}", uploads.len(), t_name));
                 
                 let uploads_iter = uploads.into_iter().map(|upload| {
                     let b_id = block_id.clone();
@@ -56,31 +55,24 @@ pub async fn handle_create_task(
                      match res {
                         Ok(_) => {
                             success_count +=1;
-                            info!("✅ Image {}/{} uploaded", success_count, success_count + fail_count);
-                            // crate::shell::show_success("✅ Image uploaded successfully");
+                            upload_current.set(success_count + fail_count);
+                            info!("✅ Image {}/{} uploaded", success_count + fail_count, total_uploads);
                         }
                         Err(e) => {
                             fail_count +=1;
+                            upload_current.set(success_count + fail_count);
                             error!("❌ Failed to upload image: {}", e);
-                            // crate::shell::status::show_error(&format!("Failed to upload image: {}", e));
                         }
                     }
                 }
                 if fail_count > 0 {
-                crate::shell::status::show_error(&format!("Uploaded {} images, {} failed", success_count, fail_count));
+                    crate::shell::status::show_error(&format!("Uploaded {} images, {} failed", success_count, fail_count));
                 } else {
                     crate::shell::status::show_success(&format!("✅ Uploaded {} images", success_count));
                 }
             }
-            // };
 
-            // #[cfg(target_arch = "wasm32")]
-            // spawn_local(upload_logic);
-            
-            // #[cfg(not(target_arch = "wasm32"))]
-            // spawn(upload_logic);
-
-            nav.push(Route::TasksListPage { block_id: block_id });
+            nav.push(Route::TasksListPage { block_id, block_name });
         },
         Err(e) => {
             error!("❌ Failed to create task: {}", e);

@@ -80,11 +80,11 @@ pub async fn list_block_images( block_id: &str) -> Result<Vec<Image>, String> {
 }
 
 /// Common S3 upload logic (handles single and multipart)
-/// Returns (image_id, image_url)
+/// Returns (image_id, image_name, image_url)
 async fn upload_file_to_s3(
     block_id: &str,
     file: File,
-) -> Result<(String, String), String> {
+) -> Result<(String, String, String), String> {
     let file_name = file.name();
     let content_type = if file.type_().is_empty() {
         "application/octet-stream".to_string()
@@ -103,13 +103,9 @@ async fn upload_file_to_s3(
         file_size,
     };
 
-    // Use new auth API token; fail clearly if not logged in
-    let token = crate::api::get_access_token()
-        .ok_or_else(|| "No auth token found for upload".to_string())?;
-
     let response = Request::post(&format!("{}/annotate/upload/initiate", api_url))
+        .credentials(web_sys::RequestCredentials::Include)
         .header("Content-Type", "application/json")
-        .header("Authorization", &format!("Bearer {}", token))
         .json(&initiate_request)
         .map_err(|e| format!("Failed to serialize initiate request: {}", e))?
         .send()
@@ -153,8 +149,6 @@ async fn upload_file_to_s3(
         upload_single_part(file, &initiate_response.upload_urls[0].upload_url).await?;
 
         // Call complete endpoint to trigger image processing
-        let token = crate::api::get_access_token()
-            .ok_or_else(|| "No auth token found for upload".to_string())?;
         let complete_request = CompleteMultipartRequest {
             block_id: block_id.to_string(),
             image_id: initiate_response.image_id.clone(),
@@ -164,8 +158,8 @@ async fn upload_file_to_s3(
         };
 
         let response = Request::post(&format!("{}/annotate/upload/complete", api_url))
+            .credentials(web_sys::RequestCredentials::Include)
             .header("Content-Type", "application/json")
-            .header("Authorization", &format!("Bearer {}", token))
             .json(&complete_request)
             .map_err(|e| format!("Failed to serialize complete request: {}", e))?
             .send()
@@ -189,13 +183,13 @@ async fn upload_file_to_s3(
         complete_response.url
     };
 
-    Ok((initiate_response.image_id, image_url))
+    Ok((initiate_response.image_id, file_name, image_url))
 }
 
 /// Upload a file for a Storage Block (no task link)
 pub async fn upload_image_for_block(block_id: &str, file: File) -> Result<String, String> {
     // Reuse common S3 logic
-    let (image_id, image_url) = upload_file_to_s3(block_id, file).await?;
+    let (image_id, _image_name, image_url) = upload_file_to_s3(block_id, file).await?;
 
     // Step 3: Create generic image record in database
     let project_id = "default"; 
@@ -219,10 +213,10 @@ pub async fn upload_image_for_task(
     file: File,
 ) -> Result<String, String> {
     // Reuse common S3 logic
-    let (image_id, image_url) = upload_file_to_s3(block_id, file).await?;
+    let (image_id, image_name, image_url) = upload_file_to_s3(block_id, file).await?;
 
     // Step 3: Create TASK image record
-    match crate::atoms::tasks::api::api_create_task_image(block_id, task_id, image_url.clone()).await {
+    match crate::atoms::tasks::api::api_create_task_image(block_id, task_id, image_id.clone(), image_name, image_url.clone()).await {
         Ok(image) => {
             dioxus::logger::tracing::info!("✅ Task Image record created: {}", image.image_id);
             // Also update TASKS so UI immediately sees the image
@@ -337,11 +331,9 @@ async fn upload_multipart(
         parts: completed_parts,
     };
 
-    let token = crate::api::get_access_token()
-        .ok_or_else(|| "No auth token found for upload".to_string())?;
     let response = Request::post(&format!("{}/annotate/upload/complete", api_url))
+        .credentials(web_sys::RequestCredentials::Include)
         .header("Content-Type", "application/json")
-        .header("Authorization", &format!("Bearer {}", token))
         .json(&complete_request)
         .map_err(|e| format!("Failed to serialize complete request: {}", e))?
         .send()

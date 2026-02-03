@@ -5,17 +5,19 @@ use crate::atoms::media::Image;
 use crate::atoms::tasks::model::Task;
 
 /// POST /blocks/{block_id}/tasks/{task_id}/images
-pub async fn api_create_task_image(block_id:&str, task_id:&str, image_url:String)->Result<Image,String> {
+pub async fn api_create_task_image(block_id:&str, task_id:&str, image_id: String, image_name: String, image_url:String)->Result<Image,String> {
     #[derive(Debug, Serialize)]
     struct CreateTaskImageRequest {
+        image_id: String,
+        image_name: String,
         url: String,
-        task_id: String,
     }
 
     let endpoint = format!("/blocks/{}/tasks/{}/images", block_id, task_id);
     let body = CreateTaskImageRequest { 
+        image_id,
+        image_name,
         url: image_url,
-        task_id: task_id.to_string() 
     };
     client::post::<CreateTaskImageRequest, Image>(&endpoint, &body).await
 }

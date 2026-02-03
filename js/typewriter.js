@@ -5,8 +5,8 @@
   }
 
   function initTypewriter() {
-    // Find the home page titles
-    const titles = document.querySelectorAll('.home-title, .home-subtitle');
+    // Find the home page titles (skip home-title since it has CSS animation)
+    const titles = document.querySelectorAll('.home-subtitle');
     if (!titles.length) {
       // Try again if elements not found (SPA navigation)
       setTimeout(initTypewriter, 100);

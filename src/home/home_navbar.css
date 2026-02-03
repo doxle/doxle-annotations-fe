@@ -22,7 +22,12 @@
 }
 
 .home-navbar-logo img {
-    height: 20px;
+    height: 32px;
+    transition: opacity 0.2s;
+}
+
+.home-navbar-logo:hover img {
+    opacity: 0.85;
 }
 
 .home-navbar-right {
@@ -85,6 +90,16 @@
     border-radius: 2px;
 }
 
+.home-mobile-menu-backdrop {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: transparent;
+    z-index: 998;
+}
+
 .home-mobile-menu {
     position: fixed;
     top: 70px;
@@ -123,6 +138,10 @@
 }
 
 @media (max-width: 768px) {
+    .home-navbar {
+        position: fixed;
+        top: 0;
+    }
     .home-nav-buttons {
         display: none !important;
     }

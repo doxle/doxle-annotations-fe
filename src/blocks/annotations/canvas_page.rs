@@ -77,7 +77,7 @@ pub fn AnnotationCanvasPage(
     image_name: String,
 ) -> Element {
 
-    info!("Canvas Page:: mounted ::+");
+    info!("Canvas Page:: mounted ::+ image_id={}", image_id);
     info!("task-name: {:?}, image_name: {:?}", task_name, image_name);
 
     
@@ -111,8 +111,6 @@ pub fn AnnotationCanvasPage(
 
 
 
-
-
     // Select the first label id
     use_effect(move || {
         let labels = LABELS();
@@ -121,17 +119,22 @@ pub fn AnnotationCanvasPage(
         }      
     });
 
+    //*** - COMPONENT IS NOT REMOUNTED BUT ONLY RERENDERED ****//
+    let mount_id = use_hook(move || uuid::Uuid::new_v4().to_string());
+    info!("Component mount_id: {}", mount_id);
 
-    // Load annotations on mount
-    let iid = image_id.clone();
-
-    use_hook(move || {
-        let id = iid.clone();
-        let out = annotations;
+    // Load annotations whenever img id changes
+    let mut last_loaded_image_id: Signal<String> = use_signal(|| String::new());
+    
+    if last_loaded_image_id() != image_id {
+        let iid = image_id.clone();
+        info!("Loading annotations for image_id: {}", iid);
+        last_loaded_image_id.set(iid.clone());
+        annotations.write().clear(); // good to clear but not necessary as we load annotations for the new img anyways
         spawn(async move {
-            state_load_annotations(&id, out).await;
+            state_load_annotations(&iid, annotations).await;
         });
-    });
+    }
 
     // Get task to find image URL
     let task: Option<Task> = TASKS.read()
@@ -206,6 +209,8 @@ pub fn AnnotationCanvasPage(
         // Context menu (outside canvas)
         if let Some((ann_id, label_id, x, y)) = context_menu() {
             {
+                let block_id_for_delete = block_id.clone();
+                let block_id_for_update = block_id.clone();
                 let image_id_for_delete = image_id.clone();
                 let image_id_for_update = image_id.clone();
 
@@ -221,7 +226,7 @@ pub fn AnnotationCanvasPage(
                         on_delete:move |_| {
                             let image_id_for_delete1 = image_id_for_delete.clone();
                             let ann_id_for_delete1 = ann_id_for_delete.clone();
-                            let block_id_del = block_id.clone();
+                            let block_id_del = block_id_for_delete.clone();
                             // annotations.write().retain(|a| a.id != ann_id_for_delete);
                             spawn(async move {
                                 state_delete_annotation(&block_id_del, &image_id_for_delete1, &ann_id_for_delete1, annotations).await;
@@ -230,15 +235,12 @@ pub fn AnnotationCanvasPage(
                         },
 
                         on_change_label:move |new_label_id: String| {
+                            let block_id_upd = block_id_for_update.clone();
                             let image_id_for_update1 = image_id_for_update.clone();
                             let ann_id_for_update1 = ann_id_for_update.clone();
                             
-                            // let mut anns = annotations.write();
-                            // if let Some(ann) = anns.iter_mut().find(|a| a.id == ann_id_for_change) {
-                            //     ann.label_id = new_label_id.clone();
-                            // }
                             spawn(async move{
-                                state_update_annotation_label(&image_id_for_update1, &ann_id_for_update1, &new_label_id, annotations).await;
+                                state_update_annotation_label(&block_id_upd, &image_id_for_update1, &ann_id_for_update1, &new_label_id, annotations).await;
                             });
 
                             context_menu.set(None);
