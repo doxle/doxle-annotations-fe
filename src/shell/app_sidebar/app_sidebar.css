@@ -36,16 +36,13 @@
 }
 
 .app-sidebar-tab {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 1px;
     cursor: pointer;
     opacity: 0.7;
     transition: opacity 0.2s;
+    font-size: 16px;
+    font-weight: 300;
+    color: var(--text-primary);
     position: relative;
-    padding-bottom: 10px;
-    margin-bottom: -10px;
 }
 
 .app-sidebar-tab:hover {
@@ -59,11 +56,12 @@
 .app-sidebar-tab.active::after {
     content: '';
     position: absolute;
-    bottom: -1px;
-    left: -8px;
-    right: -8px;
-    height: 2px;
-    background: var(--text-secondary);
+    top: -2px;
+    right: -6px;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--active-indicator, #3342FF);
 }
 
 .sidebar-icon-wrapper {
@@ -88,6 +86,7 @@
     font-size: 13px;
     font-weight: 300;
     color: var(--text-primary);
+    font-family: Helvetica, Arial, sans-serif;
 }
 
 /* Labels Table */
@@ -99,13 +98,49 @@
 
 .labels-table-row {
     display: grid;
-    grid-template-columns: auto 1fr auto auto;
+    grid-template-columns: auto auto 1fr auto;
     min-height: 28px;
     align-items: center;
-    padding: 4px 0;
+    padding: 4px 8px;
     box-sizing: border-box;
     position: relative;
     gap: 8px;
+    cursor: pointer;
+    border-radius: 4px;
+    margin: 0 -8px;
+    transition: background-color 0.15s;
+}
+
+.labels-table-row:hover {
+    background-color: var(--bg-card-hover);
+}
+
+.labels-table-row.selected {
+    background-color: var(--bg-card-hover);
+}
+
+.labels-table-row.selected .labels-table-cell {
+    color: var(--text-primary);
+}
+
+/* Hidden label - strikethrough */
+.labels-table-row.hidden-label .label-name {
+    text-decoration: line-through;
+    opacity: 0.5;
+}
+
+.labels-table-row.hidden-label .label-count {
+    opacity: 0.5;
+}
+
+/* Empty label (count = 0) - italic and lower opacity */
+.labels-table-row.empty-label .label-name {
+    font-style: italic;
+    opacity: 0.5;
+}
+
+.labels-table-row.empty-label .label-count {
+    opacity: 0.4;
 }
 
 .labels-table-cell {
@@ -115,37 +150,74 @@
     color: var(--text-primary);
 }
 
-.labels-table-cell.visibility-toggle {
-    position: absolute;
-    left: -30px;
-    opacity: 0;
-    transition: opacity 0.2s;
+
+.label-color-rect-wrapper {
+    position: relative;
+    min-width: 35px; /* 27px input + 8px margin */
+}
+
+.label-color-input {
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    width: 27px;
+    height: 7px;
+    border: none;
+    border-radius: 0.5px;
     cursor: pointer;
-}
-
-.labels-table-row:hover .labels-table-cell.visibility-toggle {
-    opacity: 1;
-}
-
-.label-color-rect {
-    width: 3.6px;
-    height: 12px;
-    background: var(--label-color, #22C55E);
+    padding: 0;
     margin-right: 8px;
-    flex: none;
+}
+
+.label-color-input::-webkit-color-swatch-wrapper {
+    padding: 0;
+}
+
+.label-color-input::-webkit-color-swatch {
+    border: none;
+    border-radius: 2px;
+}
+
+.label-color-input::-moz-color-swatch {
+    border: none;
+    border-radius: 2px;
 }
 
 .labels-table-cell.label-name {
-    color: var(--text-secondary);
+    color: var(--text-primary);
+    padding: 2px 3px;
+    cursor: pointer;
+    border-radius: 2px;
+}
+
+.labels-table-cell.label-name:hover {
+    background-color: var(--bg-card-hover);
 }
 
 .labels-table-cell.label-equals {
     color: var(--text-secondary);
+    text-align: right;
 }
 
 .labels-table-cell.label-count {
     color: var(--text-secondary);
     text-align: right;
+}
+
+/* Total row */
+.labels-table-row.total-row {
+    margin-top: 8px;
+    border-top: 1px solid var(--border-color);
+    padding-top: 8px;
+    cursor: default;
+}
+
+.labels-table-row.total-row:hover {
+    background-color: transparent;
+}
+
+.total-label {
+    font-weight: 500;
 }
 
 /* Bottom Section */

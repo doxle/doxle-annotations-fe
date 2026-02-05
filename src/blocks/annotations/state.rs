@@ -2,6 +2,7 @@ use super::api;
 use super::models::Annotation;
 use crate::atoms::svg_canvas::Geometry;
 use dioxus::prelude::*;
+use crate::blocks::dashboard::state::state_refresh_block_labels;
 
 
 /// Load annotations for an image
@@ -78,6 +79,7 @@ pub async fn state_update_annotation_label(block_id:&str, image_id:&str, annotat
 		Ok(_)=> {
 			
 			tracing::info!("✅ Annotation updated on server");
+			state_refresh_block_labels(block_id).await;
 
 		}
 		Err(e) => {

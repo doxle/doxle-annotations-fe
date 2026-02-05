@@ -2,12 +2,10 @@ use dioxus::prelude::*;
 use crate::Route;
 use crate::api;
 
-
 #[component]
 pub fn ProtectedRoute(children: Element) -> Element {
     let nav = navigator();
     let mut auth_checked = use_signal(|| false);
-    
     let mut authorized = use_signal(|| false);
 
     // Validate session on mount

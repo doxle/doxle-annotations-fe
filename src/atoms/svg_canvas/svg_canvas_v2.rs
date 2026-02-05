@@ -84,6 +84,7 @@ pub fn SvgCanvasV2(
 	selected_label_id:String,
 	on_annotation_context_menu: EventHandler<(String, String, f64, f64)>,
 	hidden_label_ids:HashSet<String>,
+	hovered_label_id: Signal<Option<String>>,
 
 ) -> Element {
 	let mut pan_x = use_signal(|| 0.0_f64);
@@ -111,14 +112,14 @@ pub fn SvgCanvasV2(
 	
 
 
-	let grid_size = 20; // Grid size in world units
-	let grid_min_px = 10.0;    // minimum on-screen spacing so lines stay visible
-	let grid_world = {
-	    let z = zoom();        // current zoom factor
-	    let base = grid_size as f64;
-	    if base * z < grid_min_px { grid_min_px / z } else { base }
+	let dot_spacing = 30.0; // Dot spacing in world units
+	let dot_min_px = 15.0;  // minimum on-screen spacing so dots stay visible
+	let dot_world = {
+	    let z = zoom();
+	    let base = dot_spacing;
+	    if base * z < dot_min_px { dot_min_px / z } else { base }
 	};
-	let grid_path = format!("M {s} 0 L 0 0 0 {s}", s = grid_world);
+	let dot_center = dot_world / 2.0;
 	let selected_label_id_for_mouse_move = selected_label_id.clone();
 	let selected_label_id_for_draw_area = selected_label_id.clone();
 	
@@ -455,21 +456,19 @@ pub fn SvgCanvasV2(
 			// Defing reusable patterns
 			defs{
 				pattern {
-					id: "grid-pattern",
-					width: "{grid_world}", 	// world-space grid size
-					height: "{grid_world}",
+					id: "dot-pattern",
+					width: "30",
+					height: "30",
 					pattern_units: "userSpaceOnUse",
-					pattern_transform: "translate({pan_x()}, {pan_y()}) scale({zoom()})",  // Transform pattern with pan/zoom so grid moves with world
-
+					// No transform needed - rect is inside world group
 					
-					// draw one cell edge; pattern tiles to cover the whole rec
-					path {
-						d: "{grid_path}", // Move pen to 0,20 and then draw line to 0,0 and line to 0,20
-						fill: "none",
-						stroke: "var(--grid-color)",
-						stroke_width: 0.5,
-						vector_effect: "non-scaling-stroke", // keep stroke 0.5px on screen while zooming
-						pointer_events:"none",
+					// Dot at center of each cell
+					circle {
+						cx: "15",
+						cy: "15",
+						r: "1.5",
+						fill: "var(--dot-color)",
+						pointer_events: "none",
 					}
 				}
 			}
@@ -480,11 +479,7 @@ pub fn SvgCanvasV2(
 					height:"100%", 
 					fill:"var(--bg-primary)",
 				}
-			
-			// 4. Grid fill: full-viewport, passes events through
-			rect { width:"100%", height:"100%", fill:"url(#grid-pattern)", pointer_events:"none",}
 
-			
 			// World group: everything that pans/zooms together
 			g{
 				transform:"translate({pan_x()}, {pan_y()}) scale({zoom()})",
@@ -529,8 +524,19 @@ pub fn SvgCanvasV2(
 						}
 					}
 				}
+				// Dot overlay on top of image (only show after image loads)
+				if image_size().0 > 0.0 {
+					rect { 
+						x: "-10000", 
+						y: "-10000", 
+						width: "20000", 
+						height: "20000", 
+						fill: "url(#dot-pattern)", 
+						pointer_events: "none",
+					}
+				}
 				// CURRENT DRAWING
-				DrawArea { 
+				DrawArea {
 					image_size: image_size(), 
 					selected_tool: selected_tool, 
 					zoom: zoom, 
@@ -544,7 +550,7 @@ pub fn SvgCanvasV2(
 				},
 
 				// PREVIEW DRAWING
-				PolygonPreview { points: active_drawing(), cursor_world_pos: cursor_world(), zoom: zoom() },
+				PolygonPreview { points: active_drawing(), cursor_world_pos: cursor_world(), zoom: zoom(), selected_label_id: selected_label_id.clone() },
 
 				// SAVED DRAWING
 				SavedAnnotation {
@@ -560,6 +566,7 @@ pub fn SvgCanvasV2(
 					last_dirty_tick:last_dirty_tick,
 					skip_polygon_insert: skip_polygon_insert,
 					hidden_label_ids:hidden_label_ids.clone(),
+					hovered_label_id: hovered_label_id,
 				}
 
 			}
@@ -615,15 +622,32 @@ fn PolygonPreview(
 	points:Vec<(f64,f64)>,
 	cursor_world_pos: (f64,f64),
 	zoom:f64,
+	selected_label_id: String,
 	) -> Element {
 
 	if points.is_empty() { return rsx!{};}
 
 	let is_dark = THEME() == Theme::Dark;
 	let stroke_w = (0.9/zoom).clamp(0.9, 2.7);
-	let circle_r = (5.1/zoom).clamp(4.2, 42.0);
-	let circle_fill = if is_dark { "rgba(255, 255, 255, 0.375)" } else { "rgba(0, 0, 0, 0.375)" };
+	let circle_r = (6.0/zoom).clamp(0.75, 18.0);
 	let snap_thresh = 15.0 / zoom;
+	
+	// Get label color
+	let labels = LABELS();
+	let label_color = labels.iter()
+		.find(|l| l.label_id == selected_label_id)
+		.map(|l| l.label_color.clone())
+		.unwrap_or_else(|| "#22C55E".to_string());
+	
+	// Convert to rgba for fill
+	let fill_rgba = if label_color.starts_with("#") && label_color.len() == 7 {
+		let r = u8::from_str_radix(&label_color[1..3], 16).unwrap_or(0);
+		let g = u8::from_str_radix(&label_color[3..5], 16).unwrap_or(0);
+		let b = u8::from_str_radix(&label_color[5..7], 16).unwrap_or(0);
+		format!("rgba({},{},{},0.15)", r, g, b)
+	} else {
+		"rgba(0,0,0,0.15)".to_string()
+	};
 
 	let fmt = |pts: &[(f64, f64)]| {					// Changes vec to svg points "0,0 10.5,20 30,5.5"
 	    pts.iter().fold(String::new(), |mut s, (x, y)| {
@@ -653,7 +677,7 @@ fn PolygonPreview(
         // Fill preview
         polygon {
             points: "{fill_points}",
-            fill: "rgba(255, 0, 0, 0.15)",
+            fill: "{fill_rgba}",
             stroke: "none",
             pointer_events: "none",
         }
@@ -662,7 +686,7 @@ fn PolygonPreview(
         polyline {
             points: "{points_str}",
             fill: "none",
-            stroke: "red",
+            stroke: "{label_color}",
             stroke_width: "{stroke_w}",
             vector_effect: "non-scaling-stroke",
             pointer_events: "none",
@@ -673,8 +697,9 @@ fn PolygonPreview(
             circle {
                 key: "node-{i}",
                 cx: "{x}", cy: "{y}", r: "{circle_r}",
-                fill: "{circle_fill}",
-                stroke: "none",
+                fill: "{label_color}",
+                stroke: "white",
+                stroke_width: "{stroke_w}",
                 pointer_events: "none",
             }
         }
@@ -684,7 +709,7 @@ fn PolygonPreview(
             line {
                 x1: "{lx}", y1: "{ly}",
                 x2: "{cursor_world_pos.0}", y2: "{cursor_world_pos.1}",
-                stroke: "red",
+                stroke: "{label_color}",
                 stroke_width: "{stroke_w}",
                 vector_effect: "non-scaling-stroke",
                 pointer_events: "none",
@@ -696,10 +721,10 @@ fn PolygonPreview(
             if let Some(&(fx, fy)) = points.first() {
                 circle {
                     cx: "{fx}", cy: "{fy}",
-                    r: "{circle_r * 4.0}",
-                    fill: "rgba(0, 255, 0, 0.5)",
-                    stroke: "green",
-                    stroke_width: "{stroke_w}",
+                    r: "{circle_r * 2.0}",
+                    fill: "{fill_rgba}",
+                    stroke: "{label_color}",
+                    stroke_width: "{stroke_w * 2.0}",
                     pointer_events: "none",
                 }
             }
@@ -814,6 +839,7 @@ fn SavedAnnotation(
 	last_dirty_tick: Signal<Instant>,
 	skip_polygon_insert: Signal<bool>,
 	hidden_label_ids:HashSet<String>,
+	hovered_label_id: Signal<Option<String>>,
 	)->Element{
 	let is_dark = THEME() == Theme::Dark;
 	// tracing::info!("What is the theme: {}", is_dark);
@@ -830,8 +856,10 @@ fn SavedAnnotation(
 
     // Scale node radius inversely with zoom so nodes stay same visual size when zoomed
     // clamp() ensures nodes don't get too small or too big
-    let node_r = (6.0 / z).clamp(4.0, 12.0);
-    let stroke_w = (2.0 / z).clamp(1.0, 4.0);
+    let node_r = (6.0 / z).clamp(0.75, 18.0);
+    let stroke_w = (1.0 / z).clamp(0.3, 2.0);
+    let selected_stroke_w = (1.5 / z).clamp(0.5, 2.0); // Thicker stroke when selected
+    let node_stroke_color = if is_dark { "white" } else { "black" };
 
 
     // Get color from label_id
@@ -842,10 +870,48 @@ fn SavedAnnotation(
             .unwrap_or_else(|| "#22C55E".to_string())
     };
 
+    // Convert color to rgba with opacity (handles both hex and rgb formats)
+    let color_with_opacity = |color: &str, opacity: f64| -> String {
+        if color.starts_with("rgb(") {
+            // rgb(0,122,255) -> rgba(0,122,255,0.2)
+            color.replace("rgb(", "rgba(").replace(")", &format!(",{})" , opacity))
+        } else if color.starts_with("#") && color.len() == 7 {
+            // #RRGGBB -> rgba(r,g,b,opacity)
+            let r = u8::from_str_radix(&color[1..3], 16).unwrap_or(0);
+            let g = u8::from_str_radix(&color[3..5], 16).unwrap_or(0);
+            let b = u8::from_str_radix(&color[5..7], 16).unwrap_or(0);
+            format!("rgba({},{},{},{})" , r, g, b, opacity)
+        } else {
+            format!("rgba(0,0,0,{})" , opacity)
+        }
+    };
+
+
+	// Calculate polygon area using shoelace formula
+	let polygon_area = |points: &[Point]| -> f64 {
+		if points.len() < 3 { return 0.0; }
+		let mut area = 0.0;
+		for i in 0..points.len() {
+			let j = (i + 1) % points.len();
+			area += points[i].x * points[j].y;
+			area -= points[j].x * points[i].y;
+		}
+		(area / 2.0).abs()
+	};
+
+	// Sort: largest first (renders below), smallest last (renders on top)
+	let mut sorted_anns: Vec<_> = annotations().into_iter()
+		.filter(|a| !hidden_label_ids.contains(&a.label_id))
+		.collect();
+	sorted_anns.sort_by(|a, b| {
+		let area_a = match &a.geometry { Geometry::Polygon { points } => polygon_area(points), _ => 0.0 };
+		let area_b = match &b.geometry { Geometry::Polygon { points } => polygon_area(points), _ => 0.0 };
+		area_b.partial_cmp(&area_a).unwrap_or(std::cmp::Ordering::Equal)
+	});
 
 	rsx!{
-		// Loop through all saved annotations
-	    for ann in annotations().into_iter().filter(|a| !hidden_label_ids.contains(&a.label_id)) {{
+		// Loop through sorted annotations (largest first, smallest on top)
+	    for ann in sorted_anns.into_iter() {{
 
 	    	// Clone IDs because we need them in multiple closures below
 			let ann_id = ann.id.clone();
@@ -874,14 +940,22 @@ fn SavedAnnotation(
 				// ═══════════════════════════════════════════════════════════
                 // POLYGON SHAPE (the filled annotation)
                 // ═══════════════════════════════════════════════════════════
-				polygon {
-					key:"{ann_id}",
-					points: "{svg_pts}",
-					fill: if is_selected { format!("{}66", color) } else { format!("{}33", color) },
-					// Selected = yellow border, otherwise use label color
-                    stroke: if is_selected { "{color}" } else { "{color}" },
+				{{
+					let fill_color = if is_selected { color_with_opacity(&color, 0.4) } else { color_with_opacity(&color, 0.2) };
+					// Wider invisible hit area for edges (3px buffer for adding nodes)
+					let hit_stroke_w = (6.0 / z).clamp(3.0, 12.0);
+					let aid_hit = ann_id.clone();
+					let mut annotations_hit = annotations;
+					rsx! {
+						// Visible polygon first (bottom)
+						polygon {
+							key:"{ann_id}",
+							points: "{svg_pts}",
+							fill: "{fill_color}",
+					// Selected = label color border
+                    stroke: "{color}",
 					// Selected = thicker stroke to make selection obvious
-                    stroke_width: if is_selected { "{stroke_w * 1.05}" } else { "1.0" },
+                    stroke_width: if is_selected { "{selected_stroke_w}" } else { "1.5" },
 					vector_effect:"non-scaling-stroke",
 					pointer_events:"auto",
 					cursor: "default",
@@ -894,6 +968,17 @@ fn SavedAnnotation(
                             evt.stop_propagation(); // Don't let click bubble to background
                             selected_ann_id.set(aid.clone()); // Mark this annotation as selected
                         }
+                    },
+
+                    // HOVER: Track hovered label for 'h' key hide
+                    onmouseenter: {
+                        let lid = label_id.clone();
+                        move |_| {
+                            hovered_label_id.set(Some(lid.clone()));
+                        }
+                    },
+                    onmouseleave: move |_| {
+                        hovered_label_id.set(None);
                     },
 
 					// Bubble up to parent SVG selection is handled by onclick
@@ -965,7 +1050,48 @@ fn SavedAnnotation(
                             on_annotation_context_menu.call((aid.clone(), lid.clone(), p.x, p.y));
                         }
                     }
-				}
+							}
+						// Invisible wider stroke for edge hit detection (on top for clicks)
+						if is_selected {
+							polygon {
+								key: "hit-{ann_id}",
+								points: "{svg_pts}",
+								fill: "none",
+								stroke: "transparent",
+								stroke_width: "{hit_stroke_w}",
+								pointer_events: "stroke",
+								cursor: "crosshair",
+								onmousedown: move |evt: MouseEvent| {
+									let mods = evt.data.modifiers();
+									if mods.meta() || mods.ctrl() {
+										evt.prevent_default();
+										evt.stop_propagation();
+									}
+								},
+								onmouseup: move |evt: MouseEvent| {
+									if skip_polygon_insert() {
+										skip_polygon_insert.set(false);
+										return;
+									}
+									let mods = evt.data.modifiers();
+									if !(mods.meta() || mods.ctrl()) { return; }
+									evt.prevent_default();
+									evt.stop_propagation();
+									if selected_ann_id() != aid_hit { return; }
+									let (wx, wy) = cursor_world();
+									let mut anns = annotations_hit.write();
+									if let Some(ann) = anns.iter_mut().find(|a| a.id == aid_hit) {
+										if let Geometry::Polygon { points } = &mut ann.geometry {
+											insert_point_on_polygon(points, wx, wy);
+											dirty_ann_ids.write().insert(aid_hit.to_string());
+											last_dirty_tick.set(Instant::now());
+										}
+									}
+								},
+							}
+						}
+					}
+				}}
 
 				 // Draggable nodes (only when selected)
                 if is_selected {
@@ -982,8 +1108,8 @@ fn SavedAnnotation(
                             annotations: annotations,
                             dragging_node: dragging_node,
                             cursor_world: cursor_world,
-                            is_dark: is_dark,
-                            dirty_ann_ids: dirty_ann_ids,      // ADD
+                            node_color: color.clone(),
+                            dirty_ann_ids: dirty_ann_ids,
     						last_dirty_tick: last_dirty_tick,  
     						skip_polygon_insert: skip_polygon_insert,
                         }
@@ -1019,12 +1145,15 @@ fn DraggableNode(
     annotations: Signal<Vec<Annotation>>,
     dragging_node: Signal<i32>,
     cursor_world: Signal<(f64, f64)>,
-    is_dark:bool,
+    node_color: String,
     dirty_ann_ids: Signal<HashSet<String>>,  
     last_dirty_tick: Signal<Instant>, 
     skip_polygon_insert: Signal<bool>,
 ) -> Element {
 		let mut is_hovered = use_signal(||false);
+		
+		// Node fill is solid label color, stroke is always white
+		let node_stroke = "white";
 	
 		 rsx! {
 	        circle {
@@ -1032,8 +1161,8 @@ fn DraggableNode(
 	            cx: "{x}",
 	            cy: "{y}",
 	            r: "{radius}",
-	            fill: if is_dark { "white" } else { "black" },
-	            stroke: if is_hovered() {"red"} else {""},
+	            fill: "{node_color}",
+	            stroke: "{node_stroke}",
 	            stroke_width: "{stroke_width}",
 	            cursor: "default",
 	            pointer_events: "auto",

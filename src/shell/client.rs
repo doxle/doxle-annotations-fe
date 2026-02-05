@@ -7,7 +7,7 @@ use web_sys::RequestCredentials;
 // ========== TOGGLE FOR LOCAL vs DEPLOYED ==========
 // Uncomment ONE of these:
 // pub const API_BASE_URL: &str = "https://api.doxle.ai";      // DEPLOYED
-pub const API_BASE_URL: &str = "http://localhost:9000";  // LOCAL (cargo lambda watch)
+pub const API_BASE_URL: &str = "";  // LOCAL - uses Dioxus proxy (same-origin, fixes cookies)
 
 // CloudFront CDN for image caching
 pub const CLOUDFRONT_URL: &str = "https://d1flb4kxeu5kb6.cloudfront.net";

@@ -1,7 +1,7 @@
 use crate::Route;
 use dioxus::prelude::*;
 use crate::shell::{THEME, Theme, AppNavbar};
-use crate::blocks::dashboard::state::state_create_block_with_labels;
+use crate::blocks::dashboard::state::state_create_block;
 
 
 
@@ -52,8 +52,9 @@ const BUDGET_BLOCK_ICON_DARK: Asset = asset!("/assets/icons/budget-block-dark.sv
 pub fn CreateBlockPage() -> Element {
     
     let mut block_name = use_signal(String::new);
-    let mut block_type = use_signal(String::new); // Default empty for selection screen
+    let mut block_type = use_signal(|| "annotation".to_string()); // Default to annotation
     let mut company = use_signal(String::new);
+    let mut is_submitting = use_signal(|| false);
     // Saved labels: Vec<(name, color)>
     let mut labels: Signal<Vec<(String, String)>> = use_signal(Vec::new);
     // Current input state
@@ -122,6 +123,11 @@ pub fn CreateBlockPage() -> Element {
     let handle_submit = move|evt:Event<FormData>| {
         evt.prevent_default();
 
+        if *is_submitting.read() {
+            crate::shell::status::show_info("Creating block ...");
+            return;
+        }
+
         let name = block_name.read().trim().to_string();
         let b_type = block_type.read().to_lowercase();
         let comp_val = company.read().trim().to_string();
@@ -142,21 +148,17 @@ pub fn CreateBlockPage() -> Element {
 
             return;
         }
-        
-        if b_type == "annotation" && clean_labels.is_empty() {
-             crate::shell::status::show_error(&format!("Atleast 1 label is required:"));
-             return;
-        }
 
         tracing::info!("Create block: name = {}, type={}, labels = {:?}", name, b_type, clean_labels);
+        is_submitting.set(true);
         // DIRECT CALL - No callback needed
         spawn(async move {
-            match state_create_block_with_labels(name, b_type, clean_labels, comp).await {
+            match state_create_block(name, b_type, comp).await {
                 Ok(_) => {navigator.push(Route::DashboardPage {});}
                 Err(e) => {
                     tracing::error!("Failed to create block: {}", e);
                     crate::shell::status::show_error(&format!("Failed to create block:{}", e));
-
+                    is_submitting.set(false);
                 }
             }
         });
@@ -173,203 +175,84 @@ pub fn CreateBlockPage() -> Element {
             div{
                 class:"blocks-form-container",
                 
-                if block_type().is_empty() {
-                    // === SELECTION SCREEN ===
-                    img {
-                        src: doxle_logo,
-                        class: "doxle-logo",
-                        alt: "Doxle"
-                    }
+                // === FORM SCREEN ===
+                
+                // Title
+                div {
+                    class: "create-blocks-instruction",
+                    "Create a new block ..."
+                }
 
-                    div {
-                        class: "create-blocks-instruction",
-                        "Create a new block ..."
-                    }
+                form{
+                    class:"blocks-form",
+                    onsubmit:handle_submit,
+                    autocomplete:"off",
 
-                    div {
-                        class: "block-type-buttons",
-                        // Annotation Block
-                        button {
-                            class: "block-type-button",
-                            onclick: move |_| *block_type.write() = "annotation".to_string(),
-                            img {
-                                src: annotation_icon,
-                                class: "block-type-icon",
-                                alt: "Annotation"
-                            }
-                            "Annotation"
-                        }
-
-                        // Files Block
-                        button {
-                            class: "block-type-button",
-                            onclick: move |_| *block_type.write() = "files".to_string(),
-                            img {
-                                src: file_icon,
-                                class: "block-type-icon",
-                                alt: "Files"
-                            }
-                            "Files"
-                        }
-
-                        // Budget Block
-                        button {
-                            class: "block-type-button",
-                            onclick: move |_| *block_type.write() = "budget".to_string(),
-                            img {
-                                src: budget_icon,
-                                class: "block-type-icon",
-                                alt: "Budget"
-                            }
-                            "Budget"
-                        }
-                    }
-                } else {
-                    // === FORM SCREEN ===
-                    
-                    // Header
-                    div {
-                        class: "blocks-title-row",
-                        
-                        if block_type() == "annotation" {
-                            img {
-                                src: annotation_badge,
-                                class: "header-block-icon",
-                                alt: "Annotation"
-                            }
-                        } else if block_type() == "files" {
-                            img {
-                                src: file_icon,
-                                class: "header-block-icon",
-                                alt: "Files"
-                            }
-                        } else if block_type() == "budget" {
-                            img {
-                                src: budget_icon,
-                                class: "header-block-icon",
-                                alt: "Budget"
-                            }
-                        }
-
-                        h1 {
-                            class: "create-blocks-title",
-                            if block_type() == "annotation" {
-                                "Annotation Block"
-                            } else if block_type() == "files" {
-                                "Files Block"
-                            } else if block_type() == "budget" {
-                                "Budget Block"
-                            }
+                    //Block name
+                    div{
+                        class:"blocks-form-group",
+                        input{
+                            id:"block-name",
+                            class:"blocks-name-input",
+                            r#type:"text",
+                            autocomplete:"off",
+                            placeholder:"Block name",
+                            value:"{block_name}",
+                            oninput:move|e| *block_name.write() = e.value(),
+                            onkeydown:handle_block_name_keydown,
                         }
                     }
 
-                    form{
-                        class:"blocks-form",
-                        onsubmit:handle_submit,
-                        autocomplete:"off",
-
-                        //Block name
-                        div{
-                            class:"blocks-form-group",
-                            input{
-                                id:"block-name",
-                                class:"blocks-name-input",
-                                r#type:"text",
-                                autocomplete:"off",
-                                placeholder:"Block name",
-                                value:"{block_name}",
-                                oninput:move|e| *block_name.write() = e.value(),
-                                onkeydown:handle_block_name_keydown,
-                            }
+                    // Company (Optional)
+                    div{
+                        class:"blocks-form-group",
+                        input{
+                            class:"blocks-name-input",
+                            r#type:"text",
+                            autocomplete:"off",
+                            placeholder:"Company (optional)",
+                            value:"{company}",
+                            oninput:move|e| *company.write() = e.value(),
                         }
+                    }
 
-                        // Company (Optional)
-                        div{
-                            class:"blocks-form-group",
-                            input{
-                                class:"blocks-name-input",
-                                r#type:"text",
-                                autocomplete:"off",
-                                placeholder:"Company (optional)",
-                                value:"{company}",
-                                oninput:move|e| *company.write() = e.value(),
-                            }
-                        }
 
-                        //Labels list (Only for Annotation)
-                        if block_type() == "annotation" {
-                            div {
-                                class: "blocks-form-group",
-                                
-                                // Single input
-                                input {
-                                    id: "label-input",
-                                    class: "blocks-label-input label-name-input",
-                                    r#type: "text",
-                                    autocomplete: "off",
-                                    placeholder: "Label name (press Enter to add)",
-                                    value: "{current_input}",
-                                    oninput: move |e| current_input.set(e.value()),
-                                    onkeydown: handle_label_keydown,
-                                }
-                                
-                                // Added labels as chips
-                                if !labels.read().is_empty() {
-                                    div {
-                                        class: "label-chips",
-                                        for (index, (name, color)) in labels.read().iter().cloned().enumerate() {
-                                            div {
-                                                class: "label-chip",
-                                                key: "{index}",
-                                                style: "background-color: {color};",
-                                                
-                                                span { class: "chip-name", "{name}" }
-                                                
-                                                // Edit button
-                                                span {
-                                                    class: "chip-action",
-                                                    onclick: move |_| {
-                                                        let (n, c) = labels.read()[index].clone();
-                                                        current_input.set(n);
-                                                        current_color.set(c);
-                                                        editing_index.set(index as i32);
-                                                    },
-                                                    "✏️"
-                                                }
-                                                
-                                                // Delete button
-                                                span {
-                                                    class: "chip-action",
-                                                    onclick: move |_| {
-                                                        labels.write().remove(index);
-                                                    },
-                                                    "✕"
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-
-                        // Submit Actions
+                    // Progress bar
+                    if *is_submitting.read() {
                         div {
-                            class: "form-actions",
-                            
-                            button {
-                                r#type: "button",
-                                class: "blocks-back-button", 
-                                onclick: move |_| {
-                                    *block_type.write() = String::new(); // Go Back
-                                },
-                                "Back" 
+                            class: "create-progress-container",
+                            div {
+                                class: "create-progress-bar",
+                                div {
+                                    class: "create-progress-fill",
+                                }
                             }
+                            span {
+                                class: "create-progress-text",
+                                "Creating block..."
+                            }
+                        }
+                    }
 
-                            button {
-                                r#type: "submit",
-                                class: "blocks-create-button",
-                                "Create Block" 
-                            }
+                    // Submit Actions
+                    div {
+                        class: "form-actions",
+                        
+                        button {
+                            r#type: "button",
+                            class: "blocks-back-button",
+                            disabled: *is_submitting.read(),
+                            onclick: move |_| {
+                                navigator.push(Route::DashboardPage {});
+                            },
+                            "Back" 
+                        }
+
+                        button {
+                            r#type: "submit",
+                            class: "blocks-create-button",
+                            disabled: *is_submitting.read(),
+                            if *is_submitting.read() { "Creating..." } else { "Create Block" }
                         }
                     }
                 }

@@ -1,16 +1,23 @@
 .svg-canvas-v2 {
     width: 100%;
     height: 100%;
-    touch-action: none;            // <-- add
-    overscroll-behavior: contain;  // <-- a
+    touch-action: none;            
+    overscroll-behavior: contain;  
+    outline:none;
+}
+
+.svg-canvas-v2:focus {
+    outline: none;
 }
 
 :root {
     --canvas-image-filter: none;
+    --dot-color: rgba(0, 0, 0, 0.15);
 }
 
 html.dark {
     --canvas-image-filter: invert(1) hue-rotate(180deg);
+    --dot-color: rgba(255, 255, 255, 0.4);
 }
 
 

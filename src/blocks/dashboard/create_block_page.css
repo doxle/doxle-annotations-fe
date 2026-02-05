@@ -320,3 +320,70 @@ input:focus {
 .chip-action:hover {
     opacity: 1;
 }
+
+/* Create Progress Bar */
+.create-progress-container {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 16px;
+  width: 100%;
+}
+
+.create-progress-bar {
+  width: 100%;
+  height: 6px;
+  background-color: var(--bg-card);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.create-progress-fill {
+  height: 100%;
+  width: 100%;
+  background-color: var(--dx-blue);
+  border-radius: 3px;
+  position: relative;
+  animation: create-progress-pulse 1.5s ease-in-out infinite;
+}
+
+.create-progress-fill::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.3),
+    transparent
+  );
+  animation: progress-shimmer 1.5s infinite;
+}
+
+@keyframes create-progress-pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.6;
+  }
+}
+
+@keyframes progress-shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+.create-progress-text {
+  font-family: 'Modular Houseplant', monospace;
+  font-size: 12px;
+  color: var(--text-secondary);
+  text-align: center;
+}

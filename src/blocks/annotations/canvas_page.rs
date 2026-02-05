@@ -104,19 +104,34 @@ pub fn AnnotationCanvasPage(
     let sidebar_open: Signal<bool> = use_signal(|| true);
     let grid_visible: Signal<bool> = use_signal(|| false);
     let selected_tool: Signal<Tool> = use_signal(|| Tool::Pan);
-    setup_keyboard_shortcuts(sidebar_open, grid_visible, selected_tool, active_drawing);
     let mut context_menu:Signal<Option<(String, String, f64, f64)>> = use_signal(|| None);
     let mut selected_label_id:Signal<String> = use_signal(|| String::new());
     let mut hidden_label_ids:Signal<HashSet<String>> = use_signal(HashSet::new);
+    let mut hovered_label_id:Signal<Option<String>> = use_signal(|| None);
+    let mut show_shortcuts:Signal<bool> = use_signal(|| false);
+    setup_keyboard_shortcuts(sidebar_open, grid_visible, selected_tool, active_drawing, hidden_label_ids, hovered_label_id, show_shortcuts);
 
 
 
-    // Select the first label id
+    // Select the first visible label, or switch if current is hidden
     use_effect(move || {
         let labels = LABELS();
-        if selected_label_id().is_empty() && !labels.is_empty() {
-            selected_label_id.set(labels[0].label_id.clone());
-        }      
+        let hidden = hidden_label_ids();
+        let current = selected_label_id();
+        
+        if labels.is_empty() { return; }
+        
+        // Check if current selection is empty, invalid, or hidden
+        let needs_reselect = current.is_empty() 
+            || !labels.iter().any(|l| l.label_id == current)
+            || hidden.contains(&current);
+            
+        if needs_reselect {
+            // Find first visible label
+            if let Some(visible) = labels.iter().find(|l| !hidden.contains(&l.label_id)) {
+                selected_label_id.set(visible.label_id.clone());
+            }
+        }
     });
 
     //*** - COMPONENT IS NOT REMOUNTED BUT ONLY RERENDERED ****//
@@ -190,6 +205,7 @@ pub fn AnnotationCanvasPage(
                         annotations:annotations,
                         selected_label_id: selected_label_id(),
                         hidden_label_ids: hidden_label_ids(),
+                        hovered_label_id: hovered_label_id,
                         on_annotation_context_menu:move|(ann_id, label_id, x, y)| {
                             context_menu.set(Some((ann_id, label_id, x, y)));
                         },
@@ -204,6 +220,8 @@ pub fn AnnotationCanvasPage(
                 labels:LABELS(), 
                 annotations:annotations(),
                 hidden_label_ids:hidden_label_ids,
+                block_id: block_id.clone(),
+                selected_label_id: selected_label_id,
             }
         }
         // Context menu (outside canvas)
@@ -250,6 +268,52 @@ pub fn AnnotationCanvasPage(
                     }
                 }
                
+            }
+        }
+        // Shortcuts help modal
+        if show_shortcuts() {
+            div {
+                class: "shortcuts-modal-backdrop",
+                onclick: move |_| show_shortcuts.set(false),
+            }
+            div {
+                class: "shortcuts-modal",
+                h2 { class: "shortcuts-title", "Keyboard Shortcuts" }
+                div { class: "shortcuts-list",
+                    div { class: "shortcut-item",
+                        span { class: "shortcut-key", "P" }
+                        span { class: "shortcut-desc", "Polygon draw mode" }
+                    }
+                    div { class: "shortcut-item",
+                        span { class: "shortcut-key", "Esc" }
+                        span { class: "shortcut-desc", "Cancel / Pan mode" }
+                    }
+                    div { class: "shortcut-item",
+                        span { class: "shortcut-key", "G" }
+                        span { class: "shortcut-desc", "Toggle grid" }
+                    }
+                    div { class: "shortcut-item",
+                        span { class: "shortcut-key", "H" }
+                        span { class: "shortcut-desc", "Hide hovered label" }
+                    }
+                    div { class: "shortcut-item",
+                        span { class: "shortcut-key", "ha" }
+                        span { class: "shortcut-desc", "Toggle hide all labels" }
+                    }
+                    div { class: "shortcut-item",
+                        span { class: "shortcut-key", "⌘\\" }
+                        span { class: "shortcut-desc", "Toggle sidebar" }
+                    }
+                    div { class: "shortcut-item",
+                        span { class: "shortcut-key", "⌘+click" }
+                        span { class: "shortcut-desc", "Add/remove node" }
+                    }
+                    div { class: "shortcut-item",
+                        span { class: "shortcut-key", "Space" }
+                        span { class: "shortcut-desc", "Show this help" }
+                    }
+                }
+                div { class: "shortcuts-footer", "Press Space or click outside to close" }
             }
         }
     }

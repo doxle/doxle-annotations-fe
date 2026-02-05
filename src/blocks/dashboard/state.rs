@@ -11,6 +11,14 @@ pub static LABELS: GlobalSignal<Vec<BlockLabel>> = Signal::global(|| Vec::new())
 pub static LABELS_LOADING:GlobalSignal<bool> = Signal::global(||false);
 
 
+/// Reset all block-specific state (call when leaving block or deleting)
+pub fn state_reset_block_context() {
+    *CURRENT_BLOCK.write() = None;
+    *LABELS.write() = Vec::new();
+    *LABELS_LOADING.write() = false;
+    tracing::info!("🧹 Block context reset");
+}
+
 
 /// Load all blocks from API and update global state
 pub async fn state_load_blocks() {
@@ -31,30 +39,14 @@ pub async fn state_load_blocks() {
     *BLOCKS_LOADING.write() = false;
 }
 
-
-/// Create a new block with labels and add to global state
-pub async fn state_create_block_with_labels(name: String, block_type: String, labels: Vec<(String, String)>, company: Option<String>) -> Result<Block, String> {
-    // 1 - Create block
-    let block = match api_create_block(name.clone(), block_type.clone(), company).await {
+/// Create a new block (BE auto-creates default labels)
+pub async fn state_create_block(name: String, block_type: String, company: Option<String>) -> Result<Block, String> {
+    let block = match api_create_block(name, block_type, company).await {
         Ok(block) => block,
         Err(e) => return Err(e)
     };
-    let block_id = block.block_id.clone();
-
-    // 2 - Create each label for this block
-    for (label_name, label_color) in labels.iter() {
-        let trimmed = label_name.trim();
-        if trimmed.is_empty() {
-            continue;
-        }
-
-        match api_create_label(&block_id, trimmed.to_string(), label_color.clone()).await {
-            Ok(_) => {},
-            Err(e) => return Err(e)
-        };
-    }
     
-    // 3 - Add to global state
+    tracing::info!("📦 Block created with {} labels", block.labels.len());
     BLOCKS.write().push(block.clone());
     Ok(block)
 }
@@ -104,6 +96,8 @@ pub async fn state_delete_block(block_id: &str) {
     match api_delete_block(block_id).await {
         Ok(_) => {
             tracing::info!("✅ Block delete confirmed by server: {}", block_id);
+            state_reset_block_context();
+            
             if !optimistic {
                 // Now remove it for real (this triggers redirect effect after we drop loading)
                 BLOCKS.write().retain(|b| b.block_id != block_id);
@@ -213,4 +207,33 @@ pub async fn state_load_labels(block_id:&str){
     }
     *LABELS_LOADING.write() = false;
 }
+
+/// Refresh a single block's labels from BE
+pub async fn state_refresh_block_labels(block_id:&str){
+    tracing::info!("🔄 Fetching labels for block {}", block_id);
+    match api_get_labels(block_id).await {
+        Ok(labels) => {
+            tracing::info!("📥 Got {} labels from BE:", labels.len());
+            for l in &labels {
+                tracing::info!("   - {} ({}): count={}", l.label_name, l.label_id, l.label_count);
+            }
+            let total:u32 = labels.iter().map(|l| l.label_count).sum();
+            BLOCKS.write().iter_mut().for_each(|b| {
+                if b.block_id == block_id {
+                    tracing::info!("✏️ Updating block {} in BLOCKS signal", block_id);
+                    b.labels = labels.clone();
+                    b.annotation_count = total;
+                }
+            });
+            tracing::info!("🔄 Refreshed labels for block {}", block_id);
+        }
+        Err(e) => tracing::error!("❌ Failed refreshing block labels: {}", e),
+    
+    }
+
+}
+
+
+
+
 

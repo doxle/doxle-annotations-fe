@@ -17,8 +17,32 @@ pub fn AnnotationContextMenu(
 	on_close:EventHandler<()>
 	)->Element{
 
-let is_dark = THEME() == Theme::Dark;
+    let is_dark = THEME() == Theme::Dark;
 	let trash_icon = if is_dark { TRASH_ICON_DARK } else { TRASH_ICON_LIGHT };
+
+    // Calculate menu height estimate (items + padding + delete)
+    let menu_height = (labels.len() as f64 * 32.0) + 80.0;
+    
+    // Get viewport height
+    let viewport_height = web_sys::window()
+        .and_then(|w| Some(w.inner_height().ok()?.as_f64()?))
+        .unwrap_or(800.0);
+    
+    // If menu would overflow bottom, position above click point
+    let final_y = if y + menu_height > viewport_height - 20.0 {
+        (y - menu_height.min(300.0)).max(10.0)
+    } else {
+        y
+    };
+    
+    // Cap max height based on available space
+    let max_h = if final_y < y {
+        // Menu is above click - use space from top
+        (y - 20.0).min(350.0)
+    } else {
+        // Menu is below click - use space to bottom
+        (viewport_height - y - 20.0).min(350.0)
+    };
 
 	rsx!{
 		style { {CSS} }
@@ -30,30 +54,33 @@ let is_dark = THEME() == Theme::Dark;
         
 		div{
 			class: "annotation-context-menu",
-            style: "left: {x}px; top: {y}px;",
+            style: "left: {x}px; top: {final_y}px; max-height: {max_h}px;",
             onclick: move |evt| evt.stop_propagation(),
 
-             // Label options
-            for label in labels {
-                div {
-                    class: "context-menu-item",
-                    onclick: {
-                        let lid = label.label_id.clone();
-                        move |_| on_change_label.call(lid.clone())
-                    },
-                    if label.label_id == current_label_id {
-                        span { class: "radio-icon", "●" }
-                    } else {
-                        span { class: "radio-icon", "○" }
+            // Scrollable label options
+            div {
+                class: "context-menu-labels",
+                for label in labels {
+                    div {
+                        class: "context-menu-item",
+                        onclick: {
+                            let lid = label.label_id.clone();
+                            move |_| on_change_label.call(lid.clone())
+                        },
+                        if label.label_id == current_label_id {
+                            span { class: "radio-icon", "●" }
+                        } else {
+                            span { class: "radio-icon", "○" }
+                        }
+                        span { "{label.label_name}" }
                     }
-                    span { "{label.label_name}" }
                 }
             }
 
             // Divider
             div { class: "context-menu-divider" }
             
-            // Delete
+            // Delete (always visible at bottom)
             div {
                 class: "context-menu-item delete",
                 onclick: move |_| on_delete.call(()),

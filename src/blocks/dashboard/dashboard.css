@@ -103,8 +103,8 @@
 .block-card {
   padding: 32px 24px;
   min-height: 400px;
-  background-color: rgb(253, 253, 255);
-  border: 0.8px solid rgb(230, 230, 230);
+  background-color: var(--bg-card);
+  border: 0.8px solid var(--border-subtle);
   border-radius: 6px;
   transition: all 0.2s;
   cursor: pointer;
@@ -115,12 +115,12 @@
 }
 
 .dark .block-card {
-  background-color: rgb(12, 12, 12);
-  border-color: rgb(12, 12, 12);
+  background-color: var(--bg-card);
+  border-color: var(--border-subtle);
 }
 
 .block-card:hover {
-  border: 1px solid var(--border-color-hover);
+  border-color: var(--border-color-hover);
   
 }
 
@@ -251,12 +251,22 @@
   margin-right: 8px;
 }
 
-.block-label-line {
+.block-label-bar-bg {
   flex: 1;
-  height: 2px;
+  height: 6px;
+  background: var(--border-color, #e5e5e5);
+  border-radius: 3px;
+  min-width: 60px;
+  margin-right: 8px;
+  overflow: hidden;
+}
+
+.block-label-bar-fill {
+  height: 100%;
+  width: var(--bar-width, 0%);
   background: var(--label-color, #22C55E);
-  min-width: 20px;
-  margin-right: 4px;
+  border-radius: 3px;
+  transition: width 0.3s ease;
 }
 
 .block-label-count {
@@ -332,7 +342,7 @@
 /* Dark theme overrides */
 html.dark .block-card {
   background-color: var(--bg-card);
-  border-color: var(--border-color);
+  border-color: var(--border-subtle);
   color: var(--text-primary);
 }
 
@@ -384,4 +394,38 @@ html.dark .blocks-create-button-centered {
 
 html.dark .blocks-create-button-centered:hover {
   border-color: var(--text-primary);
+}
+
+/* Deleting state */
+.block-card.deleting {
+  opacity: 0.5;
+  pointer-events: none;
+  position: relative;
+  overflow: hidden;
+}
+
+.block-card.deleting::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  height: 3px;
+  width: 30%;
+  background: linear-gradient(90deg, var(--dx-blue), var(--dx-blue));
+  animation: deleting-progress 1s ease-in-out infinite;
+}
+
+@keyframes deleting-progress {
+  0% {
+    left: 0;
+    width: 30%;
+  }
+  50% {
+    left: 35%;
+    width: 30%;
+  }
+  100% {
+    left: 70%;
+    width: 30%;
+  }
 }

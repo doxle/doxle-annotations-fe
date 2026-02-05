@@ -10,3 +10,7 @@ title = "Doxle"
 [web.watcher]
 reload_html = true
 watch_path = ["src", "public"]
+
+# Proxy API requests to local backend - fixes SameSite cookie issues
+[[web.proxy]]
+backend = "http://localhost:9000"

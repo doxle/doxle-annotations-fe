@@ -51,6 +51,7 @@ html, body {
     --focus-blue: #4f5bf8;
     --outline-blue: rgba(51, 66, 255, 0.4);
     --breadcrumb-hover: rgb(79,91,248);
+    --active-indicator: #3342FF;
 
 
     /* Error colors */

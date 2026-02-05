@@ -10,8 +10,8 @@ use crate::blocks::dashboard::state::state_load_blocks;
 
 
 // const D_FLAG2: Asset = asset!("/assets/icons/d-flag2.svg");
-const LOGO_LIGHT: Asset = asset!("/assets/icons/dx-walker-navbar-light.svg");
-const LOGO_DARK: Asset = asset!("/assets/icons/dx-walker-navbar-dark.svg");
+const LOGO_LIGHT: Asset = asset!("/assets/icons/dog-light.svg");
+const LOGO_DARK: Asset = asset!("/assets/icons/dog-dark.svg");
 const CHEVRON_LEFT: Asset = asset!("/assets/icons/chevron-left.svg");
 const CHEVRON_RIGHT: Asset = asset!("/assets/icons/chevron-right.svg");
 

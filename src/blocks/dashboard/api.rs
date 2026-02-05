@@ -37,10 +37,10 @@ pub async fn api_rename_label(project_id: &str, label_id: &str, new_name: String
     client::patch(&endpoint, &body).await
 }
 
-// PATCH /projects/{project_id}/labels/{label_id}
-pub async fn api_update_label_color(project_id: &str, label_id: &str, color: String) -> Result<Label, String> {
-    let endpoint = format!("/projects/{}/labels/{}", project_id, label_id);
-    let body = UpdateLabelRequest { name: None, color: Some(color) };
+// PATCH /blocks/{block_id}/labels/{label_id}
+pub async fn api_update_label_color(block_id: &str, label_id: &str, color: String) -> Result<BlockLabel, String> {
+    let endpoint = format!("/blocks/{}/labels/{}", block_id, label_id);
+    let body = serde_json::json!({ "label_color": color });
     client::patch(&endpoint, &body).await
 }
 

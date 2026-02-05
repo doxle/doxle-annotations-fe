@@ -28,6 +28,7 @@ pub fn DashboardPage()->Element{
     let navigator = use_navigator();
     let mut open_menu_id: Signal<Option<String>> = use_signal(|| None);
     let mut editing_block: Signal<Option<(String, String)>> = use_signal(|| None); // (block_id, current_name)
+    let mut deleting_block_id: Signal<Option<String>> = use_signal(|| None);
 
     info!("Loading dashboard page: ");
 
@@ -110,10 +111,11 @@ pub fn DashboardPage()->Element{
                             let approved_image_count = block.approved_image_count.clone();
                             let annotation_count = block.annotation_count.clone();
 
+                            let is_deleting = deleting_block_id() == Some(block.block_id.clone());
                             rsx!{
                                 li {
                                     key:"{block_id}",
-                                    class:"block-card",
+                                    class: if is_deleting { "block-card deleting" } else { "block-card" },
                                     onclick:move|_|{
 
                                         // Don't navigate if menu is open
@@ -166,10 +168,10 @@ pub fn DashboardPage()->Element{
                                                     },
                                                     on_delete: move |_| {
                                                         let id = bid_delete.clone();
-
-                                                        *BLOCKS_LOADING.write() = true;
+                                                        deleting_block_id.set(Some(id.clone()));
                                                         spawn(async move {
                                                             state_delete_block(&id).await;
+                                                            deleting_block_id.set(None);
                                                         });
                                                         open_menu_id.set(None);
                                                     },
@@ -196,13 +198,21 @@ pub fn DashboardPage()->Element{
                                             div {
                                                 class: "block-row-5",
                                                 for (idx, label) in block.labels.iter().enumerate(){
-                                                    div {
-                                                        class:"block-label",
-                                                        style:"--label-color: {label.label_color};",
-                                                        span { class: "block-label-num", "#{idx + 1}.{label.label_name}" }
-                                                        span { class: "block-label-line" }
-                                                        span { class: "block-label-count", "{label.label_count}" }
-                                                    }
+                                                    {{
+                                                        let max_count = block.labels.iter().map(|l| l.label_count).max().unwrap_or(1).max(1);
+                                                        let bar_pct = (label.label_count as f64 / max_count as f64 * 100.0) as u32;
+                                                        rsx! {
+                                                            div {
+                                                                class:"block-label",
+                                                                style:"--label-color: {label.label_color}; --bar-width: {bar_pct}%;",
+                                                                span { class: "block-label-num", "#{idx + 1}.{label.label_name}" }
+                                                                div { class: "block-label-bar-bg",
+                                                                    div { class: "block-label-bar-fill" }
+                                                                }
+                                                                span { class: "block-label-count", "{label.label_count}" }
+                                                            }
+                                                        }
+                                                    }}
                                                 }
                                                 // Total row
                                                 div {
