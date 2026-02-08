@@ -27,6 +27,9 @@ pub fn HomePage() -> Element {
             let window = web_sys::window().unwrap();
             let document = window.document().unwrap();
 
+            // Reset scroll position (mobile keyboard can leave page scrolled)
+            window.scroll_to_with_x_and_y(0.0, 0.0);
+
             if document.get_element_by_id("bg-dots-script").is_none() {
                 let script = document.create_element("script").unwrap();
                 script.set_id("bg-dots-script");

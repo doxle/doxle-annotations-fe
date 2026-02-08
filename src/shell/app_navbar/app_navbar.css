@@ -282,3 +282,279 @@
     text-decoration-color: var(--text-primary);
 }
 
+/* Right section with Invite button */
+.app-navbar-right-section {
+    position: absolute;
+    right: 15px;
+    display: flex;
+    align-items: center;
+}
+
+.invite-button {
+    background: var(--dx-blue);
+    color: white;
+    border: none;
+    border-radius: 4px;
+    padding: 6px 12px;
+    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    font-size: 13px;
+    font-weight: 300;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.invite-button:hover {
+    background: var(--dx-blue-hover, #0056b3);
+}
+
+/* Sidebar tabs in navbar - positioned to align with sidebar content */
+.navbar-sidebar-tabs {
+    position: absolute;
+    left: calc(100% - 18vw + 16.8px); /* Left edge aligns with sidebar content left edge */
+    display: flex;
+    gap: 24px;
+}
+
+.navbar-tab {
+    font-size: 16px;
+    font-weight: 300;
+    color: var(--text-primary);
+    cursor: pointer;
+    opacity: 0.7;
+    transition: opacity 0.2s;
+    position: relative;
+}
+
+.navbar-tab:hover {
+    opacity: 1;
+}
+
+.navbar-tab.active {
+    opacity: 1;
+}
+
+.navbar-tab.active::after {
+    content: '';
+    position: absolute;
+    top: -2px;
+    right: -6px;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--active-indicator, #3342FF);
+}
+
+.user-avatar-container {
+    position: relative;
+}
+
+.user-avatar {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: var(--dx-blue);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    font-size: 11px;
+    font-weight: 300;
+    cursor: pointer;
+    transition: opacity 0.2s;
+}
+
+.user-avatar:hover {
+    opacity: 0.85;
+}
+
+/* Account Panel */
+.account-panel-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.4);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+.account-panel {
+    background: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    width: 360px;
+    max-width: 90vw;
+    box-shadow: 0 4px 20px var(--shadow);
+    position: relative;
+    display: flex;
+    flex-direction: column;
+}
+
+.account-panel-close {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    background: none;
+    border: none;
+    font-size: 20px;
+    color: var(--text-secondary);
+    cursor: pointer;
+    padding: 0;
+    line-height: 1;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.account-panel-close:hover {
+    color: var(--text-primary);
+}
+
+.account-panel-section {
+    padding: 24px 24px 20px;
+}
+
+.account-panel-title {
+    margin: 0 0 16px 0;
+    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    font-size: 14px;
+    font-weight: 300;
+    color: var(--text-primary);
+}
+
+.account-panel-invite-form {
+    display: flex;
+    gap: 8px;
+}
+
+.account-panel-input {
+    flex: 1;
+    padding: 8px 12px;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    font-size: 13px;
+    font-weight: 300;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+}
+
+.account-panel-input:focus {
+    outline: none;
+    border-color: var(--dx-blue);
+}
+
+.account-panel-input:disabled {
+    opacity: 0.6;
+}
+
+.account-panel-send-btn {
+    background: var(--dx-blue);
+    color: white;
+    border: none;
+    border-radius: 4px;
+    padding: 8px 16px;
+    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    font-size: 13px;
+    font-weight: 300;
+    cursor: pointer;
+    transition: background 0.2s;
+    white-space: nowrap;
+}
+
+.account-panel-send-btn:hover:not(:disabled) {
+    opacity: 0.9;
+}
+
+.account-panel-send-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.account-panel-error {
+    color: #dc3545;
+    font-size: 12px;
+    margin-top: 8px;
+}
+
+.account-panel-success {
+    color: var(--text-primary);
+    font-size: 12px;
+    margin-top: 8px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.account-panel-success::before {
+    content: '';
+    width: 14px;
+    height: 14px;
+    background: #28a745;
+    border-radius: 50%;
+    display: inline-flex;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='white'%3E%3Cpath d='M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z'/%3E%3C/svg%3E");
+    background-size: 8px;
+    background-repeat: no-repeat;
+    background-position: center;
+    animation: checkmark-pop 0.3s ease-out;
+}
+
+@keyframes checkmark-pop {
+    0% { transform: scale(0); opacity: 0; }
+    50% { transform: scale(1.2); }
+    100% { transform: scale(1); opacity: 1; }
+}
+
+.account-panel-bottom {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    padding: 16px 24px;
+    border-top: 1px solid var(--border-color);
+    background: var(--bg-primary);
+    border-radius: 0 0 8px 8px;
+}
+
+.account-panel-user {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.account-panel-user-name {
+    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    font-size: 13px;
+    font-weight: 400;
+    color: var(--text-primary);
+}
+
+.account-panel-user-email {
+    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    font-size: 11px;
+    font-weight: 300;
+    color: var(--text-secondary);
+}
+
+.account-panel-logout {
+    background: none;
+    border: none;
+    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    font-size: 12px;
+    font-weight: 300;
+    color: var(--text-secondary);
+    cursor: pointer;
+    padding: 4px 0;
+    transition: color 0.2s;
+}
+
+.account-panel-logout:hover {
+    color: var(--text-primary);
+}
+

@@ -10,7 +10,7 @@ pub mod theme;
 pub mod status;
 
 pub use app_navbar::AppNavbar;
-pub use app_sidebar::AppSidebar;
+pub use app_sidebar::{AppSidebar, SidebarTab};
 pub use bottom_bar::BottomBar;
 pub use global_keyboard::setup_global_keyboard_shortcuts;
 pub use protected_route::ProtectedRoute;

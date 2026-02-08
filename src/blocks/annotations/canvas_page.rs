@@ -59,7 +59,7 @@ use super::image_layer::ImageLayer;
 use super::annotations_layer::AnnotationsLayer;
 use super::models::Annotation;
 use super::state::{state_load_annotations, state_update_annotation_label, state_delete_annotation};
-use crate::shell::{AppNavbar, app_sidebar::AppSidebar};
+use crate::shell::{AppNavbar, app_sidebar::{AppSidebar, SidebarTab}};
 use super::keyboard_shortcuts::setup_keyboard_shortcuts;
 use crate::blocks::dashboard::state::{LABELS, LABELS_LOADING, state_load_labels};
 use super::context_menu::AnnotationContextMenu;
@@ -109,6 +109,7 @@ pub fn AnnotationCanvasPage(
     let mut hidden_label_ids:Signal<HashSet<String>> = use_signal(HashSet::new);
     let mut hovered_label_id:Signal<Option<String>> = use_signal(|| None);
     let mut show_shortcuts:Signal<bool> = use_signal(|| false);
+    let sidebar_tab: Signal<SidebarTab> = use_signal(|| SidebarTab::Labels);
     setup_keyboard_shortcuts(sidebar_open, grid_visible, selected_tool, active_drawing, hidden_label_ids, hovered_label_id, show_shortcuts);
 
 
@@ -168,7 +169,10 @@ pub fn AnnotationCanvasPage(
 
     rsx! {
         style { {CSS} }
-        AppNavbar {}
+        AppNavbar {
+            sidebar_tab: Some(sidebar_tab),
+            sidebar_open: Some(sidebar_open),
+        }
         div { class: "annotation-canvas-page",
             div { class: "canvas-area",
                 if TASKS_LOADING() {
@@ -222,6 +226,7 @@ pub fn AnnotationCanvasPage(
                 hidden_label_ids:hidden_label_ids,
                 block_id: block_id.clone(),
                 selected_label_id: selected_label_id,
+                active_tab: sidebar_tab,
             }
         }
         // Context menu (outside canvas)

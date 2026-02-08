@@ -101,6 +101,7 @@ fn App() -> Element {
         apply_theme_class(theme);
     });
 
+
     rsx! {
         // Filter console warnings
                 document::Script { src: asset!("/public/filter-console.js") }

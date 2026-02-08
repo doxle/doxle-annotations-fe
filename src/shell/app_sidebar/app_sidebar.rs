@@ -11,8 +11,8 @@ const LABELS_ICON_DARK: Asset = asset!("/assets/icons/labels-dark.svg");
 const COMMENTS_ICON_LIGHT: Asset = asset!("/assets/icons/comment-light.svg");
 const COMMENTS_ICON_DARK: Asset = asset!("/assets/icons/comment-dark.svg");
 
-#[derive(Clone, Copy, PartialEq)]
-enum SidebarTab {
+#[derive(Clone, Copy, PartialEq, Debug)]
+pub enum SidebarTab {
     Labels,
     Comments,
 }
@@ -26,12 +26,11 @@ pub fn AppSidebar(
     hidden_label_ids:Signal<HashSet<String>>,
     block_id: String,
     selected_label_id: Signal<String>,
+    active_tab: Signal<SidebarTab>,
     ) -> Element {
     let is_dark = THEME() == Theme::Dark;
     let labels_icon = if is_dark { LABELS_ICON_DARK } else { LABELS_ICON_LIGHT };
     let comments_icon = if is_dark { COMMENTS_ICON_DARK } else { COMMENTS_ICON_LIGHT };
-    let mut active_tab = use_signal(|| SidebarTab::Labels);
-    let nav = navigator();
     
     // Load user if not already loaded - runs only once
     // use_hook(|| {
@@ -46,21 +45,6 @@ pub fn AppSidebar(
     rsx! {
         div {
             class: if open() { "app-sidebar open" } else { "app-sidebar" },
-            
-            // Labels and Comments tabs (at top)
-            div {
-                class: "app-sidebar-tabs",
-                div {
-                    class: if active_tab() == SidebarTab::Labels { "app-sidebar-tab active" } else { "app-sidebar-tab" },
-                    onclick: move |_| active_tab.set(SidebarTab::Labels),
-                    "Labels"
-                }
-                div {
-                    class: if active_tab() == SidebarTab::Comments { "app-sidebar-tab active" } else { "app-sidebar-tab" },
-                    onclick: move |_| active_tab.set(SidebarTab::Comments),
-                    "Comments"
-                }
-            }
             
             // Labels table
             if active_tab() == SidebarTab::Labels {
@@ -150,21 +134,9 @@ pub fn AppSidebar(
                 }
             }
             
-            // Bottom section with logout and version
+            // Bottom section with version
             div {
                 class: "app-sidebar-bottom-section",
-                
-                // Logout button
-                div {
-                    class: "app-sidebar-logout",
-                    onclick: move |_| {
-                        // Clear auth token
-                       
-                        nav.push(crate::Route::HomePage {});
-                    },
-                    "Logout"
-                }
-                
                 div {
                     class: "app-sidebar-version",
                     "v1.06"

@@ -87,7 +87,26 @@ pub fn SignInPage() -> Element {
                     class: "signin-logo",
                     src: "{SIGN_IN_LOGO}",
                     alt: "Logo",
-                    onclick: move |_| { nav.push(Route::HomePage {}); },
+                    onclick: move |_| {
+                        #[cfg(target_arch = "wasm32")]
+                        {
+                            use wasm_bindgen::JsCast;
+
+                            if let Some(window) = web_sys::window() {
+                                if let Some(document) = window.document() {
+                                    if let Some(active) = document.active_element() {
+                                        if let Ok(el) = active.dyn_into::<web_sys::HtmlElement>() {
+                                            el.blur();
+                                        }
+                                    }
+                                }
+
+                                window.scroll_to_with_x_and_y(0.0, 0.0);
+                            }
+                        }
+
+                        nav.push(Route::HomePage {});
+                    },
                 }
 
                 h2 {

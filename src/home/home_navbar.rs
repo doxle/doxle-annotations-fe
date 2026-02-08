@@ -5,6 +5,26 @@ const LOGO: Asset = asset!("/assets/icons/dog-dark.svg");
 const LOGO_HOVER: Asset = asset!("/assets/icons/dog-dark.svg");
 const NAVBAR_CSS: &str = include_str!("home_navbar.css");
 
+#[cfg(target_arch = "wasm32")]
+fn blur_active_element_and_scroll_to_top() {
+    use wasm_bindgen::JsCast;
+
+    if let Some(window) = web_sys::window() {
+        if let Some(document) = window.document() {
+            if let Some(active) = document.active_element() {
+                if let Ok(el) = active.dyn_into::<web_sys::HtmlElement>() {
+                    el.blur();
+                }
+            }
+        }
+
+        window.scroll_to_with_x_and_y(0.0, 0.0);
+    }
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+fn blur_active_element_and_scroll_to_top() {}
+
 #[component]
 pub fn Navbar() -> Element {
     let mut menu_open = use_signal(|| false);
@@ -23,7 +43,10 @@ let is_signin = matches!(route, Route::SignInPage {});
             // Left side - Logo
             div {
                 class: "home-navbar-logo",
-                onclick: move |_| { nav.push(Route::HomePage {}); },
+                onclick: move |_| {
+                    blur_active_element_and_scroll_to_top();
+                    nav.push(Route::HomePage {});
+                },
                 img {
                     class: "home-logo-img home-logo-default",
                     src: LOGO,

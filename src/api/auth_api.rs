@@ -23,6 +23,19 @@ struct ContactRequest {
     message: String,
 }
 
+#[derive(Debug, Serialize)]
+struct CreateInviteRequest {
+    email: String,
+}
+
+#[derive(Debug, Deserialize, Clone)]
+pub struct InviteResponse {
+    pub invite_code: String,
+    pub email: String,
+    pub expires_at: String,
+    pub status: String,
+}
+
 #[derive(Debug, Deserialize)]
 struct ErrorResponse {
     error: String,
@@ -163,6 +176,44 @@ pub async fn logout() -> Result<(), String> {
     }
 
     Ok(())
+}
+
+// POST /invites - create invite and send email
+pub async fn create_invite(email: &str) -> Result<InviteResponse, String> {
+    tracing::info!("📨 Creating invite for: {}", email);
+
+    let request = CreateInviteRequest {
+        email: email.to_string(),
+    };
+
+    let endpoint = format!("{}/invites", API_BASE_URL);
+
+    let response = Request::post(&endpoint)
+        .credentials(RequestCredentials::Include)
+        .header("Content-Type", "application/json")
+        .json(&request)
+        .map_err(|e| format!("Failed to serialize: {}", e))?
+        .send()
+        .await
+        .map_err(|e| format!("Network error: {}", e))?;
+
+    if !response.ok() {
+        let error_text = response
+            .text()
+            .await
+            .unwrap_or_else(|_| "Unknown error".to_string());
+        let error_msg = serde_json::from_str::<ErrorResponse>(&error_text)
+            .map(|er| er.message)
+            .unwrap_or(error_text);
+        return Err(error_msg);
+    }
+
+    let invite: InviteResponse = response
+        .json()
+        .await
+        .map_err(|e| format!("Failed to parse response: {}", e))?;
+
+    Ok(invite)
 }
 
 

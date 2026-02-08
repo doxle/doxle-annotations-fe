@@ -1,12 +1,136 @@
 use dioxus::prelude::*;
 use crate::shell::{THEME, Theme};
+use crate::shell::app_sidebar::SidebarTab;
 use crate::Route;
 use crate::atoms::tasks::state::TASKS;
 use crate::atoms::media::Image;
-use crate::users::state::{USER, USER_LOADING, load_user};
+use crate::users::state::{USER, load_user};
 use super::status_bar::StatusBar;
 use crate::api;
 use crate::blocks::dashboard::state::state_load_blocks;
+
+// Account Panel Component - opens when clicking avatar
+#[component]
+fn AccountPanel(show: Signal<bool>, user_name: String, user_email: String) -> Element {
+    let nav = use_navigator();
+    let mut email = use_signal(|| String::new());
+    let mut is_loading = use_signal(|| false);
+    let mut error_message = use_signal(|| Option::<String>::None);
+    let mut success_message = use_signal(|| Option::<String>::None);
+
+    let handle_submit = move |evt: Event<FormData>| {
+        evt.prevent_default();
+        let email_value = email();
+        
+        if email_value.trim().is_empty() {
+            error_message.set(Some("Please enter an email address".to_string()));
+            return;
+        }
+
+        spawn(async move {
+            is_loading.set(true);
+            error_message.set(None);
+            success_message.set(None);
+
+            match api::create_invite(&email_value).await {
+                Ok(_) => {
+                    success_message.set(Some(format!("Invite sent to {}", email_value)));
+                    email.set(String::new());
+                }
+                Err(e) => {
+                    error_message.set(Some(e));
+                }
+            }
+            is_loading.set(false);
+        });
+    };
+
+    let close_panel = move |_| {
+        show.set(false);
+        email.set(String::new());
+        error_message.set(None);
+        success_message.set(None);
+    };
+
+    rsx! {
+        div {
+            class: "account-panel-overlay",
+            onmousedown: close_panel,
+            
+            div {
+                class: "account-panel",
+                onmousedown: move |e| e.stop_propagation(),
+                
+                // Close button
+                button {
+                    class: "account-panel-close",
+                    onclick: close_panel,
+                    "×"
+                }
+                
+                // Invite section
+                div {
+                    class: "account-panel-section",
+                    h3 { class: "account-panel-title", "Invite" }
+                    
+                    form {
+                        onsubmit: handle_submit,
+                        class: "account-panel-invite-form",
+                        
+                        input {
+                            class: "account-panel-input",
+                            r#type: "email",
+                            placeholder: "Enter email address",
+                            required: true,
+                            value: "{email}",
+                            disabled: is_loading(),
+                            oninput: move |e| email.set(e.value())
+                        }
+                        
+                        button {
+                            class: "account-panel-send-btn",
+                            r#type: "submit",
+                            disabled: is_loading(),
+                            if is_loading() { "..." } else { "Send" }
+                        }
+                    }
+                    
+                    if let Some(error) = error_message() {
+                        div { class: "account-panel-error", "{error}" }
+                    }
+                    
+                    if let Some(success) = success_message() {
+                        div { class: "account-panel-success", "{success}" }
+                    }
+                }
+                
+                // Bottom bar with user info and logout
+                div {
+                    class: "account-panel-bottom",
+                    
+                    // User info (left)
+                    div {
+                        class: "account-panel-user",
+                        span { class: "account-panel-user-name", "{user_name}" }
+                        span { class: "account-panel-user-email", "{user_email}" }
+                    }
+                    
+                    // Logout (right)
+                    button {
+                        class: "account-panel-logout",
+                        onclick: move |_| {
+                            spawn(async {
+                                let _ = api::logout().await;
+                            });
+                            nav.push(Route::SignInPage {});
+                        },
+                        "Sign Out"
+                    }
+                }
+            }
+        }
+    }
+}
 
 
 // const D_FLAG2: Asset = asset!("/assets/icons/d-flag2.svg");
@@ -16,23 +140,24 @@ const CHEVRON_LEFT: Asset = asset!("/assets/icons/chevron-left.svg");
 const CHEVRON_RIGHT: Asset = asset!("/assets/icons/chevron-right.svg");
 
 #[component]
-pub fn AppNavbar(children:Element) -> Element {
+pub fn AppNavbar(
+    children: Element,
+    #[props(default)] sidebar_tab: Option<Signal<SidebarTab>>,
+    #[props(default)] sidebar_open: Option<Signal<bool>>,
+) -> Element {
     let route = use_route::<Route>();
     let nav = use_navigator();
     let is_dark = THEME() == Theme::Dark;
     let mut logo_menu_open = use_signal(|| false);
+    let mut show_account_panel = use_signal(|| false);
 
-    // use_hook(||{
-    //     if api::get_access_token().is_some() // token exists
-    //     && USER.read().is_none() // User is none
-    //     && !*USER_LOADING.read() // User is not currently loading - prevents starting multiple user calls
-    //     {
-    //         spawn(async move {
-    //             load_user().await;
-    //         });
-    //     }
-    // });
-    
+    // Load user once when AppNavbar mounts (no signal reads = runs once, won't loop)
+    use_effect(|| {
+        spawn(async move {
+            load_user().await;
+        });
+    });
+
     // Extract data from route
     let (block_id, block_name, task_id, task_name, image_name, prev_img, next_img, current_idx, total_imgs): (
         Option<String>, Option<String>, Option<String>, Option<String>, Option<String>, Option<Image>, Option<Image>, usize, usize
@@ -154,30 +279,7 @@ pub fn AppNavbar(children:Element) -> Element {
 
              div {
                 class: "app-navbar-left-section",
-                // User name - only clickable/underlined when not on dashboard
-                if let Some(user) = &*USER.read() {
-                    if block_name.is_some() {
-                        // Not on dashboard - show clickable username
-                        span {
-                            class: "app-navbar-username clickable",
-                            onclick: move |_| {
-                                spawn(async move {
-                                    state_load_blocks().await;
-                                });
-                                nav.push(Route::DashboardPage {});
-                            },
-                            "@{user.user_name}"
-                        }
-                    } else {
-                        // On dashboard - no underline
-                        span {
-                            class: "app-navbar-username",
-                            "@{user.user_name}"
-                        }
-                    }
-                }
-                // Breadcrumb
-                // Block name - clickable to go back to dashboard (to load all blocks)
+                // Breadcrumb - Block name clickable to go back to dashboard
                 if let Some(name) = &block_name {
                     div { 
                         class: "app-breadcrumb-item clickable",
@@ -194,7 +296,7 @@ pub fn AppNavbar(children:Element) -> Element {
                 // Task name
                 if let Some(name) = &task_name {
                     // Add slash separator
-                    if block_name.is_some() || USER.read().is_some() {
+                    if block_name.is_some() {
                         span {
                             class: "app-breadcrumb-chevron",
                             "/"
@@ -313,6 +415,63 @@ pub fn AppNavbar(children:Element) -> Element {
                 StatusBar {}
             }
 
+            // Sidebar tabs (only when sidebar is open)
+            if let (Some(mut tab_signal), Some(open_signal)) = (sidebar_tab, sidebar_open) {
+                if open_signal() {
+                    div {
+                        class: "navbar-sidebar-tabs",
+                        div {
+                            class: if tab_signal() == SidebarTab::Labels { "navbar-tab active" } else { "navbar-tab" },
+                            onclick: move |_| tab_signal.set(SidebarTab::Labels),
+                            "Labels"
+                        }
+                        div {
+                            class: if tab_signal() == SidebarTab::Comments { "navbar-tab active" } else { "navbar-tab" },
+                            onclick: move |_| tab_signal.set(SidebarTab::Comments),
+                            "Comments"
+                        }
+                    }
+                }
+            }
+
+            // Right section - User avatar
+            if let Some(user) = &*USER.read() {
+                {
+                    // Get initials from user name
+                    let initials: String = user.user_name
+                        .split_whitespace()
+                        .filter_map(|word| word.chars().next())
+                        .take(2)
+                        .collect::<String>()
+                        .to_uppercase();
+                    let initials = if initials.is_empty() { 
+                        user.user_email.chars().next().unwrap_or('U').to_uppercase().to_string() 
+                    } else { 
+                        initials 
+                    };
+                    let user_name = user.user_name.clone();
+                    let user_email = user.user_email.clone();
+                    rsx! {
+                        div {
+                            class: "app-navbar-right-section",
+                            div {
+                                class: "user-avatar",
+                                onclick: move |_| show_account_panel.set(true),
+                                "{initials}"
+                            }
+                        }
+                        
+                        // Account Panel
+                        if show_account_panel() {
+                            AccountPanel { 
+                                show: show_account_panel,
+                                user_name: user_name,
+                                user_email: user_email
+                            }
+                        }
+                    }
+                }
+            }
         }
     }
 }
