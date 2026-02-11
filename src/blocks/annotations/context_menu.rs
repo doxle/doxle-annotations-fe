@@ -28,20 +28,17 @@ pub fn AnnotationContextMenu(
         .and_then(|w| Some(w.inner_height().ok()?.as_f64()?))
         .unwrap_or(800.0);
     
-    // If menu would overflow bottom, position above click point
-    let final_y = if y + menu_height > viewport_height - 20.0 {
-        (y - menu_height.min(300.0)).max(10.0)
+    // Anchor at click point, pick direction with more space
+    let space_below = viewport_height - y - 20.0;
+    let space_above = y - 20.0;
+    let grow_up = space_above > space_below;
+    let max_h = (if grow_up { space_above } else { space_below }).min(350.0);
+
+    let pos_style = if grow_up {
+        let bottom = viewport_height - y;
+        format!("left: {x}px; bottom: {bottom}px; max-height: {max_h}px;")
     } else {
-        y
-    };
-    
-    // Cap max height based on available space
-    let max_h = if final_y < y {
-        // Menu is above click - use space from top
-        (y - 20.0).min(350.0)
-    } else {
-        // Menu is below click - use space to bottom
-        (viewport_height - y - 20.0).min(350.0)
+        format!("left: {x}px; top: {y}px; max-height: {max_h}px;")
     };
 
 	rsx!{
@@ -54,7 +51,7 @@ pub fn AnnotationContextMenu(
         
 		div{
 			class: "annotation-context-menu",
-            style: "left: {x}px; top: {final_y}px; max-height: {max_h}px;",
+            style: "{pos_style}",
             onclick: move |evt| evt.stop_propagation(),
 
             // Scrollable label options

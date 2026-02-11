@@ -42,7 +42,7 @@ pub async fn state_create_task(block_id:&str, name:String) -> Result<Task, Strin
  	}
  }
 
-pub async fn state_update_task_state(block_id:&str, task_id:&str, state:String) {
+pub async fn state_update_task_state(block_id:&str, task_id:&str, state:super::model::TaskState) {
  	 // Find task index and backup old state only
  	 let (index, old_state) = {
  	 	let tasks = TASKS.read();
@@ -56,7 +56,7 @@ pub async fn state_update_task_state(block_id:&str, task_id:&str, state:String) 
  	 TASKS.write()[index].task_state = state.clone();
 
  	 //API call
- 	if let Err(e) = api::api_update_task(block_id, task_id, None, Some(state)).await {
+ 	if let Err(e) = api::api_update_task(block_id, task_id, None, Some(state), None, None).await {
  	 	tracing::error!("❌ Failed to update task state: {}", e);
         // Rollback
         TASKS.write()[index].task_state = old_state;
@@ -103,7 +103,7 @@ pub async fn state_rename_task(block_id: &str, task_id: &str, new_name: String) 
     TASKS.write()[index].task_name = new_name.clone();
 
     // API call
-    if let Err(e) = api::api_update_task(block_id, task_id, Some(new_name), None).await {
+    if let Err(e) = api::api_update_task(block_id, task_id, Some(new_name), None, None, None).await {
         tracing::error!("❌ Failed to rename task: {}", e);
         // Rollback
         TASKS.write()[index].task_name = old_name;

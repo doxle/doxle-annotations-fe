@@ -47,9 +47,16 @@ pub fn SignupPage() -> Element {
             // Step 1: Sign up with Cognito
             tracing::info!("📝 Signing up user with Cognito: {}", email_value);
             match api::signup(&email_value, &password_value, &invite_code_value).await {
-                Ok(_) => {
+                Ok(signup_resp) => {
                     tracing::info!("✅ Cognito signup successful");
                     
+                    // Get role from invite (returned by signup endpoint)
+                    let user_role = match signup_resp.role.as_deref() {
+                        Some("builder") => crate::users::api::UserRole::Builder,
+                        Some("admin") => crate::users::api::UserRole::Admin,
+                        _ => crate::users::api::UserRole::Annotator,
+                    };
+
                     // Step 2: Authenticate (cookies set automatically)
                     tracing::info!("🔐 Authenticating");
                     match api::authenticate(&email_value, &password_value).await {
@@ -64,7 +71,7 @@ pub fn SignupPage() -> Element {
                                 name_value,
                                 email_value,
                                 None, // No company field
-                                "annotator".to_string()
+                                user_role,
                             ).await {
                                 Ok(_) => {
                                     tracing::info!("✅ User profile created successfully");

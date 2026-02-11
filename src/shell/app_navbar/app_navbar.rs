@@ -14,28 +14,59 @@ use crate::blocks::dashboard::state::state_load_blocks;
 fn AccountPanel(show: Signal<bool>, user_name: String, user_email: String) -> Element {
     let nav = use_navigator();
     let mut email = use_signal(|| String::new());
+    let mut selected_role = use_signal(|| Option::<String>::None);
     let mut is_loading = use_signal(|| false);
     let mut error_message = use_signal(|| Option::<String>::None);
     let mut success_message = use_signal(|| Option::<String>::None);
+    let mut invites: Signal<Vec<api::InviteResponse>> = use_signal(Vec::new);
+    let mut invites_loading = use_signal(|| false);
+
+    let is_admin = USER.read().as_ref().map(|u| u.is_admin()).unwrap_or(false);
+
+    // Load invites when panel opens (admin only)
+    use_effect(move || {
+        if is_admin {
+            spawn(async move {
+                invites_loading.set(true);
+                match api::list_invites().await {
+                    Ok(list) => invites.set(list),
+                    Err(e) => tracing::error!("Failed to load invites: {}", e),
+                }
+                invites_loading.set(false);
+            });
+        }
+    });
 
     let handle_submit = move |evt: Event<FormData>| {
         evt.prevent_default();
         let email_value = email();
+        let role_value = selected_role();
         
         if email_value.trim().is_empty() {
             error_message.set(Some("Please enter an email address".to_string()));
             return;
         }
 
+        let role = match role_value {
+            Some(r) => r,
+            None => {
+                error_message.set(Some("Please select a role".to_string()));
+                return;
+            }
+        };
+
         spawn(async move {
             is_loading.set(true);
             error_message.set(None);
             success_message.set(None);
 
-            match api::create_invite(&email_value).await {
-                Ok(_) => {
+            match api::create_invite(&email_value, &role).await {
+                Ok(invite) => {
                     success_message.set(Some(format!("Invite sent to {}", email_value)));
                     email.set(String::new());
+                    selected_role.set(None);
+                    // Add to local list
+                    invites.write().push(invite);
                 }
                 Err(e) => {
                     error_message.set(Some(e));
@@ -48,6 +79,7 @@ fn AccountPanel(show: Signal<bool>, user_name: String, user_email: String) -> El
     let close_panel = move |_| {
         show.set(false);
         email.set(String::new());
+        selected_role.set(None);
         error_message.set(None);
         success_message.set(None);
     };
@@ -68,39 +100,142 @@ fn AccountPanel(show: Signal<bool>, user_name: String, user_email: String) -> El
                     "×"
                 }
                 
-                // Invite section
-                div {
-                    class: "account-panel-section",
-                    h3 { class: "account-panel-title", "Invite" }
-                    
-                    form {
-                        onsubmit: handle_submit,
-                        class: "account-panel-invite-form",
+                // Invite section (admin only)
+                if is_admin {
+                    div {
+                        class: "account-panel-section",
+                        h3 { class: "account-panel-title", "Invite" }
                         
-                        input {
-                            class: "account-panel-input",
-                            r#type: "email",
-                            placeholder: "Enter email address",
-                            required: true,
-                            value: "{email}",
-                            disabled: is_loading(),
-                            oninput: move |e| email.set(e.value())
+                        form {
+                            onsubmit: handle_submit,
+                            
+                            div {
+                                class: "account-panel-invite-form",
+                                input {
+                                    class: "account-panel-input",
+                                    r#type: "email",
+                                    placeholder: "Enter email address",
+                                    required: true,
+                                    value: "{email}",
+                                    disabled: is_loading(),
+                                    oninput: move |e| email.set(e.value())
+                                }
+                                button {
+                                    class: "account-panel-send-btn",
+                                    r#type: "submit",
+                                    disabled: is_loading(),
+                                    if is_loading() { "..." } else { "Send" }
+                                }
+                            }
+
+                            // Role selector
+                            div {
+                                class: "account-panel-role-selector",
+                                for role in ["annotator", "builder"] {
+                                    {
+                                        let role_str = role.to_string();
+                                        let role_clone = role_str.clone();
+                                        let is_selected = selected_role() == Some(role_str.clone());
+                                        rsx! {
+                                            label {
+                                                class: "account-panel-role-option",
+                                                input {
+                                                    r#type: "radio",
+                                                    name: "invite-role",
+                                                    checked: is_selected,
+                                                    onchange: move |_| selected_role.set(Some(role_clone.clone())),
+                                                }
+                                                "{role}"
+                                            }
+                                        }
+                                    }
+                                }
+                            }
                         }
                         
-                        button {
-                            class: "account-panel-send-btn",
-                            r#type: "submit",
-                            disabled: is_loading(),
-                            if is_loading() { "..." } else { "Send" }
+                        if let Some(error) = error_message() {
+                            div { class: "account-panel-error", "{error}" }
                         }
-                    }
-                    
-                    if let Some(error) = error_message() {
-                        div { class: "account-panel-error", "{error}" }
-                    }
-                    
-                    if let Some(success) = success_message() {
-                        div { class: "account-panel-success", "{success}" }
+                        
+                        if let Some(success) = success_message() {
+                            div { class: "account-panel-success", "{success}" }
+                        }
+
+                        // Pending invites list
+                        if !invites.read().is_empty() {
+                            div {
+                                class: "account-panel-invites-list",
+                                h4 { class: "account-panel-subtitle", "Pending Invites" }
+                                for invite in invites.read().iter() {
+                                    {
+                                        let code = invite.invite_code.clone();
+                                        let invite_email = invite.email.clone();
+                                        let invite_role = invite.role.clone();
+                                        let invite_status = invite.status.clone();
+                                        let toggle_email = invite.email.clone();
+                                        let toggle_code = invite.invite_code.clone();
+                                        let toggle_role = invite.role.clone();
+                                        rsx! {
+                                            div {
+                                                class: "account-panel-invite-row",
+                                                span { class: "account-panel-invite-email", "{invite_email}" }
+                                                button {
+                                                    class: "account-panel-invite-role-btn",
+                                                    onclick: move |e| {
+                                                        e.stop_propagation();
+                                                        let email = toggle_email.clone();
+                                                        let code = toggle_code.clone();
+                                                        let new_role = if toggle_role == "annotator" { "builder" } else { "annotator" };
+                                                        let new_role = new_role.to_string();
+                                                        spawn(async move {
+                                                            if let Ok(_) = api::delete_invite(&code).await {
+                                                                match api::create_invite(&email, &new_role).await {
+                                                                    Ok(new_invite) => {
+                                                                        let mut list = invites.write();
+                                                                        list.retain(|i| i.invite_code != code);
+                                                                        list.push(new_invite);
+                                                                    }
+                                                                    Err(e) => tracing::error!("Failed to recreate invite: {}", e),
+                                                                }
+                                                            }
+                                                        });
+                                                    },
+                                                    "{invite_role}"
+                                                }
+                                                span { class: "account-panel-invite-status", "{invite_status}" }
+                                                button {
+                                                    class: "account-panel-invite-delete",
+                                                    onclick: move |_| {
+                                                        let code = code.clone();
+                                                        spawn(async move {
+                                                            match api::delete_invite(&code).await {
+                                                                Ok(_) => {
+                                                                    invites.write().retain(|i| i.invite_code != code);
+                                                                }
+                                                                Err(e) => {
+                                                                    tracing::error!("Failed to delete invite: {}", e);
+                                                                }
+                                                            }
+                                                        });
+                                                    },
+                                                    svg {
+                                                        width: "14",
+                                                        height: "14",
+                                                        view_box: "0 0 24 24",
+                                                        fill: "none",
+                                                        stroke: "currentColor",
+                                                        stroke_width: "1.5",
+                                                        stroke_linecap: "round",
+                                                        stroke_linejoin: "round",
+                                                        path { d: "M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6h14" }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
                 
@@ -159,13 +294,13 @@ pub fn AppNavbar(
     });
 
     // Extract data from route
-    let (block_id, block_name, task_id, task_name, image_name, prev_img, next_img, current_idx, total_imgs): (
-        Option<String>, Option<String>, Option<String>, Option<String>, Option<String>, Option<Image>, Option<Image>, usize, usize
+    let (block_id, block_name, block_type_str, task_id, task_name, image_name, prev_img, next_img, current_idx, total_imgs): (
+        Option<String>, Option<String>, String, Option<String>, Option<String>, Option<String>, Option<Image>, Option<Image>, usize, usize
     ) = match &route {
-        Route::TasksListPage { block_id, block_name } => {
-            (Some(block_id.clone()), Some(block_name.clone()), None, None, None, None, None, 0, 0)
+        Route::TasksListPage { block_id, block_name, block_type } => {
+            (Some(block_id.clone()), Some(block_name.clone()), block_type.clone(), None, None, None, None, None, 0, 0)
         }
-        Route::AnnotationCanvasPage { block_id, block_name, task_id, task_name, image_id, image_name } => {
+        Route::AnnotationCanvasPage { block_id, block_name, block_type, task_id, task_name, image_id, image_name } => {
             let mut prev_img: Option<Image> = None;
             let mut next_img: Option<Image> = None;
             let mut current_idx: usize = 0;
@@ -182,14 +317,15 @@ pub fn AppNavbar(
                     else { prev_img = Some(img.clone()); }
                 }
             }
-            (Some(block_id.clone()), Some(block_name.clone()), Some(task_id.clone()), Some(task_name.clone()), Some(image_name.clone()), prev_img, next_img, current_idx, total_imgs)
+            (Some(block_id.clone()), Some(block_name.clone()), block_type.clone(), Some(task_id.clone()), Some(task_name.clone()), Some(image_name.clone()), prev_img, next_img, current_idx, total_imgs)
         }
-        _ => (None, None, None, None, None, None, None, 0, 0)
+        _ => (None, None, String::new(), None, None, None, None, None, 0, 0)
     };
     
     // Clone for use in closures
     let bid = block_id.clone().unwrap_or_default();
     let bname = block_name.clone().unwrap_or_default();
+    let btype = block_type_str.clone();
     let tid = task_id.clone().unwrap_or_default();
     let tname = task_name.clone().unwrap_or_default();
     
@@ -229,13 +365,7 @@ pub fn AppNavbar(
                             },
                             "Dashboard"
                         }
-                         div {
-                             class: "logo-menu-item",
-                             onclick: move |_| {
-                                 logo_menu_open.set(false);
-                             },
-                             "Tasks"
-                         }
+                       
                          div { class: "logo-menu-divider" }
                          div {
                              class: "logo-menu-item",
@@ -307,11 +437,12 @@ pub fn AppNavbar(
                         {
                             let bid = bid.clone();
                             let bname = bname.clone();
+                            let btype = btype.clone();
                             rsx! {
                                 div { 
                                     class: "app-breadcrumb-item clickable",
                                     onclick: move |_| {
-                                    nav.push(Route::TasksListPage { block_id: bid.clone(), block_name: bname.clone() });
+                                    nav.push(Route::TasksListPage { block_id: bid.clone(), block_name: bname.clone(), block_type: btype.clone() });
                                     },
                                     "{name}" 
                                 }
@@ -357,6 +488,7 @@ pub fn AppNavbar(
                         {
                             let bid = bid.clone();
                             let bname = bname.clone();
+                            let btype = btype.clone();
                             let tid = tid.clone();
                             let tname = tname.clone();
                             let img_id = img.image_id.clone();
@@ -369,6 +501,7 @@ pub fn AppNavbar(
                                         nav.push(Route::AnnotationCanvasPage {
                                             block_id: bid.clone(),
                                             block_name: bname.clone(),
+                                            block_type: btype.clone(),
                                             task_id: tid.clone(),
                                             task_name: tname.clone(),
                                             image_id: img_id.clone(),
@@ -384,6 +517,7 @@ pub fn AppNavbar(
                         {
                             let bid = bid.clone();
                             let bname = bname.clone();
+                            let btype = btype.clone();
                             let tid = tid.clone();
                             let tname = tname.clone();
                             let img_id = img.image_id.clone();
@@ -396,6 +530,7 @@ pub fn AppNavbar(
                                         nav.push(Route::AnnotationCanvasPage {
                                             block_id: bid.clone(),
                                             block_name: bname.clone(),
+                                            block_type: btype.clone(),
                                             task_id: tid.clone(),
                                             task_name: tname.clone(),
                                             image_id: img_id.clone(),

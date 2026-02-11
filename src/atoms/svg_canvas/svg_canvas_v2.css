@@ -12,12 +12,13 @@
 
 :root {
     --canvas-image-filter: none;
-    --dot-color: rgba(0, 0, 0, 0.15);
+    --dot-color: rgba(0, 0, 0, 0.07
+    );
 }
 
 html.dark {
     --canvas-image-filter: invert(1) hue-rotate(180deg);
-    --dot-color: rgba(255, 255, 255, 0.4);
+    --dot-color: rgba(255, 255, 255, 0.15);
 }
 
 

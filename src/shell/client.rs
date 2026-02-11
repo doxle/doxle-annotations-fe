@@ -3,6 +3,24 @@ use serde_json::json;
 use gloo_net::http::Request;
 use web_sys::RequestCredentials;
 
+/// Distinguishes auth failures from transient/network errors
+#[derive(Debug, Clone)]
+pub enum ApiError {
+    /// 401 after refresh attempt failed — user must sign in again
+    Unauthorized(String),
+    /// Any other error (network, 4xx/5xx, parse) — not an auth issue
+    Other(String),
+}
+
+impl std::fmt::Display for ApiError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ApiError::Unauthorized(msg) => write!(f, "{}", msg),
+            ApiError::Other(msg) => write!(f, "{}", msg),
+        }
+    }
+}
+
 // Shared API configuration
 // ========== TOGGLE FOR LOCAL vs DEPLOYED ==========
 // Uncomment ONE of these:
@@ -69,6 +87,11 @@ pub fn to_cloudfront_url(s3_url: &str) -> String {
 
 // Generic GET helper
 pub async fn get<R: for<'de> Deserialize<'de>>(endpoint: &str) -> Result<R, String> {
+    get_typed(endpoint).await.map_err(|e| e.to_string())
+}
+
+/// GET that returns ApiError so callers can distinguish 401 from other errors
+pub async fn get_typed<R: for<'de> Deserialize<'de>>(endpoint: &str) -> Result<R, ApiError> {
     let url = format!("{}{}", API_BASE_URL, endpoint);
     let mut tried_refresh = false;
 
@@ -77,20 +100,19 @@ pub async fn get<R: for<'de> Deserialize<'de>>(endpoint: &str) -> Result<R, Stri
             .credentials(RequestCredentials::Include)
             .send()
             .await
-            .map_err(|e| format!("Network error: {}", e))?;
+            .map_err(|e| ApiError::Other(format!("Network error: {}", e)))?;
 
         // If 401 try to get refresh from BE
         if resp.status() == 401 && !tried_refresh {
             tried_refresh = true;
             if refresh_session().await.is_ok() { continue; }
-            handle_unauthorized();
-            return Err("Unauthorized - please log in again".into());
+            return Err(ApiError::Unauthorized("Unauthorized - please log in again".into()));
         }
         if !resp.ok() {
             let txt = resp.text().await.unwrap_or_else(|_| "Unknown error".into());
-            return Err(format!("Request failed ({}): {}", resp.status(), txt));
+            return Err(ApiError::Other(format!("Request failed ({}): {}", resp.status(), txt)));
         }
-        return resp.json().await.map_err(|e| format!("Failed to parse response: {}", e));
+        return resp.json().await.map_err(|e| ApiError::Other(format!("Failed to parse response: {}", e)));
     }
 }
 

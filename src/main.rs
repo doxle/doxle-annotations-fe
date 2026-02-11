@@ -126,21 +126,6 @@ fn App() -> Element {
                 document::Style { {APP_NAVBAR_CSS} }
                 document::Style { {DOTS_CSS} }
 
-               
-                // Theme script in head - runs before body renders
-                script {
-                    dangerous_inner_html: {
-                        r#"(function(){
-                            var html = document.documentElement;
-                            var saved = localStorage.getItem('doxle_theme');
-                            if (saved === 'dark') html.classList.add('dark');
-                            else if (saved === 'light') html.classList.add('light');
-                            else if (window.matchMedia('(prefers-color-scheme:dark)').matches) html.classList.add('dark');
-                            else html.classList.add('light');
-                        })();"#
-                    }
-                }
-
                 // Fonts from template with asset URLs
                 document::Style {
                     {
@@ -185,12 +170,12 @@ enum Route {
     DashboardPage{},
     #[route("/blocks/new")]
     CreateBlockPage{},
-    #[route("/blocks/:block_id/:block_name/tasks/new")]
-    CreateTaskPage { block_id: String, block_name: String },
-    #[route("/blocks/:block_id/:block_name/tasks")]
-    TasksListPage { block_id: String, block_name: String },
-    #[route("/blocks/:block_id/:block_name/tasks/:task_id/:task_name/:image_id/:image_name/drawing")]
-    AnnotationCanvasPage { block_id: String, block_name: String, task_id: String, task_name: String, image_id: String, image_name: String },
+    #[route("/blocks/:block_id/:block_name/:block_type/tasks/new")]
+    CreateTaskPage { block_id: String, block_name: String, block_type: String },
+    #[route("/blocks/:block_id/:block_name/:block_type/tasks")]
+    TasksListPage { block_id: String, block_name: String, block_type: String },
+    #[route("/blocks/:block_id/:block_name/:block_type/tasks/:task_id/:task_name/:image_id/:image_name/drawing")]
+    AnnotationCanvasPage { block_id: String, block_name: String, block_type: String, task_id: String, task_name: String, image_id: String, image_name: String },
     #[route("/matrix")]
     MatrixPage {},
     #[route("/bricks")]

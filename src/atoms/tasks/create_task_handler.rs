@@ -19,6 +19,7 @@ pub struct PendingUpload {
 pub async fn handle_create_task(
     block_id: String,
     block_name: String,
+    block_type: String,
     task_name: String,
     uploads: Vec<PendingUpload>,
     nav: Navigator,
@@ -72,7 +73,7 @@ pub async fn handle_create_task(
                 }
             }
 
-            nav.push(Route::TasksListPage { block_id, block_name });
+            nav.push(Route::TasksListPage { block_id, block_name, block_type });
         },
         Err(e) => {
             error!("❌ Failed to create task: {}", e);

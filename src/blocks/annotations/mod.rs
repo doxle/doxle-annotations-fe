@@ -6,4 +6,5 @@ pub mod annotations_layer;
 pub mod canvas_page;
 pub mod keyboard_shortcuts;
 pub mod context_menu;
+pub mod comment_dialog;
 pub use canvas_page::AnnotationCanvasPage;

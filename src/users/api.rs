@@ -1,16 +1,39 @@
 use serde::{Deserialize, Serialize};
 
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
+#[serde(rename_all = "lowercase")]
+pub enum UserRole {
+    Admin,
+    Annotator,
+    Builder,
+}
 
-#[derive(Debug, Serialize, Deserialize)]
+impl Default for UserRole {
+    fn default() -> Self {
+        Self::Annotator
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct User {
     pub user_id: String,
     #[serde(default)]
     pub user_name: String,
     pub user_email: String,
     pub user_company: Option<String>,
-    pub user_role: String,
+    pub user_role: UserRole,
     pub user_created_at: String,
     pub user_last_login: Option<String>,
+}
+
+impl User {
+    pub fn is_admin(&self) -> bool {
+        self.user_role == UserRole::Admin
+    }
+
+    pub fn is_annotator(&self) -> bool {
+        self.user_role == UserRole::Annotator
+    }
 }
 
 #[derive(Debug, Serialize)]
@@ -18,7 +41,12 @@ pub struct CreateUserRequest {
     pub user_name: String,
     pub user_email: String,
     pub user_company: Option<String>,
-    pub user_role: String,
+    pub user_role: UserRole,
+}
+
+// GET /users
+pub async fn list_users() -> Result<Vec<User>, String> {
+    crate::shell::client::get::<Vec<User>>("/users").await
 }
 
 // GET /users/me
@@ -32,7 +60,7 @@ pub async fn create_user_profile(
     user_name: String,
     user_email: String,
     user_company: Option<String>,
-    user_role: String,
+    user_role: UserRole,
 ) -> Result<User, String> {
     tracing::info!("➕ Creating new user profile: {}", user_email);
 

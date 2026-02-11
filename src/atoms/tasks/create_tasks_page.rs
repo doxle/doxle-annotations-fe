@@ -33,6 +33,7 @@ fn format_size(bytes: f64) -> String {
 pub struct CreateTaskPageProps {
     pub block_id: String,
     pub block_name: String,
+    pub block_type: String,
 }
 
 #[component]
@@ -46,8 +47,10 @@ pub fn CreateTaskPage(props: CreateTaskPageProps) -> Element {
     
     let block_id = props.block_id.clone();
     let block_name = props.block_name.clone();
+    let block_type = props.block_type.clone();
     let block_id_for_back = block_id.clone();
     let block_name_for_back = block_name.clone();
+    let block_type_for_back = block_type.clone();
 
     let is_dark = THEME() == Theme::Dark;
     let tasks_icon = if is_dark { TASKS_ICON_DARK } else { TASKS_ICON_LIGHT };
@@ -78,12 +81,14 @@ pub fn CreateTaskPage(props: CreateTaskPageProps) -> Element {
 
         let block_id_clone = block_id.clone();
         let block_name_clone = block_name.clone();
+        let block_type_clone = block_type.clone();
         let nav = nav.clone();
 
         spawn(async move {
             handle_create_task(
                 block_id_clone,
                 block_name_clone,
+                block_type_clone,
                 name,
                 images_to_upload,
                 nav,
@@ -228,7 +233,7 @@ pub fn CreateTaskPage(props: CreateTaskPageProps) -> Element {
                             class: "tasks-back-button",
                             disabled: *is_submitting.read(),
                             onclick: move |_| {
-                                nav.push(Route::TasksListPage { block_id: block_id_for_back.clone(), block_name: block_name_for_back.clone() });
+                                nav.push(Route::TasksListPage { block_id: block_id_for_back.clone(), block_name: block_name_for_back.clone(), block_type: block_type_for_back.clone() });
                             },
                             "Back"
                         }

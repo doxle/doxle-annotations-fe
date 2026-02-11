@@ -54,7 +54,7 @@ pub fn SignInPage() -> Element {
                         Err(e) => {
                             tracing::warn!("User profile not found (continuing anyway): {}", e);
                             let name = email_value.split('@').next().unwrap_or("User").to_string();
-                            match api::create_user_profile(name, email_value.clone(), None, "user".to_string()).await {
+                            match api::create_user_profile(name, email_value.clone(), None, crate::users::api::UserRole::Annotator).await {
                                 Ok(_) => tracing::info!("✅ User profile created"),
                                 Err(e) => tracing::warn!("Failed to create profile: {}", e),
                             }

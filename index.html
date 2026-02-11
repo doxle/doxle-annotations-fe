@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta content="text/html;charset=utf-8" http-equiv="Content-Type">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta charset="UTF-8">
+    <!-- Prevent flash: set theme class + background BEFORE wasm loads -->
+    <script>
+      (function(){
+        var h=document.documentElement;
+        var s=localStorage.getItem('doxle_theme');
+        if(s==='dark')h.className='dark';
+        else if(s==='light')h.className='light';
+        else if(window.matchMedia('(prefers-color-scheme:dark)').matches)h.className='dark';
+        else h.className='light';
+      })();
+    </script>
+    <style>
+      html, body { margin:0; padding:0; height:100%; width:100%; overflow:hidden; }
+      body { background:#ffffff; }
+      html.dark body { background:#000000; }
+    </style>
+  </head>
+  <body>
+    <div id="main"></div>
+  </body>
+</html>

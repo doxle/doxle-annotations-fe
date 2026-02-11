@@ -26,14 +26,24 @@ struct ContactRequest {
 #[derive(Debug, Serialize)]
 struct CreateInviteRequest {
     email: String,
+    role: String,
 }
 
 #[derive(Debug, Deserialize, Clone)]
 pub struct InviteResponse {
     pub invite_code: String,
     pub email: String,
+    pub role: String,
     pub expires_at: String,
+    pub created_at: String,
     pub status: String,
+}
+
+#[derive(Debug, Deserialize, Clone)]
+pub struct SignupResponse {
+    pub message: String,
+    #[serde(default)]
+    pub role: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -89,7 +99,7 @@ pub async fn authenticate(email: &str, password: &str) -> Result<SessionResponse
 }
 
 // POST /signup
-pub async fn signup(email: &str, password: &str, invite_code: &str) -> Result<(), String> {
+pub async fn signup(email: &str, password: &str, invite_code: &str) -> Result<SignupResponse, String> {
     tracing::info!("📝 Starting signup for: {}", email);
 
     let request = SignupRequest {
@@ -120,7 +130,12 @@ pub async fn signup(email: &str, password: &str, invite_code: &str) -> Result<()
         return Err(error_msg);
     }
 
-    Ok(())
+    let signup_resp: SignupResponse = response
+        .json()
+        .await
+        .map_err(|e| format!("Failed to parse signup response: {}", e))?;
+
+    Ok(signup_resp)
 }
 
 // POST /contact - send contact form message
@@ -179,11 +194,12 @@ pub async fn logout() -> Result<(), String> {
 }
 
 // POST /invites - create invite and send email
-pub async fn create_invite(email: &str) -> Result<InviteResponse, String> {
-    tracing::info!("📨 Creating invite for: {}", email);
+pub async fn create_invite(email: &str, role: &str) -> Result<InviteResponse, String> {
+    tracing::info!("📨 Creating invite for: {} with role: {}", email, role);
 
     let request = CreateInviteRequest {
         email: email.to_string(),
+        role: role.to_string(),
     };
 
     let endpoint = format!("{}/invites", API_BASE_URL);
@@ -216,12 +232,17 @@ pub async fn create_invite(email: &str) -> Result<InviteResponse, String> {
     Ok(invite)
 }
 
+// GET /invites - list all invites (admin-only)
+pub async fn list_invites() -> Result<Vec<InviteResponse>, String> {
+    tracing::info!("📋 Listing invites");
+    crate::shell::client::get::<Vec<InviteResponse>>("/invites").await
+}
 
-
-
-
-
-
-
+// DELETE /invites/{code} - delete invite (admin-only)
+pub async fn delete_invite(invite_code: &str) -> Result<(), String> {
+    tracing::info!("🗑️ Deleting invite: {}", invite_code);
+    let endpoint = format!("/invites/{}", invite_code);
+    crate::shell::client::delete(&endpoint).await
+}
 
 

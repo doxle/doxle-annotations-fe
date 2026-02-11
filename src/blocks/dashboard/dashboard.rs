@@ -2,6 +2,9 @@ use crate::Route;
 use dioxus::prelude::*;
 use crate::shell::{THEME, Theme, AppNavbar, ProtectedRoute};
 use crate::blocks::dashboard::state::{BLOCKS, BLOCKS_LOADING, state_load_blocks, state_delete_block, state_set_current_block, state_rename_block};
+use crate::blocks::dashboard::api::BlockType;
+use crate::users::state::USER;
+use crate::users::api::UserRole;
 use super::block_menu::BlockMenu;
 use super::edit_block_modal::EditBlockModal;
 
@@ -43,7 +46,11 @@ pub fn DashboardPage()->Element{
     // Show loading or existing blocks
     info!("BLOCKS-LIST Page :-");
 
-     // Show loading 
+    // Filter blocks by role: builders see only File + Building
+    let user_role = USER.read().as_ref().map(|u| u.user_role.clone()).unwrap_or(UserRole::Annotator);
+    let is_builder = user_role == UserRole::Builder;
+
+    // Show loading 
     if BLOCKS_LOADING() {
         return rsx! {
             ProtectedRoute {
@@ -55,8 +62,17 @@ pub fn DashboardPage()->Element{
             }
         };
     }
+
+    let filtered_blocks: Vec<_> = BLOCKS.read().iter().filter(|b| {
+        if is_builder {
+            b.block_type == BlockType::File || b.block_type == BlockType::Building
+        } else {
+            true
+        }
+    }).cloned().collect();
+
     // If no blocks, show centered "+ NEW BLOCK" button
-    if BLOCKS.read().is_empty() {
+    if filtered_blocks.is_empty() {
         return rsx! {
             ProtectedRoute {
                 style { {DASHBOARD_CSS} }
@@ -101,7 +117,7 @@ pub fn DashboardPage()->Element{
                 class:"blocks-list-container",
                 ul{
                     class:"blocks-list",
-                    for block in BLOCKS.read().iter() {
+                    for block in filtered_blocks.iter() {
                         {
                             let block_id = block.block_id.clone();
                             let block_id_for_delete = block.block_id.clone();
@@ -125,7 +141,7 @@ pub fn DashboardPage()->Element{
                                         }
                                         let id = block_id.clone();
                                         state_set_current_block(&id.clone());
-                                        navigator.push(Route::TasksListPage { block_id: id, block_name: block_name.clone() });
+                                        navigator.push(Route::TasksListPage { block_id: id, block_name: block_name.clone(), block_type: block_type.as_str().to_string() });
                                     },
                                     
                                     // Row 1: Block name + three dots
@@ -191,7 +207,8 @@ pub fn DashboardPage()->Element{
                                     // Row 3: Divider
                                     div { class: "block-divider" }
                                     
-                                    // Row 5: Labels with counts (vertical, numbered)
+                                    // Row 5: Labels with counts (vertical, numbered) - admin only
+                                    if user_role == UserRole::Admin {
                                     {
                                         let total_annotations: u32 = block.labels.iter().map(|l| l.label_count).sum();
                                         rsx! {
@@ -223,6 +240,7 @@ pub fn DashboardPage()->Element{
                                                 }
                                             }
                                         }
+                                    }
                                     }
                                     
                                     // Row 6: Dates (bottom right)

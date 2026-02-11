@@ -1,0 +1,203 @@
+/* Comment Dialog - Figma-style */
+
+.comment-dialog-backdrop {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    z-index: 999;
+}
+
+/* Dialog = just the input */
+.comment-dialog {
+    position: fixed;
+    z-index: 1000;
+    display: flex;
+    flex-direction: column;
+    width: 260px;
+    min-height: 36px;
+    background: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    box-shadow: 0 4px 20px var(--shadow), 0 1px 4px var(--shadow);
+    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+    animation: dialog-in 0.15s ease-out forwards;
+    overflow: hidden;
+}
+
+@keyframes dialog-in {
+    0% {
+        opacity: 0;
+        transform: translateY(4px);
+    }
+    100% {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Header - shows when thread has comments */
+.comment-dialog-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 6px 8px 4px 12px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.comment-dialog-title {
+    font-size: 13px;
+    font-family: "Helvetica Neue Light", "Helvetica Neue", Helvetica, Arial, sans-serif;
+    font-weight: 300;
+    color: var(--text-primary);
+}
+
+.comment-dialog-actions {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+}
+
+.comment-action-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 3px;
+    border-radius: 4px;
+    color: var(--text-tertiary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: color 0.15s;
+}
+
+.comment-action-btn:hover {
+    color: var(--text-primary);
+}
+
+.comment-action-btn.resolved {
+    background: #22c55e;
+    color: #15803d;
+    border-radius: 50%;
+}
+
+/* Thread - only shows when replies exist */
+.comment-dialog-thread {
+    max-height: 240px;
+    overflow-y: auto;
+    padding: 10px 14px 4px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.comment-entry {
+    display: flex;
+    gap: 8px;
+    align-items: flex-start;
+}
+
+.comment-avatar {
+    width: 22px;
+    height: 22px;
+    min-width: 22px;
+    border-radius: 50%;
+    background: var(--bg-card-hover);
+    border: 1px solid var(--border-color);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 9px;
+    font-weight: 600;
+    color: var(--text-primary);
+    text-transform: uppercase;
+}
+
+.comment-body {
+    flex: 1;
+    min-width: 0;
+}
+
+.comment-meta {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 1px;
+}
+
+.comment-author {
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--text-primary);
+}
+
+.comment-time {
+    font-size: 10px;
+    color: var(--text-tertiary);
+}
+
+.comment-text {
+    font-size: 12px;
+    font-weight: 300;
+    color: var(--text-primary);
+    line-height: 1.4;
+    word-break: break-word;
+}
+
+/* Input wrapper */
+.comment-input-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+    height: 36px;
+    padding: 0 3px 0 3px;
+}
+
+.comment-input {
+    width: 100%;
+    padding: 0 36px 0 12px;
+    font-size: 13px;
+    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+    font-weight: 300;
+    background: transparent;
+    border: none;
+    color: var(--text-primary);
+    outline: none;
+    box-sizing: border-box;
+}
+
+.comment-input::placeholder {
+    color: var(--text-tertiary);
+}
+
+/* Circle submit button */
+.comment-submit-btn {
+    position: absolute;
+    right: 8px;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: var(--text-primary);
+    color: var(--bg-primary);
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: opacity 0.15s;
+    opacity: 0.5;
+}
+
+.comment-submit-btn:hover {
+    opacity: 1;
+}
+
+.comment-submit-btn.active {
+    opacity: 1;
+}
+
+.comment-submit-btn:focus,
+.comment-submit-btn:focus-visible {
+    background: var(--text-primary);
+}

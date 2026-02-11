@@ -1,12 +1,12 @@
 /* Crosshair drawn at viewport (screen) coords. Static CSS only. */
 :root {
-  --crosshair-color: #333333;        /* dark grey for light theme */
-  --crosshair-guide-color: #666666;  /* lighter grey guides */
+  --crosshair-color: #EF4444;        /* red */
+  --crosshair-guide-color: #EF4444;  /* red guides */
   --crosshair-gap: 9px;
 }
 html.dark :root, html.dark {
-  --crosshair-color: #cccccc;        /* light grey for dark theme */
-  --crosshair-guide-color: #999999;  /* darker grey guides */
+  --crosshair-color: #EF4444;        /* red */
+  --crosshair-guide-color: #EF4444;  /* red guides */
   --crosshair-gap: 9px;
 }
 

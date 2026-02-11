@@ -387,3 +387,40 @@ input:focus {
   color: var(--text-secondary);
   text-align: center;
 }
+
+/* Block type dropdown */
+.blocks-type-select {
+  height: 33px;
+  width: 100%;
+  padding: 0 12px;
+  border: 1px solid var(--border-color);
+  border-radius: 0px;
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  font-family: 'Modular Houseplant';
+  font-weight: 400;
+  outline: none;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%23999' stroke-width='1.2' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  cursor: pointer;
+}
+
+.blocks-type-select--default {
+  color: var(--text-secondary);
+}
+
+.blocks-type-select:focus {
+  border-color: var(--primary-button-bg);
+}
+
+html.dark .blocks-type-select {
+  background-color: var(--bg-primary);
+  border-color: var(--border-color);
+  color: var(--text-primary);
+}
+
+html.dark .blocks-type-select--default {
+  color: var(--text-secondary);
+}

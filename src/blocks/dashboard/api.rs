@@ -57,11 +57,52 @@ pub async fn api_delete_label(project_id: &str, label_id: &str) -> Result<(), St
 // Block-Centric Architecture (no projects)
 // ======================
 
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
+#[serde(rename_all = "lowercase")]
+pub enum BlockType {
+    Annotation,
+    File,
+    Building,
+}
+
+impl std::fmt::Display for BlockType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.label())
+    }
+}
+
+impl BlockType {
+    pub fn as_str(&self) -> &str {
+        match self {
+            BlockType::Annotation => "annotation",
+            BlockType::File => "file",
+            BlockType::Building => "building",
+        }
+    }
+
+    pub fn label(&self) -> &str {
+        match self {
+            BlockType::Annotation => "Annotation",
+            BlockType::File => "File",
+            BlockType::Building => "Building",
+        }
+    }
+
+    pub fn from_str(s: &str) -> Option<BlockType> {
+        match s {
+            "annotation" => Some(BlockType::Annotation),
+            "file" => Some(BlockType::File),
+            "building" => Some(BlockType::Building),
+            _ => None,
+        }
+    }
+}
+
 #[derive(Debug,  Serialize, Deserialize, Clone, PartialEq)]
 pub struct Block {
     pub block_id: String,
     pub block_name: String,
-    pub block_type: String,
+    pub block_type: BlockType,
     pub block_company:Option<String>,
     pub block_state: String,
     pub block_locked: bool,
@@ -76,7 +117,7 @@ pub struct Block {
 #[derive(Debug, Serialize)]
 pub struct CreateBlockRequest {
     pub block_name: String,
-    pub block_type: String,
+    pub block_type: BlockType,
     pub block_company: Option<String>,
 }
 
@@ -87,7 +128,7 @@ pub async fn api_list_blocks() -> Result<Vec<Block>, String> {
 }
 
 /// POST /blocks -> create a new block
-pub async fn api_create_block(block_name: String, block_type: String, block_company: Option<String>) -> Result<Block, String> {
+pub async fn api_create_block(block_name: String, block_type: BlockType, block_company: Option<String>) -> Result<Block, String> {
     let body = CreateBlockRequest { block_name, block_type, block_company };
     client::post::<CreateBlockRequest, Block>("/blocks", &body).await
 }

@@ -6,7 +6,7 @@
     align-items: center;
     position: relative;
     border-bottom: 1px solid var(--navbar-border);
-    z-index: 400; /* Above sidebar (300) */
+    z-index: 1001; /* Above sidebar (1000) and comment backdrop (999) */
 }
 
 .app-navbar-logo-container {
@@ -50,9 +50,9 @@
 .logo-menu-item {
     padding: 4px 16px;
     white-space: nowrap;
-    font-size: 11px;
+    font-size: 13px;
     font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
-    font-weight: 400;
+    font-weight: 300;
     color: var(--text-primary);
     cursor: pointer;
     transition: background 0.15s;
@@ -556,5 +556,124 @@
 
 .account-panel-logout:hover {
     color: var(--text-primary);
+}
+
+/* Role selector */
+.account-panel-role-selector {
+    display: flex;
+    gap: 16px;
+    margin-top: 8px;
+}
+
+.account-panel-role-option {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    font-size: 12px;
+    font-weight: 300;
+    color: var(--text-secondary);
+    cursor: pointer;
+}
+
+.account-panel-role-option input[type="radio"] {
+    appearance: none;
+    width: 14px;
+    height: 14px;
+    border: 1px solid var(--border-color);
+    border-radius: 50%;
+    margin: 0;
+    cursor: pointer;
+    position: relative;
+}
+
+.account-panel-role-option input[type="radio"]:checked {
+    border-color: var(--dx-blue);
+}
+
+.account-panel-role-option input[type="radio"]:checked::after {
+    content: '';
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--dx-blue);
+}
+
+/* Invite list */
+.account-panel-invites-list {
+    margin-top: 16px;
+}
+
+.account-panel-subtitle {
+    margin: 0 0 8px 0;
+    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    font-size: 12px;
+    font-weight: 300;
+    color: var(--text-secondary);
+}
+
+.account-panel-invite-row {
+    display: flex;
+    align-items: center;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--border-color);
+    gap: 12px;
+}
+
+.account-panel-invite-row:last-child {
+    border-bottom: none;
+}
+
+.account-panel-invite-email {
+    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    font-size: 12px;
+    font-weight: 300;
+    color: var(--text-primary);
+    flex: 1;
+}
+
+.account-panel-invite-role-btn {
+    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    font-size: 10px;
+    font-weight: 300;
+    color: white;
+    background: var(--dx-blue);
+    border: none;
+    border-radius: 3px;
+    padding: 2px 10px;
+    cursor: pointer;
+    transition: opacity 0.2s;
+    white-space: nowrap;
+}
+
+.account-panel-invite-role-btn:hover {
+    opacity: 0.85;
+}
+
+.account-panel-invite-status {
+    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    font-size: 10px;
+    font-weight: 300;
+    color: var(--text-primary);
+    white-space: nowrap;
+}
+
+.account-panel-invite-delete {
+    background: none;
+    border: none;
+    color: var(--text-secondary);
+    cursor: pointer;
+    padding: 4px;
+    line-height: 1;
+    transition: color 0.2s;
+    display: flex;
+    align-items: center;
+}
+
+.account-panel-invite-delete:hover {
+    color: #dc3545;
 }
 

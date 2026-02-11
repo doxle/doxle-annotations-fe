@@ -122,6 +122,13 @@ html.dark .tasks-create-button-centered:hover {
   border-color: var(--text-primary);
 }
 
+.tasks-empty-message {
+  font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  font-size: 14px;
+  font-weight: 300;
+  color: var(--text-secondary);
+}
+
 /* Tasks list */
 .tasks-list {
   list-style: none;
@@ -182,11 +189,23 @@ html.dark .tasks-list-item:hover {
   width: 100%;
 }
 
+/* Task name group */
+.task-name-group {
+  display: flex;
+  flex-direction: column;
+}
+
 /* Task name - 18px as requested */
 .task-name {
   font-size: 18px;
   font-weight: 400;
   color: var(--text-primary);
+}
+
+.task-block-name {
+  font-size: 10px;
+  font-weight: 300;
+  color: var(--text-secondary);
 }
 
 /* Task actions (three dots menu) */
@@ -200,6 +219,7 @@ html.dark .tasks-list-item:hover {
   display: flex;
   flex-direction: row;
   gap: 20px;
+  margin-top: 8px;
 }
 
 /* Dropdown group */

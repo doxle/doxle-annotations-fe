@@ -2,6 +2,7 @@ use crate::Route;
 use dioxus::prelude::*;
 use crate::shell::{THEME, Theme, AppNavbar};
 use crate::blocks::dashboard::state::state_create_block;
+use crate::blocks::dashboard::api::BlockType;
 
 
 
@@ -52,7 +53,8 @@ const BUDGET_BLOCK_ICON_DARK: Asset = asset!("/assets/icons/budget-block-dark.sv
 pub fn CreateBlockPage() -> Element {
     
     let mut block_name = use_signal(String::new);
-    let mut block_type = use_signal(|| "annotation".to_string()); // Default to annotation
+    let mut block_type: Signal<Option<BlockType>> = use_signal(|| Some(BlockType::Annotation));
+    let mut type_touched = use_signal(|| false);
     let mut company = use_signal(String::new);
     let mut is_submitting = use_signal(|| false);
     // Saved labels: Vec<(name, color)>
@@ -105,7 +107,7 @@ pub fn CreateBlockPage() -> Element {
         if e.code().to_string() == "Enter" {
             e.prevent_default();
             // If annotation, focus first label input
-            if block_type() == "annotation" {
+            if block_type() == Some(BlockType::Annotation) {
                  if let Some(window) = web_sys::window() {
                     if let Some(document) = window.document() {
                         if let Some(element) = document.get_element_by_id("label-input-0") {
@@ -129,11 +131,17 @@ pub fn CreateBlockPage() -> Element {
         }
 
         let name = block_name.read().trim().to_string();
-        let b_type = block_type.read().to_lowercase();
+        let b_type = match block_type() {
+            Some(bt) => bt,
+            None => {
+                crate::shell::status::show_error("Please select a block type");
+                return;
+            }
+        };
         let comp_val = company.read().trim().to_string();
         let comp = if comp_val.is_empty() { None } else { Some(comp_val) };
 
-        let clean_labels:Vec<(String,String)> = if b_type == "annotation" {
+        let clean_labels:Vec<(String,String)> = if b_type == BlockType::Annotation {
              labels.read()
                  .iter()
                  .filter(|(name, _)|!name.trim().is_empty())
@@ -144,12 +152,11 @@ pub fn CreateBlockPage() -> Element {
         };
 
         if name.is_empty() {
-            crate::shell::status::show_error(&format!("Block name is required:"));
-
+            crate::shell::status::show_error("Block name is required");
             return;
         }
 
-        tracing::info!("Create block: name = {}, type={}, labels = {:?}", name, b_type, clean_labels);
+        tracing::info!("Create block: name = {}, type={}, labels = {:?}", name, b_type.as_str(), clean_labels);
         is_submitting.set(true);
         // DIRECT CALL - No callback needed
         spawn(async move {
@@ -216,6 +223,20 @@ pub fn CreateBlockPage() -> Element {
                         }
                     }
 
+                    // Block type selector
+                    div {
+                        class: "blocks-form-group",
+                        select {
+                            class: if type_touched() { "blocks-type-select" } else { "blocks-type-select blocks-type-select--default" },
+                            onchange: move |e| {
+                                type_touched.set(true);
+                                block_type.set(BlockType::from_str(&e.value()));
+                            },
+                            option { value: "annotation", selected: block_type() == Some(BlockType::Annotation), "Annotation" }
+                            option { value: "file", selected: block_type() == Some(BlockType::File), "File" }
+                            option { value: "building", selected: block_type() == Some(BlockType::Building), "Building" }
+                        }
+                    }
 
                     // Progress bar
                     if *is_submitting.read() {

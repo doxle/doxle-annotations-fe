@@ -58,11 +58,13 @@ use crate::atoms::tasks::model::Task;
 use super::image_layer::ImageLayer;
 use super::annotations_layer::AnnotationsLayer;
 use super::models::Annotation;
-use super::state::{state_load_annotations, state_update_annotation_label, state_delete_annotation};
+use super::state::{state_load_annotations, state_update_annotation_label, state_delete_annotation, state_load_threads, state_create_thread, state_add_comment, state_delete_thread, state_resolve_thread};
 use crate::shell::{AppNavbar, app_sidebar::{AppSidebar, SidebarTab}};
 use super::keyboard_shortcuts::setup_keyboard_shortcuts;
 use crate::blocks::dashboard::state::{LABELS, LABELS_LOADING, state_load_labels};
 use super::context_menu::AnnotationContextMenu;
+use super::comment_dialog::CommentDialog;
+use super::models::CommentThread;
 
 
 const CSS: &str = include_str!("canvas_page.css");
@@ -71,6 +73,7 @@ const CSS: &str = include_str!("canvas_page.css");
 pub fn AnnotationCanvasPage(
     block_id: String,
     block_name: String,
+    block_type: String,
     task_id: String,
     task_name: String,
     image_id: String,
@@ -103,14 +106,17 @@ pub fn AnnotationCanvasPage(
     let zoom: Signal<f64> = use_signal(|| 1.0);
     let sidebar_open: Signal<bool> = use_signal(|| true);
     let grid_visible: Signal<bool> = use_signal(|| false);
-    let selected_tool: Signal<Tool> = use_signal(|| Tool::Pan);
+    let mut selected_tool: Signal<Tool> = use_signal(|| Tool::Pan);
     let mut context_menu:Signal<Option<(String, String, f64, f64)>> = use_signal(|| None);
     let mut selected_label_id:Signal<String> = use_signal(|| String::new());
     let mut hidden_label_ids:Signal<HashSet<String>> = use_signal(HashSet::new);
     let mut hovered_label_id:Signal<Option<String>> = use_signal(|| None);
     let mut show_shortcuts:Signal<bool> = use_signal(|| false);
     let sidebar_tab: Signal<SidebarTab> = use_signal(|| SidebarTab::Labels);
-    setup_keyboard_shortcuts(sidebar_open, grid_visible, selected_tool, active_drawing, hidden_label_ids, hovered_label_id, show_shortcuts);
+    let mut comment_threads: Signal<Vec<CommentThread>> = use_signal(|| Vec::new());
+    let mut comment_dialog: Signal<Option<(f64, f64, f64, f64, String)>> = use_signal(|| None); // (world_x, world_y, screen_x, screen_y, thread_id)
+    let mut scroll_to_thread: Signal<Option<String>> = use_signal(|| None);
+    setup_keyboard_shortcuts(sidebar_open, grid_visible, selected_tool, active_drawing, hidden_label_ids, hovered_label_id, show_shortcuts, sidebar_tab);
 
 
 
@@ -146,9 +152,14 @@ pub fn AnnotationCanvasPage(
         let iid = image_id.clone();
         info!("Loading annotations for image_id: {}", iid);
         last_loaded_image_id.set(iid.clone());
-        annotations.write().clear(); // good to clear but not necessary as we load annotations for the new img anyways
+        annotations.write().clear();
+        comment_threads.write().clear();
         spawn(async move {
             state_load_annotations(&iid, annotations).await;
+        });
+        let iid2 = image_id.clone();
+        spawn(async move {
+            state_load_threads(&iid2, comment_threads).await;
         });
     }
 
@@ -207,11 +218,35 @@ pub fn AnnotationCanvasPage(
                         selected_tool:selected_tool(), 
                         active_drawing:active_drawing, 
                         annotations:annotations,
+                        comment_threads: comment_threads,
                         selected_label_id: selected_label_id(),
                         hidden_label_ids: hidden_label_ids(),
                         hovered_label_id: hovered_label_id,
+                        active_thread_id: comment_dialog().map(|(_, _, _, _, ref tid)| tid.clone()),
+                        scroll_to_thread: scroll_to_thread,
+                        show_comments: sidebar_tab() == SidebarTab::Comments,
                         on_annotation_context_menu:move|(ann_id, label_id, x, y)| {
                             context_menu.set(Some((ann_id, label_id, x, y)));
+                        },
+                        on_comment_click: {
+                            let image_id = image_id.clone();
+                            move |(wx, wy, sx, sy)| {
+                            let iid = image_id.clone();
+                            spawn(async move {
+                                if let Some(tid) = state_create_thread(&iid, wx, wy, None, comment_threads).await {
+                                    comment_dialog.set(Some((wx, wy, sx, sy, tid)));
+                                }
+                            });
+                        }},
+                        on_marker_click: move |(tid, sx, sy): (String, f64, f64)| {
+                            // Clean up existing empty thread if dialog is open
+                            if let Some((_, _, _, _, ref old_tid)) = comment_dialog() {
+                                let old_tid = old_tid.clone();
+                                comment_threads.write().retain(|t| t.id != old_tid || !t.comments.is_empty());
+                            }
+                            if let Some(t) = comment_threads.read().iter().find(|t| t.id == tid).cloned() {
+                                comment_dialog.set(Some((t.world_x, t.world_y, sx, sy, tid)));
+                            }
                         },
                     }
                 } else {
@@ -223,10 +258,12 @@ pub fn AnnotationCanvasPage(
                 task_name: task_name.clone(), 
                 labels:LABELS(), 
                 annotations:annotations(),
+                comment_threads: comment_threads(),
                 hidden_label_ids:hidden_label_ids,
                 block_id: block_id.clone(),
                 selected_label_id: selected_label_id,
                 active_tab: sidebar_tab,
+                scroll_to_thread: scroll_to_thread,
             }
         }
         // Context menu (outside canvas)
@@ -273,6 +310,66 @@ pub fn AnnotationCanvasPage(
                     }
                 }
                
+            }
+        }
+        // Comment dialog (floating on canvas)
+        if let Some((world_x, world_y, screen_x, screen_y, thread_id)) = comment_dialog() {
+            {
+                let thread = comment_threads.read().iter().find(|t| t.id == thread_id).cloned();
+                let image_id_for_post = image_id.clone();
+                let image_id_for_resolve = image_id.clone();
+                let image_id_for_del = image_id.clone();
+                let image_id_for_close = image_id.clone();
+                rsx! {
+                    CommentDialog {
+                        screen_x: screen_x,
+                        screen_y: screen_y,
+                        thread: thread,
+                        on_post: move |text: String| {
+                            let iid = image_id_for_post.clone();
+                            let tid = thread_id.clone();
+                            spawn(async move {
+                                state_add_comment(&iid, &tid, &text, comment_threads).await;
+                            });
+                        },
+                        on_resolve: move |_| {
+                            if let Some((_, _, _, _, ref tid)) = comment_dialog() {
+                                let tid = tid.clone();
+                                let iid = image_id_for_resolve.clone();
+                                spawn(async move {
+                                    state_resolve_thread(&iid, &tid, comment_threads).await;
+                                });
+                            }
+                        },
+                        on_delete: move |_| {
+                            if let Some((_, _, _, _, ref tid)) = comment_dialog() {
+                                let tid = tid.clone();
+                                let iid = image_id_for_del.clone();
+                                comment_dialog.set(None);
+                                spawn(async move {
+                                    state_delete_thread(&iid, &tid, comment_threads).await;
+                                });
+                            }
+                        },
+                        on_close: move |_| {
+                            // Delete thread from server if user closed without posting any comment
+                            if let Some((_, _, _, _, ref tid)) = comment_dialog() {
+                                let tid = tid.clone();
+                                let has_comments = comment_threads.read().iter()
+                                    .find(|t| t.id == tid)
+                                    .map_or(false, |t| !t.comments.is_empty());
+                                if !has_comments {
+                                    let iid = image_id_for_close.clone();
+                                    spawn(async move {
+                                        state_delete_thread(&iid, &tid, comment_threads).await;
+                                    });
+                                }
+                            }
+                            comment_dialog.set(None);
+                            selected_tool.set(Tool::Pan);
+                        },
+                    }
+                }
             }
         }
         // Shortcuts help modal

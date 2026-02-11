@@ -1,5 +1,5 @@
 use super::api;
-use super::models::Annotation;
+use super::models::{Annotation, CommentThread, Comment, ThreadMetadata};
 use crate::atoms::svg_canvas::Geometry;
 use dioxus::prelude::*;
 use crate::blocks::dashboard::state::state_refresh_block_labels;
@@ -143,4 +143,148 @@ pub async fn state_update_annotation_geometry(block_id:&str, image_id:&str, anno
 	}
 }
 
+
+// ============================================
+// Comment / Thread State Functions
+// ============================================
+
+/// Convert API thread to FE model
+fn api_thread_to_model(api: &super::models::ApiCommentThread) -> CommentThread {
+    let (world_x, world_y) = api.metadata.as_ref()
+        .and_then(|m| serde_json::from_str::<ThreadMetadata>(m).ok())
+        .map(|m| (m.world_x, m.world_y))
+        .unwrap_or((0.0, 0.0));
+
+    CommentThread {
+        id: api.thread_id.clone(),
+        world_x,
+        world_y,
+        resolved: api.resolved,
+        comments: api.comments.iter().map(|c| Comment {
+            id: c.comment_id.clone(),
+            user_id: c.user_id.clone(),
+            user_name: c.user_name.clone(),
+            text: c.text.clone(),
+            created_at: c.created_at.clone(),
+        }).collect(),
+    }
+}
+
+/// Load all threads for a parent (image_id for annotations)
+pub async fn state_load_threads(parent_id: &str, mut threads: Signal<Vec<CommentThread>>) {
+    if parent_id.is_empty() { return; }
+
+    match api::api_list_threads(parent_id).await {
+        Ok(api_threads) => {
+            let result: Vec<CommentThread> = api_threads.iter().map(api_thread_to_model).collect();
+            *threads.write() = result;
+            tracing::info!("✅ Threads loaded: {} items", threads.read().len());
+        }
+        Err(e) => {
+            tracing::error!("❌ Failed to load threads: {}", e);
+        }
+    }
+}
+
+/// Create a thread via API, add to local signal, return the server thread_id
+pub async fn state_create_thread(
+    parent_id: &str,
+    world_x: f64,
+    world_y: f64,
+    text: Option<String>,
+    mut threads: Signal<Vec<CommentThread>>,
+) -> Option<String> {
+    let metadata = serde_json::to_string(&ThreadMetadata { world_x, world_y }).ok();
+
+    match api::api_create_thread(parent_id, metadata, text).await {
+        Ok(api_thread) => {
+            let thread = api_thread_to_model(&api_thread);
+            let tid = thread.id.clone();
+            threads.write().push(thread);
+            tracing::info!("✅ Thread created: {}", tid);
+            Some(tid)
+        }
+        Err(e) => {
+            tracing::error!("❌ Failed to create thread: {}", e);
+            None
+        }
+    }
+}
+
+/// Add a comment to an existing thread
+pub async fn state_add_comment(
+    parent_id: &str,
+    thread_id: &str,
+    text: &str,
+    mut threads: Signal<Vec<CommentThread>>,
+) {
+    match api::api_add_comment(parent_id, thread_id, text).await {
+        Ok(api_comment) => {
+            let comment = Comment {
+                id: api_comment.comment_id,
+                user_id: api_comment.user_id,
+                user_name: api_comment.user_name,
+                text: api_comment.text,
+                created_at: api_comment.created_at,
+            };
+            let mut w = threads.write();
+            if let Some(t) = w.iter_mut().find(|t| t.id == thread_id) {
+                t.comments.push(comment);
+            }
+            tracing::info!("✅ Comment added to thread {}", thread_id);
+        }
+        Err(e) => {
+            tracing::error!("❌ Failed to add comment: {}", e);
+        }
+    }
+}
+
+/// Delete a thread and all its comments
+pub async fn state_delete_thread(
+    parent_id: &str,
+    thread_id: &str,
+    mut threads: Signal<Vec<CommentThread>>,
+) {
+    match api::api_delete_thread(parent_id, thread_id).await {
+        Ok(_) => {
+            threads.write().retain(|t| t.id != thread_id);
+            tracing::info!("✅ Thread deleted: {}", thread_id);
+        }
+        Err(e) => {
+            tracing::error!("❌ Failed to delete thread: {}", e);
+        }
+    }
+}
+
+/// Toggle resolved state on a thread
+pub async fn state_resolve_thread(
+    parent_id: &str,
+    thread_id: &str,
+    mut threads: Signal<Vec<CommentThread>>,
+) {
+    // Optimistic toggle
+    let new_resolved = {
+        let mut w = threads.write();
+        if let Some(t) = w.iter_mut().find(|t| t.id == thread_id) {
+            t.resolved = !t.resolved;
+            t.resolved
+        } else {
+            return;
+        }
+    };
+
+    match api::api_resolve_thread(parent_id, thread_id, new_resolved).await {
+        Ok(_) => {
+            tracing::info!("✅ Thread resolved={}: {}", new_resolved, thread_id);
+        }
+        Err(e) => {
+            tracing::error!("❌ Failed to resolve thread: {}", e);
+            // Rollback
+            let mut w = threads.write();
+            if let Some(t) = w.iter_mut().find(|t| t.id == thread_id) {
+                t.resolved = !t.resolved;
+            }
+        }
+    }
+}
 

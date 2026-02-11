@@ -1,4 +1,4 @@
-use super::api::{Block, BlockLabel, api_list_blocks, api_create_block, api_create_label, api_delete_block, api_rename_block, api_get_labels};
+use super::api::{Block, BlockType, BlockLabel, api_list_blocks, api_create_block, api_create_label, api_delete_block, api_rename_block, api_get_labels};
 use dioxus::prelude::*;
 
 // Global signals for blocks state
@@ -40,7 +40,7 @@ pub async fn state_load_blocks() {
 }
 
 /// Create a new block (BE auto-creates default labels)
-pub async fn state_create_block(name: String, block_type: String, company: Option<String>) -> Result<Block, String> {
+pub async fn state_create_block(name: String, block_type: BlockType, company: Option<String>) -> Result<Block, String> {
     let block = match api_create_block(name, block_type, company).await {
         Ok(block) => block,
         Err(e) => return Err(e)

@@ -1,6 +1,7 @@
 use dioxus::prelude::*;
 use crate::Route;
-use crate::api;
+use crate::shell::client::{self, ApiError};
+use crate::users::api::User;
 
 #[component]
 pub fn ProtectedRoute(children: Element) -> Element {
@@ -15,13 +16,18 @@ pub fn ProtectedRoute(children: Element) -> Element {
         let mut authorized = authorized.clone();
 
         spawn(async move {
-            match api::get_current_user().await {
+            match client::get_typed::<User>("/users/me").await {
                 Ok(_user) => {
                     authorized.set(true);
                 }
-                Err(_) => {
+                Err(ApiError::Unauthorized(_)) => {
                     tracing::info!("No valid session - redirecting to sign-in");
                     nav.push(Route::SignInPage {});
+                }
+                Err(ApiError::Other(e)) => {
+                    // Network/server error — don't sign out, just allow through
+                    tracing::warn!("Auth check failed (non-401): {} — allowing through", e);
+                    authorized.set(true);
                 }
             }
             auth_checked.set(true);

@@ -11,12 +11,14 @@ pub enum Theme {
 
 
 
-// Global theme signal - defaults to system preference
+// Global theme signal - checks localStorage first, then system preference
 pub const THEME: GlobalSignal<Theme> = Signal::global(|| {
+    if let Some(saved) = load_theme_preference() {
+        return saved;
+    }
     if system_prefers_dark() {
         Theme::Dark
-    }
-    else {
+    } else {
         Theme::Light
     }
 });

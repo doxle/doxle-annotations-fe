@@ -2,7 +2,7 @@ use dioxus::prelude::*;
 use std::collections::HashSet;
 use crate::shell::{THEME, Theme};
 use crate::blocks::dashboard::api::{BlockLabel, api_update_label_color};
-use crate::blocks::annotations::models::Annotation;
+use crate::blocks::annotations::models::{Annotation, CommentThread};
 
 
 
@@ -23,10 +23,12 @@ pub fn AppSidebar(
     task_name: String, 
     labels: Vec<BlockLabel>,
     annotations:Vec<Annotation>,
+    comment_threads: Vec<CommentThread>,
     hidden_label_ids:Signal<HashSet<String>>,
     block_id: String,
     selected_label_id: Signal<String>,
     active_tab: Signal<SidebarTab>,
+    scroll_to_thread: Signal<Option<String>>,
     ) -> Element {
     let is_dark = THEME() == Theme::Dark;
     let labels_icon = if is_dark { LABELS_ICON_DARK } else { LABELS_ICON_LIGHT };
@@ -41,6 +43,9 @@ pub fn AppSidebar(
     //     });
     // });
    
+
+    let mut comment_threads = comment_threads;
+    comment_threads.sort_by_key(|thread| thread.resolved);
 
     rsx! {
         div {
@@ -58,12 +63,10 @@ pub fn AppSidebar(
                         let label_color = label.label_color.clone();
                         let block_id_for_update = block_id.clone();
 
-                        let row_class = match (is_selected, is_hidden, count == 0) {
-                            (true, _, _) => "labels-table-row selected",
-                            (false, true, _) => "labels-table-row hidden-label",
-                            (false, false, true) => "labels-table-row empty-label",
-                            _ => "labels-table-row",
-                        };
+                        let mut row_class = String::from("labels-table-row");
+                        if is_selected { row_class.push_str(" selected"); }
+                        if is_hidden { row_class.push_str(" hidden-label"); }
+                        if count == 0 { row_class.push_str(" empty-label"); }
                         
                         let lid_select = lid.clone();
                         let lid_toggle = lid.clone();
@@ -131,6 +134,47 @@ pub fn AppSidebar(
                        span { class: "labels-table-cell label-equals", "=" }
                        span { class: "labels-table-cell label-count", "{annotations.len():02}" }
                    }
+                }
+            }
+
+            if active_tab() == SidebarTab::Comments {
+                div {
+                    class: "sidebar-comments-list",
+                    if comment_threads.is_empty() {
+                        div { class: "sidebar-comments-empty", "No comments yet" }
+                    }
+                    for thread in comment_threads.iter() {
+                        {{
+                            let tid = thread.id.clone();
+                            let first_comment = thread.comments.first();
+                            let comment_count = thread.comments.len();
+                            let is_resolved = thread.resolved;
+                            rsx! {
+                                div {
+                                    key: "{tid}",
+                                    class: if is_resolved { "sidebar-comment-item resolved" } else { "sidebar-comment-item" },
+                                    style: "cursor: pointer;",
+                                    onclick: {
+                                        let tid = tid.clone();
+                                        move |_| {
+                                            scroll_to_thread.set(Some(tid.clone()));
+                                        }
+                                    },
+                                    if let Some(comment) = first_comment {
+                                        div {
+                                            class: "sidebar-comment-meta",
+                                            span { class: "sidebar-comment-author", "{comment.user_name}" }
+                                            span { class: "sidebar-comment-time", "{comment.created_at}" }
+                                        }
+                                        div { class: "sidebar-comment-text", "{comment.text}" }
+                                    }
+                                    if comment_count > 1 {
+                                        div { class: "sidebar-comment-replies", "{comment_count - 1} replies" }
+                                    }
+                                }
+                            }
+                        }}
+                    }
                 }
             }
             

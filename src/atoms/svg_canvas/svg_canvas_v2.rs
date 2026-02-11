@@ -65,11 +65,12 @@ use wasm_bindgen::JsCast;
 use super::state::Tool;
 use super::crosshair_overlay::CrosshairOverlay;
 use super:: {Geometry, Point};
-use crate::blocks::annotations::models::Annotation;
+use crate::blocks::annotations::models::{Annotation, CommentThread};
 use crate::shell::{THEME, Theme};
 use crate::blocks::annotations::state::{state_update_annotation_geometry, state_delete_annotation};
 
 const SVG_CANVAS_V2_CSS: &str = include_str!("svg_canvas_v2.css");
+const COMMENT_CURSOR_BLUE: Asset = asset!("/assets/icons/comment-blue.svg");
 
 
 
@@ -81,10 +82,16 @@ pub fn SvgCanvasV2(
 	selected_tool: Tool,
 	active_drawing: Signal<Vec<(f64, f64)>>,
 	annotations: Signal<Vec<Annotation>>,
+	comment_threads: Signal<Vec<CommentThread>>,
 	selected_label_id:String,
 	on_annotation_context_menu: EventHandler<(String, String, f64, f64)>,
+	on_comment_click: EventHandler<(f64, f64, f64, f64)>,
+	on_marker_click: EventHandler<(String, f64, f64)>,
+	active_thread_id: Option<String>,
+	scroll_to_thread: Signal<Option<String>>,
 	hidden_label_ids:HashSet<String>,
 	hovered_label_id: Signal<Option<String>>,
+	show_comments: bool,
 
 ) -> Element {
 	let mut pan_x = use_signal(|| 0.0_f64);
@@ -161,8 +168,51 @@ pub fn SvgCanvasV2(
 	});
 
 	
-	// info!("SvgCanvasV2 Page: mounted");
-
+	// Scroll to thread when sidebar triggers it (animated)
+	use_effect(move || {
+		if let Some(tid) = scroll_to_thread() {
+			scroll_to_thread.set(None);
+			if let Some(thread) = comment_threads().iter().find(|t| t.id == tid).cloned() {
+				let (canvas_cx, canvas_cy, svg_left, svg_top) = {
+					#[cfg(target_arch = "wasm32")]
+					{
+						web_sys::window()
+							.and_then(|w| w.document())
+							.and_then(|d| d.get_element_by_id("svg-canvas-v2"))
+							.map(|el| {
+								let r = el.get_bounding_client_rect();
+								(r.width() / 2.0, r.height() / 2.0, r.left(), r.top())
+							})
+							.unwrap_or((400.0, 300.0, 0.0, 0.0))
+					}
+					#[cfg(not(target_arch = "wasm32"))]
+					{ (400.0, 300.0, 0.0, 0.0) }
+				};
+				let target_px = canvas_cx - thread.world_x * zoom();
+				let target_py = canvas_cy - thread.world_y * zoom();
+				let start_px = pan_x();
+				let start_py = pan_y();
+				// Animate pan over ~300ms with ease-out cubic
+				spawn(async move {
+					let steps = 20;
+					let step_ms = 16; // ~60fps
+					for i in 1..=steps {
+						let t = i as f64 / steps as f64;
+						let ease = 1.0 - (1.0 - t).powi(3); // ease-out cubic
+						pan_x.set(start_px + (target_px - start_px) * ease);
+						pan_y.set(start_py + (target_py - start_py) * ease);
+						TimeoutFuture::new(step_ms).await;
+					}
+					// Final exact position + open dialog
+					pan_x.set(target_px);
+					pan_y.set(target_py);
+					let sx = thread.world_x * zoom() + pan_x() + svg_left;
+					let sy = thread.world_y * zoom() + pan_y() + svg_top;
+					on_marker_click.call((tid, sx, sy));
+				});
+			}
+		}
+	});
 
 	rsx!{
 		style { {SVG_CANVAS_V2_CSS} }
@@ -172,12 +222,18 @@ pub fn SvgCanvasV2(
 			class:"svg-canvas-v2",
 			width:"100%",
 			height:"100%",
-			style: if selected_tool == Tool::Polygon {
-				"cursor:none;"
-			} else if is_dragging() {
-				"cursor:grabbing;"
-			} else {
-				"cursor:grab;"
+			style: {
+				let comment_cursor = COMMENT_CURSOR_BLUE;
+				let comment_cursor_style = format!("cursor:url('{}') 0 16, auto;", comment_cursor);
+				if selected_tool == Tool::Polygon {
+					"cursor:none;".to_string()
+				} else if selected_tool == Tool::Comment {
+					comment_cursor_style
+				} else if is_dragging() {
+					"cursor:grabbing;".to_string()
+				} else {
+					"cursor:grab;".to_string()
+				}
 			},
 			oncontextmenu: move |evt| {
 				
@@ -382,6 +438,32 @@ pub fn SvgCanvasV2(
 
     			// if it was a pan, stop here
 			    if was_pan { return; }
+
+			    // Check if click hit an existing comment marker (only when not drawing and comments visible)
+			    if show_comments && active_drawing().is_empty() {
+			        let wx = (p.x - pan_x()) / zoom();
+			        let wy = (p.y - pan_y()) / zoom();
+			        let marker_size = (18.0 / zoom()).clamp(10.0, 28.0);
+			        let hit_radius = marker_size;
+			        if let Some(thread) = comment_threads().iter().find(|t| {
+			            let dx = wx - t.world_x;
+			            let dy = wy - (t.world_y - marker_size / 2.0);
+			            (dx * dx + dy * dy).sqrt() < hit_radius
+			        }) {
+			            let tid = thread.id.clone();
+			            on_marker_click.call((tid, evt.client_coordinates().x, evt.client_coordinates().y));
+			            return;
+			        }
+			    }
+
+			    // Comment tool: click to place comment pin
+			    if selected_tool == Tool::Comment {
+			        let wx = (p.x - pan_x()) / zoom();
+			        let wy = (p.y - pan_y()) / zoom();
+			        on_comment_click.call((wx, wy, evt.client_coordinates().x, evt.client_coordinates().y));
+			        return;
+			    }
+
 			    if selected_tool != Tool::Polygon { return; }
 
 
@@ -568,6 +650,9 @@ pub fn SvgCanvasV2(
 					hidden_label_ids:hidden_label_ids.clone(),
 					hovered_label_id: hovered_label_id,
 				}
+				if show_comments {
+					CommentMarkers { threads: comment_threads(), zoom: zoom(), active_thread_id: active_thread_id.clone() }
+				}
 
 			}
 		}
@@ -618,6 +703,52 @@ fn DrawArea(
 }
 
 #[component]
+fn CommentMarkers(
+	threads: Vec<CommentThread>,
+	zoom: f64,
+	active_thread_id: Option<String>,
+) -> Element {
+	if threads.is_empty() { return rsx!{}; }
+
+	rsx! {
+		for (i, thread) in threads.iter().enumerate() {
+			{
+				let is_active = active_thread_id.as_ref() == Some(&thread.id);
+let size = if is_active { (9.0 / zoom).clamp(6.0, 14.0) } else { (18.0 / zoom).clamp(10.0, 28.0) };
+let font_size = if is_active { (5.0 / zoom).clamp(3.0, 7.0) } else { (10.0 / zoom).clamp(5.0, 14.0) };
+				let scale = size / 16.0;
+				let tx = thread.world_x;
+				let ty = thread.world_y - size;
+				let cx = thread.world_x + size / 2.0;
+				let cy = thread.world_y - size / 2.0;
+				rsx! {
+					g {
+						key: "{thread.id}",
+						pointer_events: "none",
+					path {
+						d: "M0 8C0 3.58172 3.58172 0 8 0C12.4183 0 16 3.58172 16 8C16 12.4183 12.4183 16 8 16H0V8Z",
+						fill: if thread.resolved { "#34C759" } else { "#009CFF" },
+							transform: "translate({tx}, {ty}) scale({scale})",
+						}
+						text {
+							x: "{cx}",
+							y: "{cy}",
+							text_anchor: "middle",
+							dominant_baseline: "central",
+							fill: "white",
+							font_size: "{font_size}",
+							font_family: "Helvetica Neue Light, Helvetica Light, Helvetica, Arial, sans-serif",
+							font_weight: "300",
+							"{i + 1}"
+						}
+					}
+				}
+			}
+		}
+	}
+}
+
+#[component]
 fn PolygonPreview(
 	points:Vec<(f64,f64)>,
 	cursor_world_pos: (f64,f64),
@@ -628,7 +759,7 @@ fn PolygonPreview(
 	if points.is_empty() { return rsx!{};}
 
 	let is_dark = THEME() == Theme::Dark;
-	let stroke_w = (0.9/zoom).clamp(0.9, 2.7);
+	let stroke_w = (0.9/zoom).clamp(0.1, 2.7);
 	let circle_r = (6.0/zoom).clamp(0.75, 18.0);
 	let snap_thresh = 15.0 / zoom;
 	
@@ -687,7 +818,7 @@ fn PolygonPreview(
             points: "{points_str}",
             fill: "none",
             stroke: "{label_color}",
-            stroke_width: "{stroke_w}",
+            stroke_width: "1.5",
             vector_effect: "non-scaling-stroke",
             pointer_events: "none",
         }
@@ -710,7 +841,7 @@ fn PolygonPreview(
                 x1: "{lx}", y1: "{ly}",
                 x2: "{cursor_world_pos.0}", y2: "{cursor_world_pos.1}",
                 stroke: "{label_color}",
-                stroke_width: "{stroke_w}",
+                stroke_width: "1.5",
                 vector_effect: "non-scaling-stroke",
                 pointer_events: "none",
             }

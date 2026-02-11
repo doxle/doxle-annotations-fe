@@ -61,6 +61,7 @@ pub enum Tool {
     Pan,
     Polygon,
     BBox,
+    Comment,
 }
 
 // ============================================

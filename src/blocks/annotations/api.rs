@@ -79,3 +79,70 @@ pub async fn api_update_geometry(block_id:&str, image_id:&str, annotation_id:&st
     let payload = UpdateGeometryPayload {geometry};
     client::patch_no_response(&endpoint, &payload).await
 }
+
+// ============================================
+// Comment / Thread API Types
+// ============================================
+
+use super::models::{ApiCommentThread, ApiComment};
+
+#[derive(Debug, Serialize)]
+struct CreateThreadRequest {
+    metadata: Option<String>,
+    text: Option<String>,
+}
+
+#[derive(Debug, Serialize)]
+struct CreateCommentRequest {
+    text: String,
+}
+
+#[derive(Debug, Serialize)]
+struct UpdateThreadRequest {
+    resolved: Option<bool>,
+}
+
+// ============================================
+// Comment / Thread API Calls
+// ============================================
+
+/// List all threads (with comments) for a parent resource
+pub async fn api_list_threads(parent_id: &str) -> Result<Vec<ApiCommentThread>, String> {
+    let endpoint = format!("/comments/{}/threads", parent_id);
+    client::get(&endpoint).await
+}
+
+/// Create a new thread under a parent resource
+pub async fn api_create_thread(
+    parent_id: &str,
+    metadata: Option<String>,
+    text: Option<String>,
+) -> Result<ApiCommentThread, String> {
+    let endpoint = format!("/comments/{}/threads", parent_id);
+    let payload = CreateThreadRequest { metadata, text };
+    client::post(&endpoint, &payload).await
+}
+
+/// Add a comment to an existing thread
+pub async fn api_add_comment(
+    parent_id: &str,
+    thread_id: &str,
+    text: &str,
+) -> Result<ApiComment, String> {
+    let endpoint = format!("/comments/{}/threads/{}/comments", parent_id, thread_id);
+    let payload = CreateCommentRequest { text: text.to_string() };
+    client::post(&endpoint, &payload).await
+}
+
+/// Delete a thread and all its comments
+pub async fn api_delete_thread(parent_id: &str, thread_id: &str) -> Result<(), String> {
+    let endpoint = format!("/comments/{}/threads/{}", parent_id, thread_id);
+    client::delete(&endpoint).await
+}
+
+/// Resolve or unresolve a thread
+pub async fn api_resolve_thread(parent_id: &str, thread_id: &str, resolved: bool) -> Result<(), String> {
+    let endpoint = format!("/comments/{}/threads/{}", parent_id, thread_id);
+    let payload = UpdateThreadRequest { resolved: Some(resolved) };
+    client::patch_no_response(&endpoint, &payload).await
+}

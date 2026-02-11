@@ -5,6 +5,7 @@ use dioxus::prelude::*;
 use wasm_bindgen::{closure::Closure, JsCast};
 use crate::atoms::svg_canvas::state::Tool;
 use crate::blocks::dashboard::state::LABELS;
+use crate::shell::app_sidebar::SidebarTab;
 
 
 pub fn setup_keyboard_shortcuts(
@@ -15,6 +16,7 @@ pub fn setup_keyboard_shortcuts(
 	mut hidden_label_ids: Signal<HashSet<String>>,
 	hovered_label_id: Signal<Option<String>>,
 	mut show_shortcuts: Signal<bool>,
+	mut sidebar_tab: Signal<SidebarTab>,
 )
 {
 	use_effect(move || {
@@ -23,6 +25,15 @@ pub fn setup_keyboard_shortcuts(
 		let lk = last_key.clone();
 		
 		let closure = Closure::wrap(Box::new(move|evt:web_sys::KeyboardEvent|{
+			// Ignore shortcuts when typing in input fields
+			if let Some(target) = evt.target() {
+				if let Ok(element) = target.dyn_into::<web_sys::HtmlElement>() {
+					let tag_name = element.tag_name().to_lowercase();
+					if tag_name == "input" || tag_name == "textarea" || tag_name == "select" || element.is_content_editable() {
+						return;
+					}
+				}
+			}
 			let key = evt.key();
 			let prev = lk.borrow().clone();
 			// Cmd+\ (Mac) or Ctrl+\ (Windows/Linux) - toggle sidebar
@@ -37,11 +48,23 @@ pub fn setup_keyboard_shortcuts(
 			// p - enable polygon mode
 			if key == "p" || key == "P" {
 				selected_tool.set(Tool::Polygon);
+				sidebar_tab.set(SidebarTab::Labels);
 			}
-			// Escape - disable polygon mode, clear drawing
+			// b - enable bbox mode
+			if key == "b" || key == "B" {
+				sidebar_tab.set(SidebarTab::Labels);
+			}
+			// c - enable comment mode + switch sidebar to Comments
+			if key == "c" || key == "C" {
+				selected_tool.set(Tool::Comment);
+				sidebar_open.set(true);
+				sidebar_tab.set(SidebarTab::Comments);
+			}
+			// Escape - disable polygon mode, clear drawing, return to labels
 			if key == "Escape" {
 				selected_tool.set(Tool::Pan);
 				active_drawing.write().clear();
+				sidebar_tab.set(SidebarTab::Labels);
 			}
 			// "ha" - toggle hide/show ALL labels
 			if (key == "a" || key == "A") && (prev == "h" || prev == "H") {

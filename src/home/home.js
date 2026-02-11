@@ -17,36 +17,39 @@ window.__dotsInit = function() {
 
     function resize() {
         const rect = container.getBoundingClientRect();
-        canvas.width = rect.width * dpr;
-        canvas.height = rect.height * dpr;
+        canvas.width = Math.round(rect.width * dpr);
+        canvas.height = Math.round(rect.height * dpr);
         ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
         return rect;
     }
     const rect = resize();
-    const W = rect.width;
-    const H = rect.height;
+    let W = rect.width;
+    let H = rect.height;
+    let offsetX = rect.left;
+    let offsetY = rect.top;
 
     // Grid
     const spacing = 30;
-    const cols = Math.ceil(W / spacing) + 2;
-    const rows = Math.ceil(H / spacing) + 2;
-    const count = cols * rows;
+    let cols, rows, count, baseX, baseY, phase;
 
-    // Flat arrays for zero-overhead iteration
-    const baseX = new Float32Array(count);
-    const baseY = new Float32Array(count);
-    const offX  = new Float32Array(count); // breeze offset
-    const offY  = new Float32Array(count);
-    const phase = new Float32Array(count); // random phase per dot
-    let i = 0;
-    for (let x = 0; x < cols; x++) {
-        for (let y = 0; y < rows; y++) {
-            baseX[i] = x * spacing;
-            baseY[i] = y * spacing;
-            phase[i] = Math.random() * Math.PI * 2;
-            i++;
+    function buildGrid() {
+        cols = Math.ceil(W / spacing) + 1;
+        rows = Math.ceil(H / spacing) + 2;
+        count = cols * rows;
+        baseX = new Float32Array(count);
+        baseY = new Float32Array(count);
+        phase = new Float32Array(count);
+        let i = 0;
+        for (let x = 0; x < cols; x++) {
+            for (let y = 0; y < rows; y++) {
+                baseX[i] = x * spacing;
+                baseY[i] = y * spacing;
+                phase[i] = Math.random() * Math.PI * 2;
+                i++;
+            }
         }
     }
+    buildGrid();
 
     // Mouse state
     let mx = -9999, my = -9999;
@@ -100,18 +103,34 @@ window.__dotsInit = function() {
     requestAnimationFrame(draw);
 
     // Mouse listener (desktop only)
-    function onMouseMove(e) { mx = e.clientX; my = e.clientY; }
+    function onMouseMove(e) { mx = e.clientX - offsetX; my = e.clientY - offsetY; }
+    function resetMouse() { mx = -9999; my = -9999; }
+    function onVisibilityChange() { if (document.hidden) resetMouse(); }
+    function onDocumentMouseOut(e) { if (!e.relatedTarget && !e.toElement) resetMouse(); }
     if (!isMobile) {
         document.addEventListener('mousemove', onMouseMove, { passive: true });
+        container.addEventListener('mouseleave', resetMouse, { passive: true });
+        document.addEventListener('mouseout', onDocumentMouseOut, { passive: true });
+        window.addEventListener('mouseleave', resetMouse, { passive: true });
+        window.addEventListener('blur', resetMouse, { passive: true });
+        document.addEventListener('visibilitychange', onVisibilityChange, { passive: true });
     }
 
     // Resize handler
     let resizeTimer = 0;
+    let resizeFrame = 0;
     function onResize() {
+        if (resizeFrame) cancelAnimationFrame(resizeFrame);
+        resizeFrame = requestAnimationFrame(() => {
+            const r = resize();
+            W = r.width;
+            H = r.height;
+            offsetX = r.left;
+            offsetY = r.top;
+        });
         clearTimeout(resizeTimer);
         resizeTimer = setTimeout(() => {
-            const r = resize();
-            // Rebuild grid if needed (skip for minor resize)
+            buildGrid();
         }, 150);
     }
     window.addEventListener('resize', onResize, { passive: true });
@@ -120,6 +139,11 @@ window.__dotsInit = function() {
     window.__dotsCleanup = function() {
         running = false;
         document.removeEventListener('mousemove', onMouseMove);
+        container.removeEventListener('mouseleave', resetMouse);
+        document.removeEventListener('mouseout', onDocumentMouseOut);
+        window.removeEventListener('mouseleave', resetMouse);
+        window.removeEventListener('blur', resetMouse);
+        document.removeEventListener('visibilitychange', onVisibilityChange);
         window.removeEventListener('resize', onResize);
     };
 
