@@ -3,6 +3,8 @@ use std::collections::HashSet;
 use crate::shell::{THEME, Theme};
 use crate::blocks::dashboard::api::{BlockLabel, api_update_label_color};
 use crate::blocks::annotations::models::{Annotation, CommentThread};
+use crate::atoms::svg_canvas::state::Tool;
+use crate::users::state::USER;
 
 
 
@@ -29,10 +31,12 @@ pub fn AppSidebar(
     selected_label_id: Signal<String>,
     active_tab: Signal<SidebarTab>,
     scroll_to_thread: Signal<Option<String>>,
+    #[props(default)] selected_tool: Option<Signal<Tool>>,
     ) -> Element {
     let is_dark = THEME() == Theme::Dark;
     let labels_icon = if is_dark { LABELS_ICON_DARK } else { LABELS_ICON_LIGHT };
     let comments_icon = if is_dark { COMMENTS_ICON_DARK } else { COMMENTS_ICON_LIGHT };
+    let is_admin = USER.read().as_ref().map(|u| u.is_admin()).unwrap_or(false);
     
     // Load user if not already loaded - runs only once
     // use_hook(|| {
@@ -80,30 +84,45 @@ pub fn AppSidebar(
                                 // Click anywhere except label name = select
                                 onclick: move |_| {
                                     selected_label_id.set(lid_select.clone());
+                                    // Auto-switch tool based on label_properties
+                                    if let Some(mut tool_sig) = selected_tool {
+                                        if let Some(label) = crate::blocks::dashboard::state::LABELS.read().iter().find(|l| l.label_id == lid_select) {
+                                            let tool_str = label.label_properties.as_ref()
+                                                .and_then(|p| p.get("tool"))
+                                                .and_then(|v| v.as_str())
+                                                .unwrap_or("polygon");
+                                            match tool_str {
+                                                "bbox" => tool_sig.set(Tool::BBox),
+                                                _ => tool_sig.set(Tool::Polygon),
+                                            }
+                                        }
+                                    }
                                 },
                                 div {
                                     class: "label-color-rect-wrapper",
                                     onclick: move |e| e.stop_propagation(), // Don't select when clicking color
-                                    input {
-                                        r#type: "color",
-                                        class: "label-color-input",
-                                        value: "{label_color}",
-                                        onchange: move |e| {
-                                            let new_color = e.value();
-                                            let lid = lid_color.clone();
-                                            let bid = block_id_for_update.clone();
-                                            spawn(async move {
-                                                match api_update_label_color(&bid, &lid, new_color.clone()).await {
-                                                    Ok(updated) => {
-                                                        crate::blocks::dashboard::state::LABELS.write().iter_mut().for_each(|l| {
-                                                            if l.label_id == lid {
-                                                                l.label_color = updated.label_color.clone();
-                                                            }
-                                                        });
+                                    if is_admin {
+                                        input {
+                                            r#type: "color",
+                                            class: "label-color-input",
+                                            value: "{label_color}",
+                                            onchange: move |e| {
+                                                let new_color = e.value();
+                                                let lid = lid_color.clone();
+                                                let bid = block_id_for_update.clone();
+                                                spawn(async move {
+                                                    match api_update_label_color(&bid, &lid, new_color.clone()).await {
+                                                        Ok(updated) => {
+                                                            crate::blocks::dashboard::state::LABELS.write().iter_mut().for_each(|l| {
+                                                                if l.label_id == lid {
+                                                                    l.label_color = updated.label_color.clone();
+                                                                }
+                                                            });
+                                                        }
+                                                        Err(e) => tracing::error!("Failed to update color: {}", e),
                                                     }
-                                                    Err(e) => tracing::error!("Failed to update color: {}", e),
-                                                }
-                                            });
+                                                });
+                                            }
                                         }
                                     }
                                 }

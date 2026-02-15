@@ -17,5 +17,5 @@ pub enum Geometry {
     #[serde(rename="polygon")]
     Polygon { points: Vec<Point> },
     #[serde(rename="bbox")]
-    BBox { x: f64, y: f64, width: f64, height: f64 },
+    BBox { start: Point, end: Point },
 }

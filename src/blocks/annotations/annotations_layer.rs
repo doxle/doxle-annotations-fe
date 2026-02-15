@@ -61,9 +61,9 @@ pub fn AnnotationsLayer(
                 }
                 result
             }
-            Geometry::BBox { x, y, width, height } => {
+            Geometry::BBox { start, end } => {
                 // Convert bbox to polygon points
-                format!("{},{} {},{} {},{} {},{}", x, y, x + width, y, x + width, y + height, x, y + height)
+                format!("{},{} {},{} {},{} {},{}", start.x, start.y, end.x, start.y, end.x, end.y, start.x, end.y)
             }
         }
     };

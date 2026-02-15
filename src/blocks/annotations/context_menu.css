@@ -19,12 +19,19 @@
     flex-direction: column;
     z-index: 1000;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-    font-family: "ModularHouseplant";
+    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    font-size: 12px;
+    font-weight: 400;
 }
 
 .context-menu-labels {
     overflow-y: auto;
     flex: 1;
+    scrollbar-width: none;
+}
+
+.context-menu-labels::-webkit-scrollbar {
+    display: none;
 }
 
 .context-menu-item {
@@ -51,9 +58,11 @@
     margin-top: 4px;
 }
 
-.context-menu-item .radio-icon {
-    width: 14px;
-    text-align: center;
+.context-menu-item .label-color-square {
+    width: 10px;
+    height: 10px;
+    border-radius: 2px;
+    flex-shrink: 0;
 }
 
 .context-menu-divider {

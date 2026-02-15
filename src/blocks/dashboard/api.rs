@@ -187,3 +187,10 @@ pub async fn api_create_label(block_id: &str, label_name: String, label_color:St
     };
     client::post::<CreateLabelRequest, BlockLabel>(&endpoint, &body).await
 }
+
+/// PATCH /blocks/{block_id}/labels/{label_id} - update label_properties
+pub async fn api_update_label_properties(block_id: &str, label_id: &str, properties: serde_json::Value) -> Result<BlockLabel, String> {
+    let endpoint = format!("/blocks/{}/labels/{}", block_id, label_id);
+    let body = serde_json::json!({ "label_properties": properties });
+    client::patch(&endpoint, &body).await
+}

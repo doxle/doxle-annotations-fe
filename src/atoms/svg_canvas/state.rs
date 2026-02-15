@@ -106,7 +106,7 @@ impl CanvasState {
     pub fn toggle_tool(&mut self) {
         let current = *self.selected_tool.read();
         let next = match current {
-            Tool::Polygon => Tool::Pan,
+            Tool::Polygon => Tool::Select,
             _ => Tool::Polygon,
         };
         self.selected_tool.set(next);

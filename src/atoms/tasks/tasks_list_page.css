@@ -8,7 +8,10 @@
 
 /* Center all content on the page */
 .tasks-page {
-  background: var(--bg-primary);
+  background:
+    radial-gradient(circle, var(--dot-color, rgba(0,0,0,0.3)) 1.5px, transparent 1.5px);
+  background-size: 30px 30px;
+  background-color: var(--bg-primary);
   display: flex;
   flex-direction: row;
   align-items: center;

@@ -63,7 +63,7 @@ use dioxus::prelude::*;
 use dioxus::logger::tracing;
 use wasm_bindgen::JsCast;
 use super::state::Tool;
-use super::crosshair_overlay::CrosshairOverlay;
+use super::crosshair_overlay::{CrosshairOverlay, BboxCrosshairOverlay};
 use super:: {Geometry, Point};
 use crate::blocks::annotations::models::{Annotation, CommentThread};
 use crate::shell::{THEME, Theme};
@@ -112,9 +112,10 @@ pub fn SvgCanvasV2(
 	let mut node_move_happened = use_signal(|| false); // This is used to del nodes is no movement happened
 	let mut dirty_ann_ids:Signal<HashSet<String>> = use_signal(HashSet::new); // Hashset is instant O(1) where vec is O(n) its a[1] or like a house no rather than loooking up every house on the street
 	let mut last_dirty_tick = use_signal(Instant::now);
-	let mut touch_pointer_id: Signal<Option<i32>> = use_signal(|| None);
+    let mut touch_pointer_id: Signal<Option<i32>> = use_signal(|| None);
     let mut touch_drag_active = use_signal(|| false);
-    let mut skip_polygon_insert = use_signal(|| false);   
+    let mut skip_polygon_insert = use_signal(|| false);
+    let mut bbox_start: Signal<Option<(f64, f64)>> = use_signal(|| None);
 
 	
 
@@ -227,12 +228,14 @@ pub fn SvgCanvasV2(
 				let comment_cursor_style = format!("cursor:url('{}') 0 16, auto;", comment_cursor);
 				if selected_tool == Tool::Polygon {
 					"cursor:none;".to_string()
+				} else if selected_tool == Tool::BBox {
+					"cursor:none;".to_string()
 				} else if selected_tool == Tool::Comment {
 					comment_cursor_style
 				} else if is_dragging() {
 					"cursor:grabbing;".to_string()
 				} else {
-					"cursor:grab;".to_string()
+					"cursor:default;".to_string()
 				}
 			},
 			oncontextmenu: move |evt| {
@@ -464,6 +467,34 @@ pub fn SvgCanvasV2(
 			        return;
 			    }
 
+			    // BBox tool: 2-click to create bbox
+			    if selected_tool == Tool::BBox {
+			        let wx = (p.x - pan_x()) / zoom();
+			        let wy = (p.y - pan_y()) / zoom();
+			        if let Some((sx, sy)) = bbox_start() {
+			            // Second click: create bbox annotation
+			            let width = (wx - sx).abs();
+			            let height = (wy - sy).abs();
+			            if width > 1.0 && height > 1.0 {
+			                let geometry = Geometry::BBox {
+			                    start: Point { x: sx.min(wx), y: sy.min(wy) },
+			                    end: Point { x: sx.max(wx), y: sy.max(wy) },
+			                };
+			                let label_id = selected_label_id_for_mouse_move1;
+			                let img_id = image_id.clone();
+			                let block_id1 = block_id.clone();
+			                spawn(async move {
+			                    state_create_annotation(&block_id1, &img_id, &label_id, geometry, annotations).await;
+			                });
+			            }
+			            bbox_start.set(None);
+			        } else {
+			            // First click: store start point
+			            bbox_start.set(Some((wx, wy)));
+			        }
+			        return;
+			    }
+
 			    if selected_tool != Tool::Polygon { return; }
 
 
@@ -535,20 +566,18 @@ pub fn SvgCanvasV2(
 
 
 
-			// Defing reusable patterns
-			defs{
+			// Dot pattern in fixed world units (zooms with canvas)
+			// 60 world units ≈ 30px on screen at typical initial zoom (~0.5)
+			defs {
 				pattern {
 					id: "dot-pattern",
-					width: "30",
-					height: "30",
+					width: "60",
+					height: "60",
 					pattern_units: "userSpaceOnUse",
-					// No transform needed - rect is inside world group
-					
-					// Dot at center of each cell
 					circle {
-						cx: "15",
-						cy: "15",
-						r: "1.5",
+						cx: "30",
+						cy: "30",
+						r: "2",
 						fill: "var(--dot-color)",
 						pointer_events: "none",
 					}
@@ -565,7 +594,16 @@ pub fn SvgCanvasV2(
 			// World group: everything that pans/zooms together
 			g{
 				transform:"translate({pan_x()}, {pan_y()}) scale({zoom()})",
-				//Image (non-interactive)
+				// Dot grid behind image
+				rect { 
+					x: "-10000", 
+					y: "-10000", 
+					width: "20000", 
+					height: "20000", 
+					fill: "url(#dot-pattern)", 
+					pointer_events: "none",
+				}
+				//Image (non-interactive) - renders on top of dots
 				r#image {
 					class: "canvas-image",
 					href: "{image_url}",
@@ -606,17 +644,6 @@ pub fn SvgCanvasV2(
 						}
 					}
 				}
-				// Dot overlay on top of image (only show after image loads)
-				if image_size().0 > 0.0 {
-					rect { 
-						x: "-10000", 
-						y: "-10000", 
-						width: "20000", 
-						height: "20000", 
-						fill: "url(#dot-pattern)", 
-						pointer_events: "none",
-					}
-				}
 				// CURRENT DRAWING
 				DrawArea {
 					image_size: image_size(), 
@@ -633,6 +660,7 @@ pub fn SvgCanvasV2(
 
 				// PREVIEW DRAWING
 				PolygonPreview { points: active_drawing(), cursor_world_pos: cursor_world(), zoom: zoom(), selected_label_id: selected_label_id.clone() },
+				BboxPreview { bbox_start: bbox_start(), cursor_world_pos: cursor_world(), zoom: zoom(), selected_label_id: selected_label_id.clone() },
 
 				// SAVED DRAWING
 				SavedAnnotation {
@@ -660,6 +688,11 @@ pub fn SvgCanvasV2(
 				x:cursor_pos().0,
 				y:cursor_pos().1,
 				visible: (selected_tool == Tool::Polygon || dragging_node() >=0) && cursor_inside(),
+			}
+		BboxCrosshairOverlay {
+				x: cursor_pos().0,
+				y: cursor_pos().1,
+				visible: selected_tool == Tool::BBox && cursor_inside(),
 			}
 	}
 }
@@ -863,6 +896,78 @@ fn PolygonPreview(
     }
 }
 
+#[component]
+fn BboxPreview(
+	bbox_start: Option<(f64, f64)>,
+	cursor_world_pos: (f64, f64),
+	zoom: f64,
+	selected_label_id: String,
+) -> Element {
+	let Some((sx, sy)) = bbox_start else { return rsx!{}; };
+
+	let stroke_w = (0.9 / zoom).clamp(0.1, 2.7);
+	let circle_r = (6.0 / zoom).clamp(0.75, 18.0);
+
+	// Get label color (same as PolygonPreview)
+	let labels = LABELS();
+	let label_color = labels.iter()
+		.find(|l| l.label_id == selected_label_id)
+		.map(|l| l.label_color.clone())
+		.unwrap_or_else(|| "#22C55E".to_string());
+
+	// Convert to rgba for fill (same as PolygonPreview)
+	let fill_rgba = if label_color.starts_with("#") && label_color.len() == 7 {
+		let r = u8::from_str_radix(&label_color[1..3], 16).unwrap_or(0);
+		let g = u8::from_str_radix(&label_color[3..5], 16).unwrap_or(0);
+		let b = u8::from_str_radix(&label_color[5..7], 16).unwrap_or(0);
+		format!("rgba({},{},{},0.15)", r, g, b)
+	} else {
+		"rgba(0,0,0,0.15)".to_string()
+	};
+
+	let (cx, cy) = cursor_world_pos;
+	let x = sx.min(cx);
+	let y = sy.min(cy);
+	let w = (cx - sx).abs();
+	let h = (cy - sy).abs();
+
+	// 4 corner points
+	let corners = [(x, y), (x + w, y), (x + w, y + h), (x, y + h)];
+	let points_str = format!("{},{} {},{} {},{} {},{}", x, y, x + w, y, x + w, y + h, x, y + h);
+
+	rsx! {
+		// Fill preview
+		polygon {
+			points: "{points_str}",
+			fill: "{fill_rgba}",
+			stroke: "none",
+			pointer_events: "none",
+		}
+
+		// Stroke preview
+		polygon {
+			points: "{points_str}",
+			fill: "none",
+			stroke: "{label_color}",
+			stroke_width: "1.5",
+			vector_effect: "non-scaling-stroke",
+			pointer_events: "none",
+		}
+
+		// Corner circles
+		for (i, (cx, cy)) in corners.iter().enumerate() {
+			circle {
+				key: "bbox-node-{i}",
+				cx: "{cx}", cy: "{cy}", r: "{circle_r}",
+				fill: "{label_color}",
+				stroke: "white",
+				stroke_width: "{stroke_w}",
+				pointer_events: "none",
+			}
+		}
+	}
+}
+
 // ---------- Simple geometry helpers for inserting a point ----------
 // Returns squared distance from click P to segment AB (avoids expensive sqrt).
 //      B (4, 3)
@@ -1057,7 +1162,14 @@ fn SavedAnnotation(
             // Extract points from geometry (we only handle Polygon for now)
             let points: Vec<Point> = match &ann.geometry {
                 Geometry::Polygon { points } => points.clone(),
-                _ => vec![], // BBox not handled yet
+                Geometry::BBox { start, end } => {
+                    vec![
+                        Point { x: start.x, y: start.y },
+                        Point { x: end.x, y: start.y },
+                        Point { x: end.x, y: end.y },
+                        Point { x: start.x, y: end.y },
+                    ]
+                }
             };
 
              // Convert points to SVG format: "x1,y1 x2,y2 x3,y3"

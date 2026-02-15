@@ -48,10 +48,11 @@ html, body {
 
     /* Hover and focus colors */
     --hover-blue: rgb(99, 138, 255);
+    --hover-color:rgb(230,230,230);
     --focus-blue: #4f5bf8;
     --outline-blue: rgba(51, 66, 255, 0.4);
     --breadcrumb-hover: rgb(79,91,248);
-    --active-indicator: #3342FF;
+    --active-indicator: rgb(0,156,255);
     --comment-blue:rgb(0,156,255);
     --comment-button-bg: rgb(210,210,215);
 
@@ -70,7 +71,7 @@ html, body {
     --zoom-button-hover-border: rgba(255, 255, 255, 0.3);
 
     /* Avatar colors */
-    --avatar-bg: #3b82f6;
+    --avatar-bg: rgb(0,156,255);
     --avatar-text: #ffffff;
 
     /* Project page colors */
@@ -117,6 +118,19 @@ html, body {
     --share-email-input-bg: #f5f5f5;
     --share-invite-disabled-bg: #cccccc;
     --share-invite-disabled-text: #888888;
+
+    /* Dog menu (dropdown) colors — always dark */
+    --dog-menu-bg: rgb(21, 21, 21);
+    --dog-menu-border: none;
+    --dog-menu-shadow: rgba(0, 0, 0, 0.5);
+    --dog-menu-text: #ffffff;
+    --dog-menu-text-muted: rgba(255, 255, 255, 0.5);
+    --dog-menu-divider: rgb(45, 45, 45);
+    --dog-menu-icon-filter: none;
+
+    /* Settings dialog — always dark */
+    --settings-tab-active: #ffffff;
+    --settings-tab-inactive: rgb(130, 130, 130);
 
     /* Navbar element colors */
     --navbar-text-bright: rgba(255, 255, 255, 0.9);
@@ -169,7 +183,7 @@ html.dark {
     --text-primary: #e5e5e5;
     --text-secondary: rgba(255, 255, 255, 0.6);
     --text-tertiary: #808080;
-    --border-subtle:rgb(30,30,30);
+    --border-subtle:rgb(36,36,36);
     --border-color: rgb(45,45,45);
     --border-color-hover: rgb(60, 60, 60);
     --shadow: rgba(0, 0, 0, 0.3);
@@ -200,10 +214,11 @@ html.dark {
 
     /* Hover and focus colors (dark mode) */
     --hover-blue: rgb(99, 138, 255);
+    --hover-color:rgb(45,45,45);
     --focus-blue: #4f5bf8;
     --outline-blue: rgba(51, 66, 255, 0.4);
     --breadcrumb-hover: rgb(79,91,248);
-    --active-indicator: #3342FF;
+    --active-indicator: rgb(0,156,255);
     --comment-blue:rgb(0,156,255);
     --comment-button-bg: rgb(75,75,79);
 
@@ -221,7 +236,7 @@ html.dark {
     --zoom-button-hover-border: rgba(255, 255, 255, 0.3);
 
     /* Avatar colors (dark mode) */
-    --avatar-bg: #3b82f6;
+    --avatar-bg: rgb(0,156,255);
     --avatar-text: #ffffff;
 
     /* Project page colors (dark mode) */
@@ -267,6 +282,19 @@ html.dark {
     --share-email-input-bg: #374151;
     --share-invite-disabled-bg: #4b5563;
     --share-invite-disabled-text: #9ca3af;
+
+    /* Settings dialog — always dark (dark mode) */
+    --settings-tab-active: #ffffff;
+    --settings-tab-inactive: rgb(130, 130, 130);
+
+    /* Dog menu (dropdown) colors (dark mode) */
+    --dog-menu-bg: rgb(0, 0, 0);
+    --dog-menu-border: 1px solid rgb(21, 21, 21);
+    --dog-menu-shadow: rgba(0, 0, 0, 0.5);
+    --dog-menu-text: #ffffff;
+    --dog-menu-text-muted: rgba(255, 255, 255, 0.5);
+    --dog-menu-divider: rgb(45, 45, 45);
+    --dog-menu-icon-filter: none;
 
     /* Navbar element colors (dark mode) */
     --navbar-text-bright: rgba(255, 255, 255, 0.9);

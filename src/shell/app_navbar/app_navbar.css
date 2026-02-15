@@ -1,7 +1,7 @@
 .app-navbar {
     height: 40px;
     background: var(--navbar-bg);
-    padding: 20px 10px 0 10px;
+    padding: 0 10px 0 10px;
     display: flex;
     align-items: center;
     position: relative;
@@ -20,7 +20,7 @@
     cursor: pointer;
 }
 
-.logo-menu-overlay {
+.dog-menu-overlay {
     position: fixed;
     top: 0;
     left: 0;
@@ -30,44 +30,290 @@
     z-index: 99;
 }
 
-.logo-menu-dropdown {
+.dog-menu-dropdown {
     position: absolute;
     top: 100%;
     left: 0;
     margin-top: 8px;
-    background: var(--bg-secondary);
-    border: 1px solid var(--border-color);
-    border-radius: 6px;
-    box-shadow: 0 4px 12px var(--shadow);
-    min-width: 120px;
+    width: 226px;
+    height: 482px;
+    background: var(--dog-menu-bg);
+    border: var(--dog-menu-border);
+    border-radius: 12px;
+    box-shadow: 0 4px 12px var(--dog-menu-shadow);
     z-index: 100;
-    padding: 8px 6px;
     display: flex;
     flex-direction: column;
-    gap: 2px;
+    align-items: center;
+    padding-top: 32px;
+    gap: 4px;
 }
 
-.logo-menu-item {
-    padding: 4px 16px;
-    white-space: nowrap;
-    font-size: 13px;
+.dog-menu-dog {
+    width: 32px;
+    height: 32px;
+}
+
+.dog-menu-title {
+    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    font-size: 12px;
+    font-weight: 400;
+    color: var(--dog-menu-text);
+}
+
+.dog-menu-version {
+    font-family: 'Modular Houseplant';
+    font-size: 9px;
+    font-weight: 400;
+    color: var(--dog-menu-text-muted);
+}
+
+.dog-menu-email {
+    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    font-size: 10px;
+    font-weight: 300;
+    color: var(--dog-menu-text);
+    margin-bottom: 15px;
+}
+
+.dog-menu-items {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    padding: 0 15%;
+    gap: 0;
+}
+
+.dog-menu-item {
+    padding: 6px 8px;
+    font-size: 12px;
     font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
     font-weight: 300;
-    color: var(--text-primary);
+    color: #ffffff;
     cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    border-radius: 4px;
     transition: background 0.15s;
-    border-radius: 3px;
 }
 
-.logo-menu-item:hover {
-    background: var(--dx-blue);
-    color: white;
+.dog-menu-item-icon {
+    width: 16px;
+    height: 16px;
 }
 
-.logo-menu-divider {
+.dog-menu-item:hover {
+    background: var(--comment-blue);
+    color: #ffffff;
+}
+
+.dog-menu-item:hover .dog-menu-item-icon {
+    filter: brightness(0) invert(1);
+}
+
+.dog-menu-divider {
     height: 1px;
-    background: var(--border-color);
-    margin: 2px 0;
+    background: var(--dog-menu-divider);
+    margin-top: 8px;
+    width: 100%;
+}
+
+/* ========== Settings Dialog ========== */
+.settings-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2000;
+}
+
+.settings-dialog {
+    width: 645px;
+    height: 657px;
+    background: var(--dog-menu-bg);
+    border: var(--dog-menu-border);
+    border-radius: 15px;
+    box-shadow: 0 4px 12px var(--dog-menu-shadow);
+    display: flex;
+    flex-direction: column;
+}
+
+.settings-tabs {
+    display: flex;
+    gap: 24px;
+    padding: 20px 24px 0 24px;
+}
+
+.settings-tab {
+    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    font-size: 12px;
+    font-weight: 400;
+    color: var(--settings-tab-inactive);
+    cursor: pointer;
+    padding-bottom: 10px;
+    transition: color 0.15s;
+}
+
+.settings-tab:hover {
+    color: var(--settings-tab-active);
+}
+
+.settings-tab.active {
+    color: var(--settings-tab-active);
+}
+
+.settings-tabs-divider {
+    height: 1px;
+    background: var(--dog-menu-divider);
+    width: 100%;
+}
+
+.settings-content {
+    flex: 1;
+    padding: 20px 24px;
+    overflow-y: auto;
+    scrollbar-width: none;
+}
+
+.settings-content::-webkit-scrollbar {
+    display: none;
+}
+
+/* ========== Label Settings ========== */
+.settings-label-header {
+    padding: 50px 0;
+}
+
+.settings-label-title {
+    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    font-size: 14px;
+    font-weight: 400;
+    color: var(--settings-tab-active);
+    margin-bottom: 8px;
+}
+
+.settings-label-subtitle {
+    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    font-size: 12px;
+    font-weight: 400;
+    color: var(--settings-tab-inactive);
+    line-height: 1.4;
+}
+
+.settings-label-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.settings-label-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.settings-label-name {
+    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    font-size: 12px;
+    font-weight: 400;
+    color: var(--settings-tab-active);
+}
+
+.settings-radio-group {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.settings-radio-option {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+}
+
+.settings-radio-option span {
+    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    font-size: 12px;
+    font-weight: 400;
+    color: var(--settings-tab-inactive);
+}
+
+.settings-radio-outer {
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    border: 1px solid var(--settings-tab-active);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.settings-radio-inner {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: transparent;
+}
+
+.settings-radio-option.selected .settings-radio-inner {
+    background: var(--settings-tab-active);
+}
+
+.settings-radio-option.selected span {
+    color: var(--settings-tab-active);
+}
+
+.settings-label-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    margin-top: 40px;
+}
+
+.settings-btn {
+    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    font-size: 12px;
+    font-weight: 400;
+    width: 80px;
+    padding: 8px 0;
+    border-radius: 4px;
+    cursor: pointer;
+    border: none;
+    transition: opacity 0.15s;
+    text-align: center;
+}
+
+.settings-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.settings-btn-cancel {
+    background: transparent;
+    color: var(--settings-tab-inactive);
+    border: 1px solid var(--settings-tab-inactive);
+}
+
+.settings-btn-cancel:hover {
+    color: var(--settings-tab-active);
+    border-color: var(--settings-tab-active);
+}
+
+.settings-btn-save {
+    background: var(--comment-blue);
+    color: #ffffff;
+}
+
+.settings-btn-save:hover {
+    opacity: 0.85;
 }
 
 .app-navbar-center-button-icon {
@@ -132,7 +378,7 @@
     color: var(--text-primary);
     opacity: 0.4;
     position: relative;
-    top:1px;
+    top: 0;
     /*top: vertical-align:middle;          /* nudge up slightly */*/
     margin: 0;          /* no extra horizontal spacing */
     padding: 0;
@@ -141,9 +387,9 @@
 
 .app-breadcrumb-item {
     font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
-    font-size: 13px;
-    font-weight: 300;
-    color: var(--text-secondary);
+    font-size: 12px;
+    font-weight: 400;
+    color: var(--text-primary);
     padding: 6px 0;
     border-radius: 4px;
     transition: all 0.2s;
@@ -156,12 +402,16 @@
     overflow: visible;
 }
 
+.app-breadcrumb-item.truncate {
+    display: flex;
+    align-items: center;
+}
+
 .app-breadcrumb-item.truncate .app-breadcrumb-text {
     max-width: 220px;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-    display: inline-block;
 }
 
 
@@ -215,15 +465,15 @@
 /* Clickable breadcrumb items */
 .app-breadcrumb-item.clickable {
     cursor: pointer;
-    text-decoration: underline;
-    text-decoration-color: var(--text-secondary);
-    text-decoration-thickness: 1px;
-    text-underline-offset: 4px;
+    text-decoration: none;
 }
 
 .app-breadcrumb-item.clickable:hover {
     color: var(--text-primary);
+    text-decoration: underline;
     text-decoration-color: var(--text-primary);
+    text-decoration-thickness: 1px;
+    text-underline-offset: 4px;
 }
 
 /* Image navigation chevrons */
@@ -241,6 +491,7 @@
     height: 14px;
     cursor: pointer;
     opacity: 0.7;
+    color: var(--text-primary);
 }
 
 .app-nav-chevron:hover {
@@ -249,16 +500,56 @@
 
 .app-navbar-image-counter {
     font-family: 'Modular Houseplant';
-    font-size: 14px;
+    font-size: 12px;
     font-weight: 400;
     color: var(--text-primary);
-    margin-right: 10px;
+    margin: 0 10px;
+}
+
+.app-navbar-tool-icons {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    margin-left: 17px;
+}
+
+.app-navbar-tool-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 3px;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: background 0.15s;
+}
+
+.app-navbar-tool-icon img {
+    width: 16px;
+    height: 16px;
+}
+
+.app-navbar-tool-icon img.app-navbar-tool-icon-polygon {
+    width: 18px;
+    height: 18px;
+}
+
+.app-navbar-tool-icon.app-navbar-tool-icon-comment img {
+    width: 15px;
+    height: 15px;
+}
+
+.app-navbar-tool-icon:hover,
+.app-navbar-tool-icon.active {
+    background: var(--comment-blue);
+}
+
+.app-navbar-tool-icon:hover img,
+.app-navbar-tool-icon.active img {
+    filter: brightness(0) invert(1);
 }
 
 .app-navbar-pipe {
-    font-size: 14px;
-    color: var(--border-color);
-    margin-left: 10px;
+    display: none;
 }
 
 .app-navbar-username {
@@ -310,14 +601,14 @@
 /* Sidebar tabs in navbar - positioned to align with sidebar content */
 .navbar-sidebar-tabs {
     position: absolute;
-    left: calc(100% - 18vw + 16.8px); /* Left edge aligns with sidebar content left edge */
+    left: calc(100% - 15vw + 26.8px); /* Left edge aligns with sidebar content left edge */
     display: flex;
     gap: 24px;
 }
 
 .navbar-tab {
-    font-size: 16px;
-    font-weight: 300;
+    font-size: 12px;
+    font-weight: 400;
     color: var(--text-primary);
     cursor: pointer;
     opacity: 0.7;
@@ -341,7 +632,7 @@
     width: 6px;
     height: 6px;
     border-radius: 50%;
-    background: var(--active-indicator, #3342FF);
+    background: var(--dx-blue);
 }
 
 .user-avatar-container {
@@ -383,12 +674,12 @@
 }
 
 .account-panel {
-    background: var(--bg-primary);
-    border: 1px solid var(--border-color);
+    background: var(--dog-menu-bg);
+    border: var(--dog-menu-border);
     border-radius: 8px;
     width: 360px;
     max-width: 90vw;
-    box-shadow: 0 4px 20px var(--shadow);
+    box-shadow: 0 4px 20px var(--dog-menu-shadow);
     position: relative;
     display: flex;
     flex-direction: column;
@@ -401,7 +692,7 @@
     background: none;
     border: none;
     font-size: 20px;
-    color: var(--text-secondary);
+    color: var(--settings-tab-inactive);
     cursor: pointer;
     padding: 0;
     line-height: 1;
@@ -413,7 +704,7 @@
 }
 
 .account-panel-close:hover {
-    color: var(--text-primary);
+    color: var(--settings-tab-active);
 }
 
 .account-panel-section {
@@ -424,8 +715,8 @@
     margin: 0 0 16px 0;
     font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
     font-size: 14px;
-    font-weight: 300;
-    color: var(--text-primary);
+    font-weight: 400;
+    color: var(--settings-tab-active);
 }
 
 .account-panel-invite-form {
@@ -436,13 +727,13 @@
 .account-panel-input {
     flex: 1;
     padding: 8px 12px;
-    border: 1px solid var(--border-color);
+    border: 1px solid var(--dog-menu-divider);
     border-radius: 4px;
     font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
     font-size: 13px;
     font-weight: 300;
-    background: var(--bg-primary);
-    color: var(--text-primary);
+    background: transparent;
+    color: var(--settings-tab-active);
 }
 
 .account-panel-input:focus {
@@ -517,8 +808,8 @@
     justify-content: space-between;
     align-items: flex-end;
     padding: 16px 24px;
-    border-top: 1px solid var(--border-color);
-    background: var(--bg-primary);
+    border-top: 1px solid var(--dog-menu-divider);
+    background: var(--dog-menu-bg);
     border-radius: 0 0 8px 8px;
 }
 
@@ -532,14 +823,14 @@
     font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
     font-size: 13px;
     font-weight: 400;
-    color: var(--text-primary);
+    color: var(--settings-tab-active);
 }
 
 .account-panel-user-email {
     font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
     font-size: 11px;
-    font-weight: 300;
-    color: var(--text-secondary);
+    font-weight: 400;
+    color: var(--settings-tab-inactive);
 }
 
 .account-panel-logout {
@@ -547,15 +838,15 @@
     border: none;
     font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
     font-size: 12px;
-    font-weight: 300;
-    color: var(--text-secondary);
+    font-weight: 400;
+    color: var(--settings-tab-inactive);
     cursor: pointer;
     padding: 4px 0;
     transition: color 0.2s;
 }
 
 .account-panel-logout:hover {
-    color: var(--text-primary);
+    color: var(--settings-tab-active);
 }
 
 /* Role selector */
@@ -571,8 +862,8 @@
     gap: 6px;
     font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
     font-size: 12px;
-    font-weight: 300;
-    color: var(--text-secondary);
+    font-weight: 400;
+    color: var(--settings-tab-inactive);
     cursor: pointer;
 }
 
@@ -580,7 +871,7 @@
     appearance: none;
     width: 14px;
     height: 14px;
-    border: 1px solid var(--border-color);
+    border: 1px solid var(--dog-menu-divider);
     border-radius: 50%;
     margin: 0;
     cursor: pointer;
@@ -588,18 +879,22 @@
 }
 
 .account-panel-role-option input[type="radio"]:checked {
-    border-color: var(--dx-blue);
+    border-color: #ffffff;
 }
 
 .account-panel-role-option input[type="radio"]:checked::after {
     content: '';
     position: absolute;
-    top: 2px;
-    left: 2px;
-    width: 8px;
-    height: 8px;
+    top: 3px;
+    left: 3px;
+    width: 6px;
+    height: 6px;
     border-radius: 50%;
-    background: var(--dx-blue);
+    background: #ffffff;
+}
+
+.account-panel-role-option:has(input[type="radio"]:checked) {
+    color: #ffffff;
 }
 
 /* Invite list */
@@ -612,14 +907,14 @@
     font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
     font-size: 12px;
     font-weight: 300;
-    color: var(--text-secondary);
+    color: var(--settings-tab-inactive);
 }
 
 .account-panel-invite-row {
     display: flex;
     align-items: center;
     padding: 8px 0;
-    border-bottom: 1px solid var(--border-color);
+    border-bottom: 1px solid var(--dog-menu-divider);
     gap: 12px;
 }
 
@@ -631,40 +926,58 @@
     font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
     font-size: 12px;
     font-weight: 300;
-    color: var(--text-primary);
+    color: var(--settings-tab-active);
     flex: 1;
 }
 
-.account-panel-invite-role-btn {
+.account-panel-invite-role-select {
     font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
     font-size: 10px;
     font-weight: 300;
-    color: white;
-    background: var(--dx-blue);
+    color: var(--settings-tab-inactive);
+    background: transparent;
     border: none;
-    border-radius: 3px;
-    padding: 2px 10px;
+    padding: 2px 0;
     cursor: pointer;
-    transition: opacity 0.2s;
-    white-space: nowrap;
+    transition: color 0.2s;
+    appearance: none;
+    -webkit-appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='8' viewBox='0 0 24 24' fill='none' stroke='%23828282' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right center;
+    padding-right: 14px;
 }
 
-.account-panel-invite-role-btn:hover {
-    opacity: 0.85;
+.account-panel-invite-role-select option {
+    background: var(--dog-menu-bg);
+    color: var(--settings-tab-active);
+}
+
+.account-panel-invite-role-select:hover {
+    color: var(--settings-tab-active);
+}
+
+.account-panel-invite-role-select:focus {
+    outline: none;
+}
+
+.account-panel-invite-role-select:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
 }
 
 .account-panel-invite-status {
     font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
     font-size: 10px;
     font-weight: 300;
-    color: var(--text-primary);
+    color: var(--settings-tab-active);
     white-space: nowrap;
 }
 
 .account-panel-invite-delete {
     background: none;
     border: none;
-    color: var(--text-secondary);
+    color: var(--settings-tab-inactive);
     cursor: pointer;
     padding: 4px;
     line-height: 1;

@@ -106,7 +106,7 @@ pub fn AnnotationCanvasPage(
     let zoom: Signal<f64> = use_signal(|| 1.0);
     let sidebar_open: Signal<bool> = use_signal(|| true);
     let grid_visible: Signal<bool> = use_signal(|| false);
-    let mut selected_tool: Signal<Tool> = use_signal(|| Tool::Pan);
+    let mut selected_tool: Signal<Tool> = use_signal(|| Tool::Select);
     let mut context_menu:Signal<Option<(String, String, f64, f64)>> = use_signal(|| None);
     let mut selected_label_id:Signal<String> = use_signal(|| String::new());
     let mut hidden_label_ids:Signal<HashSet<String>> = use_signal(HashSet::new);
@@ -183,6 +183,7 @@ pub fn AnnotationCanvasPage(
         AppNavbar {
             sidebar_tab: Some(sidebar_tab),
             sidebar_open: Some(sidebar_open),
+            selected_tool: Some(selected_tool),
         }
         div { class: "annotation-canvas-page",
             div { class: "canvas-area",
@@ -264,6 +265,7 @@ pub fn AnnotationCanvasPage(
                 selected_label_id: selected_label_id,
                 active_tab: sidebar_tab,
                 scroll_to_thread: scroll_to_thread,
+                selected_tool: Some(selected_tool),
             }
         }
         // Context menu (outside canvas)
@@ -366,7 +368,7 @@ pub fn AnnotationCanvasPage(
                                 }
                             }
                             comment_dialog.set(None);
-                            selected_tool.set(Tool::Pan);
+            selected_tool.set(Tool::Select);
                         },
                     }
                 }

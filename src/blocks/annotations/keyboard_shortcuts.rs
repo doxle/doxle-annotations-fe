@@ -52,6 +52,7 @@ pub fn setup_keyboard_shortcuts(
 			}
 			// b - enable bbox mode
 			if key == "b" || key == "B" {
+				selected_tool.set(Tool::BBox);
 				sidebar_tab.set(SidebarTab::Labels);
 			}
 			// c - enable comment mode + switch sidebar to Comments
@@ -60,9 +61,9 @@ pub fn setup_keyboard_shortcuts(
 				sidebar_open.set(true);
 				sidebar_tab.set(SidebarTab::Comments);
 			}
-			// Escape - disable polygon mode, clear drawing, return to labels
+			// Escape - return to arrow/select mode, clear drawing
 			if key == "Escape" {
-				selected_tool.set(Tool::Pan);
+				selected_tool.set(Tool::Select);
 				active_drawing.write().clear();
 				sidebar_tab.set(SidebarTab::Labels);
 			}

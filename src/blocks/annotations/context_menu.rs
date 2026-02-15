@@ -64,10 +64,9 @@ pub fn AnnotationContextMenu(
                             let lid = label.label_id.clone();
                             move |_| on_change_label.call(lid.clone())
                         },
-                        if label.label_id == current_label_id {
-                            span { class: "radio-icon", "●" }
-                        } else {
-                            span { class: "radio-icon", "○" }
+                        span {
+                            class: "label-color-square",
+                            style: "background: {label.label_color};",
                         }
                         span { "{label.label_name}" }
                     }
