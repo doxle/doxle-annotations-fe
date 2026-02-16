@@ -1,7 +1,7 @@
 use dioxus::prelude::*;
 use crate::Route;
 use crate::blocks::dashboard::state::state_set_current_block;
-use crate::atoms::tasks::state::{state_load_tasks, state_delete_task, state_rename_task, TASKS_LOADING, TASKS_ERROR, TASKS};
+use crate::atoms::tasks::state::{state_load_tasks, state_load_tasks_silent, state_delete_task, state_rename_task, TASKS_LOADING, TASKS_ERROR, TASKS, DELETE_CURRENT, DELETE_TOTAL};
 use crate::atoms::tasks::api::{api_assign_task, api_set_reviewer};
 use crate::users::state::USER;
 use crate::users::api::{User, UserRole, list_users};
@@ -48,8 +48,13 @@ pub fn TasksListPage(block_id: String, block_name: String, block_type: String) -
     // Load tasks on for a block mount
     use_resource(move || {
         let block_id = block_id_for_resource.clone();
+        let is_empty = TASKS.peek().is_empty();
         async move {
-            state_load_tasks(&block_id).await;
+            if is_empty {
+                state_load_tasks(&block_id).await;
+            } else {
+                state_load_tasks_silent(&block_id).await;
+            }
         }
     });
 
@@ -173,6 +178,8 @@ pub fn TasksListPage(block_id: String, block_name: String, block_type: String) -
                                 .unwrap_or_else(|| ("no-image".to_string(), "No Image".to_string()));
 
                             let is_deleting = deleting_task_id() == Some(task.task_id.clone());
+                            let del_current = DELETE_CURRENT();
+                            let del_total = DELETE_TOTAL();
                             rsx! {
                                 li {
                                     key: "{task.task_id}",
@@ -331,6 +338,24 @@ pub fn TasksListPage(block_id: String, block_name: String, block_type: String) -
                                             }
                                         }
                                         
+                                        // Delete progress overlay
+                                        if is_deleting && del_total > 0 {
+                                            div {
+                                                class: "task-delete-progress",
+                                                div {
+                                                    class: "task-delete-progress-bar",
+                                                    div {
+                                                        class: "task-delete-progress-fill",
+                                                        style: "width: {(del_current as f64 / del_total as f64 * 100.0) as u32}%",
+                                                    }
+                                                }
+                                                span {
+                                                    class: "task-delete-progress-text",
+                                                    "Deleting {del_current}/{del_total}"
+                                                }
+                                            }
+                                        }
+
                                         // Divider
                                         div { class: "task-divider" }
                                         

@@ -112,6 +112,8 @@ pub struct Block {
     #[serde(default)]
     pub labels: Vec<BlockLabel>,
     pub block_created_at: String,
+    #[serde(default)]
+    pub block_updated_at: String,
 }
 
 #[derive(Debug, Serialize)]

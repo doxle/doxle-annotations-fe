@@ -1,7 +1,7 @@
 use crate::Route;
 use dioxus::prelude::*;
 use crate::shell::{THEME, Theme, AppNavbar, ProtectedRoute};
-use crate::blocks::dashboard::state::{BLOCKS, BLOCKS_LOADING, state_load_blocks, state_delete_block, state_set_current_block, state_rename_block};
+use crate::blocks::dashboard::state::{BLOCKS, BLOCKS_LOADING, state_load_blocks, state_load_blocks_silent,  state_delete_block, state_set_current_block, state_rename_block};
 use crate::blocks::dashboard::api::BlockType;
 use crate::users::state::USER;
 use crate::users::api::UserRole;
@@ -20,6 +20,28 @@ const CARD_ICON_LIGHT: Asset = asset!("/assets/icons/card-light.svg");
 const CARD_ICON_DARK: Asset = asset!("/assets/icons/card-dark.svg");
 
 
+fn format_date(rfc3339: &str) -> String {
+    if rfc3339.is_empty() { return "—".to_string(); }
+    let date = js_sys::Date::new(&wasm_bindgen::JsValue::from_str(rfc3339));
+    let months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+    let month = months[date.get_month() as usize];
+    format!("{} {}, {}", month, date.get_date(), date.get_full_year())
+}
+
+fn format_relative_time(rfc3339: &str) -> String {
+    if rfc3339.is_empty() { return "—".to_string(); }
+    let date = js_sys::Date::new(&wasm_bindgen::JsValue::from_str(rfc3339));
+    let now = js_sys::Date::new_0();
+    let diff_secs = ((now.get_time() - date.get_time()) / 1000.0) as u64;
+    match diff_secs {
+        0..=59 => "just now".to_string(),
+        60..=3599 => format!("{} min ago", diff_secs / 60),
+        3600..=86399 => format!("{} hours ago", diff_secs / 3600),
+        86400..=2591999 => format!("{} days ago", diff_secs / 86400),
+        _ => format_date(rfc3339),
+    }
+}
+
 #[component]
 pub fn DashboardPage()->Element{
 	// Get current theme
@@ -37,8 +59,14 @@ pub fn DashboardPage()->Element{
 
     // Load blocks on mount
     use_resource(move || async move {
-        info!("Loading dashboard page - fetching blocks");
-        state_load_blocks().await;
+        if BLOCKS.peek().is_empty() {
+            info!("Loading dashboard page - first load");
+            state_load_blocks().await;
+        }
+        else {
+            info!("Loading dashboard page - silent refresh");
+            state_load_blocks_silent().await;
+        }
     });
 
 
@@ -56,20 +84,21 @@ pub fn DashboardPage()->Element{
             ProtectedRoute {
                 style { {DASHBOARD_CSS} }
                 AppNavbar {}
-                div { class: "blocks-page",
+                div { class: "blocks-page blocks-page-loading",
                     div { class: "blocks-loading", "Loading blocks..." }
                 }
             }
         };
     }
 
-    let filtered_blocks: Vec<_> = BLOCKS.read().iter().filter(|b| {
+    let mut filtered_blocks: Vec<_> = BLOCKS.read().iter().filter(|b| {
         if is_builder {
             b.block_type == BlockType::File || b.block_type == BlockType::Building
         } else {
             true
         }
     }).cloned().collect();
+    filtered_blocks.sort_by(|a, b| b.block_created_at.cmp(&a.block_created_at));
 
     // If no blocks, show centered "+ NEW BLOCK" button
     if filtered_blocks.is_empty() {
@@ -247,8 +276,8 @@ pub fn DashboardPage()->Element{
                                     div {
                                         class: "block-row-6",
                                         div { class: "block-dates",
-                                            div { class: "block-date", "Created: Jan 14, 2026" }
-                                            div { class: "block-date", "Updated: 2 hours ago" }
+                                            div { class: "block-date", "Created: {format_date(&block.block_created_at)}" }
+                                            div { class: "block-date", "Updated: {format_relative_time(&block.block_updated_at)}" }
                                         }
                                     }
                                 }

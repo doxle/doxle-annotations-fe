@@ -6,6 +6,11 @@ use crate::blocks::annotations::models::{Annotation, CommentThread};
 use crate::atoms::svg_canvas::state::Tool;
 use crate::users::state::USER;
 
+const BBOX_ICON_LIGHT: Asset = asset!("/assets/icons/bbox-light.svg");
+const BBOX_ICON_DARK: Asset = asset!("/assets/icons/bbox-dark.svg");
+const POLYGON_ICON_LIGHT: Asset = asset!("/assets/icons/polygon-light.svg");
+const POLYGON_ICON_DARK: Asset = asset!("/assets/icons/polygon-dark.svg");
+
 
 
 const LABELS_ICON_LIGHT: Asset = asset!("/assets/icons/labels-light.svg");
@@ -140,19 +145,60 @@ pub fn AppSidebar(
                                     },
                                     "{label.label_name}"
                                 }
-                                span {class:"labels-table-cell label-equals", "=" }
                                 span {class:"labels-table-cell label-count", "{count:02}" }
+                                // Geometry type indicators (only show > 0)
+                                {{
+                                    let bbox_count = annotations.iter().filter(|a| a.label_id == lid && matches!(a.geometry, crate::atoms::svg_canvas::Geometry::BBox { .. })).count();
+                                    let poly_count = annotations.iter().filter(|a| a.label_id == lid && matches!(a.geometry, crate::atoms::svg_canvas::Geometry::Polygon { .. })).count();
+                                    let bbox_icon = if is_dark { BBOX_ICON_DARK } else { BBOX_ICON_LIGHT };
+                                    let poly_icon = if is_dark { POLYGON_ICON_DARK } else { POLYGON_ICON_LIGHT };
+                                    rsx! {
+                                        div {
+                                            class: "label-geo-types",
+                                            if bbox_count > 0 {
+                                                img { src: bbox_icon, class: "label-geo-icon" }
+                                                span { class: "label-geo-tag", "{bbox_count}" }
+                                            }
+                                            if poly_count > 0 {
+                                                img { src: poly_icon, class: "label-geom-icon-poly" }
+                                                span { class: "label-geo-tag", "{poly_count}" }
+                                            }
+                                        }
+                                    }
+                                }}
                             }
                         }
                    }}
                    // Total row
-                   div {
-                       class: "labels-table-row total-row",
-                       div { class: "label-color-rect-wrapper" } // Empty placeholder for color column
-                       span { class: "labels-table-cell label-name total-label", "# total" }
-                       span { class: "labels-table-cell label-equals", "=" }
-                       span { class: "labels-table-cell label-count", "{annotations.len():02}" }
-                   }
+                   {{
+                       let total_bbox = annotations.iter().filter(|a| matches!(a.geometry, crate::atoms::svg_canvas::Geometry::BBox { .. })).count();
+                       let total_poly = annotations.iter().filter(|a| matches!(a.geometry, crate::atoms::svg_canvas::Geometry::Polygon { .. })).count();
+                       rsx! {
+                           div {
+                               class: "labels-table-row total-row",
+                               div { class: "label-color-rect-wrapper" }
+                               span { class: "labels-table-cell label-name total-label", "# total" }
+                               span { class: "labels-table-cell label-count", "{annotations.len():02}" }
+                               {{
+                                   let bbox_icon = if is_dark { BBOX_ICON_DARK } else { BBOX_ICON_LIGHT };
+                                   let poly_icon = if is_dark { POLYGON_ICON_DARK } else { POLYGON_ICON_LIGHT };
+                                   rsx! {
+                                       div {
+                                           class: "label-geo-types",
+                                           if total_bbox > 0 {
+                                               img { src: bbox_icon, class: "label-geo-icon" }
+                                               span { class: "label-geo-tag", "{total_bbox}" }
+                                           }
+                                           if total_poly > 0 {
+                                               img { src: poly_icon, class: "label-geom-icon-poly" }
+                                               span { class: "label-geo-tag", "{total_poly}" }
+                                           }
+                                       }
+                                   }
+                               }}
+                           }
+                       }
+                   }}
                 }
             }
 

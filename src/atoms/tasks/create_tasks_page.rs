@@ -240,7 +240,7 @@ pub fn CreateTaskPage(props: CreateTaskPageProps) -> Element {
                         button {
                             r#type: "submit",
                             class: "tasks-create-button",
-                            disabled: *is_submitting.read() || pending_uploads.read().is_empty(),
+                            disabled: *is_submitting.read(),
                             if *is_submitting.read() { "Uploading..." } else { "Create Task" }
                         }
                     }

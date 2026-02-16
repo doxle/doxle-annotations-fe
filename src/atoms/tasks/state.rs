@@ -7,7 +7,9 @@ use dioxus::prelude::*;
 pub static TASKS:GlobalSignal<Vec<Task>> = Signal::global(|| Vec::new());
 pub static TASKS_LOADING:GlobalSignal<bool> = Signal::global(|| false);
 pub static TASKS_ERROR:GlobalSignal<Option<String>> = Signal::global(|| None);
-pub static CURRENT_TASK_ID:GlobalSignal<Option<String>> = Signal::global(|| None);	
+pub static CURRENT_TASK_ID:GlobalSignal<Option<String>> = Signal::global(|| None);
+pub static DELETE_CURRENT: GlobalSignal<usize> = Signal::global(|| 0);
+pub static DELETE_TOTAL: GlobalSignal<usize> = Signal::global(|| 0);
 
 pub async fn state_load_tasks(block_id:&str){
  	*TASKS_LOADING.write() = true;
@@ -26,6 +28,17 @@ pub async fn state_load_tasks(block_id:&str){
  		}
  	 }
  	  *TASKS_LOADING.write() = false;
+ }
+
+ pub async fn state_load_tasks_silent(block_id:&str){
+    match api::api_list_tasks(block_id).await {
+        Ok(tasks_list) => { 
+            *TASKS.write() = tasks_list;
+        }
+        Err(e)=>{
+            tracing::error!("❌ Error loading tasks: {}", e);
+        }
+     }
  }
 
 pub async fn state_create_task(block_id:&str, name:String) -> Result<Task, String> {
@@ -78,6 +91,26 @@ pub async fn state_upload_task_file(block_id:&str, task_id:&str, file:web_sys::F
 }
 
 pub async fn state_delete_task(block_id: &str, task_id: &str) {
+    // Get images from the task before deleting
+    let images: Vec<(String, String)> = TASKS.read()
+        .iter()
+        .find(|t| t.task_id == task_id)
+        .map(|t| t.images.iter().map(|img| (img.image_id.clone(), block_id.to_string())).collect())
+        .unwrap_or_default();
+
+    let total = images.len() + 1; // images + task record
+    *DELETE_CURRENT.write() = 0;
+    *DELETE_TOTAL.write() = total;
+
+    // Delete images one by one with progress
+    for (i, (image_id, bid)) in images.iter().enumerate() {
+        if let Err(e) = crate::atoms::media::api::api_delete_image(&bid, &image_id).await {
+            tracing::error!("❌ Failed to delete image {}: {}", image_id, e);
+        }
+        *DELETE_CURRENT.write() = i + 1;
+    }
+
+    // Delete the task record
     match api::api_delete_task(block_id, task_id).await {
         Ok(_) => {
             TASKS.write().retain(|t| t.task_id != task_id);
@@ -87,6 +120,10 @@ pub async fn state_delete_task(block_id: &str, task_id: &str) {
             tracing::error!("❌ Failed to delete task: {}", e);
         }
     }
+
+    *DELETE_CURRENT.write() = total;
+    *DELETE_CURRENT.write() = 0;
+    *DELETE_TOTAL.write() = 0;
 }
 
 pub async fn state_rename_task(block_id: &str, task_id: &str, new_name: String) {

@@ -5,6 +5,10 @@ html.dark .create-tasks-page {
   background: var(--bg-primary);
 }
 
+.selected-files-list::-webkit-scrollbar {
+  display: none;
+}
+
 html.dark input {
   background-color: var(--bg-primary);
   border-color: var(--border-color);
@@ -103,7 +107,7 @@ input {
 }
 
 input:focus {
-  border-color: var(--primary-button-bg);
+  border-color: var(--text-primary);
 }
 
 /* Form actions - right aligned */
@@ -212,6 +216,8 @@ html.dark .tasks-upload-button:hover {
   width: 100%;
   max-height: 150px;
   overflow-y: auto;
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }
 
 .selected-file-item {

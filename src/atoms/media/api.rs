@@ -7,6 +7,12 @@ use crate::atoms::media::Image;
 use crate::atoms::tasks::state::TASKS;
 
 
+/// DELETE /images/{image_id}?block_id={block_id}
+pub async fn api_delete_image(block_id: &str, image_id: &str) -> Result<(), String> {
+    let endpoint = format!("/images/{}?block_id={}", image_id, block_id);
+    client::delete(&endpoint).await
+}
+
 const MULTIPART_THRESHOLD: usize = 5 * 1024 * 1024; // 5MB
 const CHUNK_SIZE: usize = 5 * 1024 * 1024; // 5MB per part
 

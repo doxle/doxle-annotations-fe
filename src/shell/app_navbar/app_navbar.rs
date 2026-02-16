@@ -8,7 +8,7 @@ use crate::atoms::svg_canvas::state::Tool;
 use crate::users::state::{USER, load_user};
 use super::status_bar::StatusBar;
 use crate::api;
-use crate::blocks::dashboard::state::{state_load_blocks, state_load_labels, LABELS};
+use crate::blocks::dashboard::state::{state_load_labels, LABELS};
 use crate::blocks::dashboard::api::api_update_label_properties;
 
 
@@ -24,6 +24,8 @@ const SETTINGS_ICON: Asset = asset!("/assets/icons/settings.svg");
 const HELP_ICON: Asset = asset!("/assets/icons/help.svg");
 const EMAIL_ICON: Asset = asset!("/assets/icons/email.svg");
 const SIGNOUT_ICON: Asset = asset!("/assets/icons/signout.svg");
+const CLOSE_LIGHT: Asset = asset!("/assets/icons/close-light.svg");
+const CLOSE_DARK: Asset = asset!("/assets/icons/close-dark.svg");
 const CHEVRON_LEFT: Asset = asset!("/assets/icons/chevron-left.svg");
 const CHEVRON_RIGHT: Asset = asset!("/assets/icons/chevron-right.svg");
 const ARROW_LEFT_LIGHT: Asset = asset!("/assets/icons/arrow-left-light.svg");
@@ -66,6 +68,9 @@ pub fn AppNavbar(
     let (block_id, block_name, block_type_str, task_id, task_name, image_name, prev_img, next_img, current_idx, total_imgs): (
         Option<String>, Option<String>, String, Option<String>, Option<String>, Option<String>, Option<Image>, Option<Image>, usize, usize
     ) = match &route {
+        Route::CreateTaskPage { block_id, block_name, block_type } => {
+            (Some(block_id.clone()), Some(block_name.clone()), block_type.clone(), None, None, None, None, None, 0, 0)
+        }
         Route::TasksListPage { block_id, block_name, block_type } => {
             (Some(block_id.clone()), Some(block_name.clone()), block_type.clone(), None, None, None, None, None, 0, 0)
         }
@@ -131,7 +136,6 @@ pub fn AppNavbar(
                              div {
                                  class: "dog-menu-item",
                                  onclick: move |_| {
-                                     spawn(async move { state_load_blocks().await; });
                                      nav.push(Route::DashboardPage {});
                                      logo_menu_open.set(false);
                                  },
@@ -198,9 +202,6 @@ pub fn AppNavbar(
                     div { 
                         class: "app-breadcrumb-item clickable",
                         onclick: move |_| {
-                            spawn(async move {
-                                state_load_blocks().await;
-                            });
                             nav.push(Route::DashboardPage {});
                         },
                         "{name}"
@@ -359,9 +360,10 @@ pub fn AppNavbar(
                 }
             } else if children.is_ok() {
                 {children}
-            } else {
-                StatusBar {}
             }
+
+            // Status bar (always visible - position: fixed)
+            StatusBar {}
 
             // Sidebar tabs (only when sidebar is open)
             if let (Some(mut tab_signal), Some(open_signal)) = (sidebar_tab, sidebar_open) {
@@ -599,6 +601,7 @@ fn SettingsDialog(show: Signal<bool>, block_id: String) -> Element {
 #[component]
 fn AccountPanel(show: Signal<bool>, user_name: String, user_email: String) -> Element {
     let nav = use_navigator();
+    let is_dark = THEME() == Theme::Dark;
     let mut email = use_signal(|| String::new());
     let mut selected_role = use_signal(|| Option::<String>::None);
     let mut is_loading = use_signal(|| false);
@@ -683,7 +686,7 @@ fn AccountPanel(show: Signal<bool>, user_name: String, user_email: String) -> El
                 button {
                     class: "account-panel-close",
                     onclick: close_panel,
-                    "×"
+                    img { src: CLOSE_DARK, alt: "Close" }
                 }
                 
                 // Invite section (admin only)

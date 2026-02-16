@@ -2,7 +2,7 @@
 
 .app-sidebar {
     width: 15vw;
-    max-width: 220px;
+    max-width: 260px;
 padding: 60px 16.8px 12px 16.8px; /* Top padding to start below navbar */
     background: var(--bg-primary);
     display: flex;
@@ -100,13 +100,13 @@ padding: 60px 16.8px 12px 16.8px; /* Top padding to start below navbar */
 
 .labels-table-row {
     display: grid;
-    grid-template-columns: auto auto 1fr auto;
+    grid-template-columns: auto 1fr 22px 40px;
     min-height: 28px;
     align-items: center;
     padding: 4px 8px;
     box-sizing: border-box;
     position: relative;
-    gap: 8px;
+    gap: 1px;
     cursor: pointer;
     border-radius: 4px;
     margin: 0;
@@ -154,7 +154,9 @@ padding: 60px 16.8px 12px 16.8px; /* Top padding to start below navbar */
 
 .label-color-rect-wrapper {
     position: relative;
-    min-width: 35px; /* 27px input + 8px margin */
+    min-width: 5px;
+    display: flex;
+    align-items: center;
 }
 
 .label-color-input {
@@ -167,7 +169,7 @@ padding: 60px 16.8px 12px 16.8px; /* Top padding to start below navbar */
     border-radius: 0.5px;
     cursor: pointer;
     padding: 0;
-    margin-right: 8px;
+    margin: 0;
 }
 
 .label-color-input::-webkit-color-swatch-wrapper {
@@ -186,23 +188,49 @@ padding: 60px 16.8px 12px 16.8px; /* Top padding to start below navbar */
 
 .labels-table-cell.label-name {
     color: var(--text-primary);
-    padding: 2px 3px;
+    padding: 0 3px;
     cursor: pointer;
     border-radius: 2px;
+    line-height: 14px;
 }
 
 .labels-table-cell.label-name:hover {
     background-color: var(--bg-card-hover);
 }
 
-.labels-table-cell.label-equals {
-    color: var(--text-secondary);
-    text-align: right;
+.labels-table-cell.label-count {
+    color: var(--text-primary);
+    text-align: left;
+    min-width: 20px;
 }
 
-.labels-table-cell.label-count {
-    color: var(--text-secondary);
-    text-align: right;
+/* Geometry type indicators */
+.label-geo-types {
+    display: flex;
+    gap: 1.5px;
+    align-items: center;
+    justify-content: flex-end;
+}
+
+.label-geo-tag {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    font-size: 10px;
+    color: var(--text-primary);
+    font-weight: 300;
+}
+
+.label-geom-icon {
+    width: 10px;
+    height: 10px;
+    margin-right: 0;
+}
+
+.label-geom-icon-poly {
+    width: 9px;
+    height: 8px;
+    margin-right: 0;
 }
 
 /* Total row */

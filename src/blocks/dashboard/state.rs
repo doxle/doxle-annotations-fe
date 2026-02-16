@@ -39,6 +39,20 @@ pub async fn state_load_blocks() {
     *BLOCKS_LOADING.write() = false;
 }
 
+
+/// Load blocks silently (no loading spinner) - for background refresh
+pub async fn state_load_blocks_silent() {
+    match api_list_blocks().await {
+        Ok(blocks_list) => {
+            tracing::info!("✅ Blocks refreshed silently: {} items", blocks_list.len());
+            *BLOCKS.write() = blocks_list;
+        }
+        Err(e) => {
+            tracing::error!("❌ Error refreshing blocks silently: {}", e);
+        }
+    }
+}
+
 /// Create a new block (BE auto-creates default labels)
 pub async fn state_create_block(name: String, block_type: BlockType, company: Option<String>) -> Result<Block, String> {
     let block = match api_create_block(name, block_type, company).await {

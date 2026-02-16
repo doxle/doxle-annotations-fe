@@ -1,13 +1,14 @@
 .status-bar-pill {
     position: fixed;
-    right: 60px;
-    top: 10px;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%);
     font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
     font-size: 12px;
     font-weight: 400;
     color: #DC2626;
     z-index: 500;
-    text-align: right;
+    text-align: center;
     animation: status-fade-in 0.3s ease-out;
 }
 

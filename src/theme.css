@@ -6,6 +6,11 @@ html, body {
     overflow: hidden;
     height: 100vh;
     width: 100vw;
+    background-color: #ffffff;
+}
+
+html.dark, html.dark body {
+    background-color: #000;
 }
 
 :root {

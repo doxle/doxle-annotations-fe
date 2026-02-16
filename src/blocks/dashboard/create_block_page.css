@@ -191,7 +191,7 @@ input {
 }
 
 input:focus {
-  border-color: var(--primary-button-bg);
+  border-color: var(--text-primary);
 }
 
 /* Labels column */
@@ -412,7 +412,7 @@ input:focus {
 }
 
 .blocks-type-select:focus {
-  border-color: var(--primary-button-bg);
+  border-color: var(--text-primary);
 }
 
 html.dark .blocks-type-select {
