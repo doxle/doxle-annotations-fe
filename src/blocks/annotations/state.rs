@@ -29,7 +29,7 @@ pub async fn state_load_annotations(image_id:&str, mut annotations: Signal<Vec<A
 }
 
 /// Create annotation with optimistic update
-pub async fn state_create_annotation(block_id:&str, image_id:&str, label_id:&str, geometry:Geometry, mut annotations:Signal<Vec<Annotation>>) {
+pub async fn state_create_annotation(block_id:&str, image_id:&str, label_id:&str, label_name:&str, geometry:Geometry, mut annotations:Signal<Vec<Annotation>>) {
 	// let ann_id = uuid::Uuid::new_v4().to_string();
 
 	 // Optimistic UI update
@@ -43,7 +43,7 @@ pub async fn state_create_annotation(block_id:&str, image_id:&str, label_id:&str
 	 // tracing::info!("✅ Annotation added to UI (optimistic)");
 
 	  // API call
-	  match api::api_create_annotation(block_id, image_id, label_id, geometry.clone()).await {
+	  match api::api_create_annotation(block_id, image_id, label_id, label_name, geometry.clone()).await {
 	  	Ok(server_ann_id) => {
 	  		 tracing::info!("✅ Annotation created on server: {}", server_ann_id);
 	  		 // Add to UI with server ID

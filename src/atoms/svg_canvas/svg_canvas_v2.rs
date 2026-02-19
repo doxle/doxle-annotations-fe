@@ -118,8 +118,6 @@ pub fn SvgCanvasV2(
     let mut bbox_start: Signal<Option<(f64, f64)>> = use_signal(|| None);
 
 	
-
-
 	let dot_spacing = 30.0; // Dot spacing in world units
 	let dot_min_px = 15.0;  // minimum on-screen spacing so dots stay visible
 	let dot_world = {
@@ -481,10 +479,15 @@ pub fn SvgCanvasV2(
 			                    end: Point { x: sx.max(wx), y: sy.max(wy) },
 			                };
 			                let label_id = selected_label_id_for_mouse_move1;
+			                let label_name = crate::blocks::dashboard::state::LABELS.read()
+			                    .iter()
+			                    .find(|l| l.label_id == label_id)
+			                    .map(|l| l.label_name.clone())
+			                    .unwrap_or_default();
 			                let img_id = image_id.clone();
 			                let block_id1 = block_id.clone();
 			                spawn(async move {
-			                    state_create_annotation(&block_id1, &img_id, &label_id, geometry, annotations).await;
+			                    state_create_annotation(&block_id1, &img_id, &label_id, &label_name, geometry, annotations).await;
 			                });
 			            }
 			            bbox_start.set(None);
@@ -517,11 +520,16 @@ pub fn SvgCanvasV2(
 			                let geometry = Geometry::Polygon {points};
 			                let ann_id = uuid::Uuid::new_v4().to_string();
 			                let label_id = selected_label_id_for_mouse_move1;
+			                let label_name = crate::blocks::dashboard::state::LABELS.read()
+			                    .iter()
+			                    .find(|l| l.label_id == label_id)
+			                    .map(|l| l.label_name.clone())
+			                    .unwrap_or_default();
 			                let img_id = image_id.clone();
 			            	
 			                let block_id1 = block_id.clone();
 			                spawn(async move{
-			                	state_create_annotation(&block_id1, &img_id, &label_id, geometry, annotations).await;
+			                	state_create_annotation(&block_id1, &img_id, &label_id, &label_name, geometry, annotations).await;
 			                });
 			                
 			                tracing::info!("Polygon save intiated{}", annotations.read().len());
@@ -803,8 +811,10 @@ fn PolygonPreview(
 		.map(|l| l.label_color.clone())
 		.unwrap_or_else(|| "#22C55E".to_string());
 	
-	// Convert to rgba for fill
-	let fill_rgba = if label_color.starts_with("#") && label_color.len() == 7 {
+	// Convert to rgba for fill (handles both #hex and rgb() formats)
+	let fill_rgba = if label_color.starts_with("rgb(") {
+		label_color.replace("rgb(", "rgba(").replace(")", ",0.15)")
+	} else if label_color.starts_with("#") && label_color.len() == 7 {
 		let r = u8::from_str_radix(&label_color[1..3], 16).unwrap_or(0);
 		let g = u8::from_str_radix(&label_color[3..5], 16).unwrap_or(0);
 		let b = u8::from_str_radix(&label_color[5..7], 16).unwrap_or(0);
@@ -813,7 +823,7 @@ fn PolygonPreview(
 		"rgba(0,0,0,0.15)".to_string()
 	};
 
-	let fmt = |pts: &[(f64, f64)]| {					// Changes vec to svg points "0,0 10.5,20 30,5.5"
+	let fmt = |pts: &[(f64, f64)]| {
 	    pts.iter().fold(String::new(), |mut s, (x, y)| {
 	        if !s.is_empty() { s.push(' '); }
 	        s.push_str(&format!("{x},{y}"));
@@ -915,8 +925,10 @@ fn BboxPreview(
 		.map(|l| l.label_color.clone())
 		.unwrap_or_else(|| "#22C55E".to_string());
 
-	// Convert to rgba for fill (same as PolygonPreview)
-	let fill_rgba = if label_color.starts_with("#") && label_color.len() == 7 {
+	// Convert to rgba for fill (handles both #hex and rgb() formats)
+	let fill_rgba = if label_color.starts_with("rgb(") {
+		label_color.replace("rgb(", "rgba(").replace(")", ",0.15)")
+	} else if label_color.starts_with("#") && label_color.len() == 7 {
 		let r = u8::from_str_radix(&label_color[1..3], 16).unwrap_or(0);
 		let g = u8::from_str_radix(&label_color[3..5], 16).unwrap_or(0);
 		let b = u8::from_str_radix(&label_color[5..7], 16).unwrap_or(0);
@@ -1056,8 +1068,6 @@ fn insert_point_on_polygon(points: &mut Vec<Point>, px: f64, py: f64) {
         points.push(Point { x: px, y: py });
     }
 }
-
-
 
 
 

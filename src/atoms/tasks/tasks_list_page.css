@@ -17,12 +17,13 @@
   align-items: center;
   justify-content: center;
   min-height: 100vh;
+  overflow-y: auto;
 }
 
 /* Container for header and list - centered */
 .tasks-list-container {
-  width: 100%;
-  max-width: 800px;
+  width: 70%;
+  max-width: none;
   margin: 0 auto;
   display: flex;
   flex-direction: column;
@@ -322,6 +323,8 @@ html.dark .task-divider {
   align-items: center;
   font-size: 12px;
   color: var(--text-secondary);
+  margin-top: 4px;
+  opacity: 0.6;
 }
 
 .task-updated-info {
@@ -404,4 +407,34 @@ html.dark .task-divider {
   font-size: 11px;
   color: var(--text-secondary);
   font-weight: 300;
+}
+
+/* Task label rows - horizontal layout */
+.task-labels-row {
+  display: grid;
+  grid-template-rows: repeat(3, auto);
+  grid-auto-flow: column;
+  grid-auto-columns: max-content;
+  gap: 4px;
+  width: 85%;
+  justify-content: space-between;
+  font-family: 'ModularHouseplant', monospace;
+}
+
+.task-label-row {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+.task-label-name {
+  color: var(--text-secondary);
+}
+
+.task-label-count {
+  color: var(--text-primary);
 }

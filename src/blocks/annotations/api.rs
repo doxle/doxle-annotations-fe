@@ -23,6 +23,7 @@ pub struct ApiAnnotation {
 #[derive(Debug, Clone, Serialize)]
 pub struct CreateAnnotationPayload {
     label_id:String,
+    label_name:String,
     geometry:Geometry,
 }
 
@@ -45,10 +46,11 @@ pub async fn api_list_annotations(image_id: &str) -> Result<Vec<ApiAnnotation>, 
     client::get(&endpoint).await
 }
 
-pub async fn api_create_annotation(block_id:&str, image_id:&str, label_id:&str, geometry:Geometry) -> Result<String, String> {
+pub async fn api_create_annotation(block_id:&str, image_id:&str, label_id:&str, label_name:&str, geometry:Geometry) -> Result<String, String> {
     let endpoint = format!("/images/{}/annotations?block_id={}", image_id, block_id);
     let payload = CreateAnnotationPayload {
         label_id:label_id.to_string(), 
+        label_name:label_name.to_string(),
         geometry:geometry,
     };
 

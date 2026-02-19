@@ -160,7 +160,9 @@ pub struct BlockLabel {
     pub label_name: String,
     pub label_color: String,
     pub label_properties: Option<serde_json::Value>,
-    pub label_count: u32
+    pub label_count: u32,
+    pub bbox_count: u32,
+    pub polygon_count: u32,
 }
 
 #[derive(Debug, Serialize)]

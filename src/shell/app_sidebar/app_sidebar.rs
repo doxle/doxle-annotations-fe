@@ -154,14 +154,18 @@ pub fn AppSidebar(
                                     let poly_icon = if is_dark { POLYGON_ICON_DARK } else { POLYGON_ICON_LIGHT };
                                     rsx! {
                                         div {
-                                            class: "label-geo-types",
+                                            class: "label-geom-types",
                                             if bbox_count > 0 {
-                                                img { src: bbox_icon, class: "label-geo-icon" }
-                                                span { class: "label-geo-tag", "{bbox_count}" }
+                                                div { class: "label-geom-group",
+                                                    img { src: bbox_icon, class: "label-geom-icon" }
+                                                    span { class: "label-geom-tag", "{bbox_count}" }
+                                                }
                                             }
                                             if poly_count > 0 {
-                                                img { src: poly_icon, class: "label-geom-icon-poly" }
-                                                span { class: "label-geo-tag", "{poly_count}" }
+                                                div { class: "label-geom-group",
+                                                    img { src: poly_icon, class: "label-geom-icon-poly" }
+                                                    span { class: "label-geom-tag", "{poly_count}" }
+                                                }
                                             }
                                         }
                                     }
@@ -184,14 +188,18 @@ pub fn AppSidebar(
                                    let poly_icon = if is_dark { POLYGON_ICON_DARK } else { POLYGON_ICON_LIGHT };
                                    rsx! {
                                        div {
-                                           class: "label-geo-types",
+                                           class: "label-geom-types",
                                            if total_bbox > 0 {
-                                               img { src: bbox_icon, class: "label-geo-icon" }
-                                               span { class: "label-geo-tag", "{total_bbox}" }
+                                               div { class: "label-geom-group",
+                                                   img { src: bbox_icon, class: "label-geom-icon" }
+                                                   span { class: "label-geom-tag", "{total_bbox}" }
+                                               }
                                            }
                                            if total_poly > 0 {
-                                               img { src: poly_icon, class: "label-geom-icon-poly" }
-                                               span { class: "label-geo-tag", "{total_poly}" }
+                                               div { class: "label-geom-group",
+                                                   img { src: poly_icon, class: "label-geom-icon-poly" }
+                                                   span { class: "label-geom-tag", "{total_poly}" }
+                                               }
                                            }
                                        }
                                    }

@@ -2,6 +2,7 @@ use dioxus::prelude::*;
 use crate::Route;
 use crate::blocks::dashboard::state::state_set_current_block;
 use crate::atoms::tasks::state::{state_load_tasks, state_load_tasks_silent, state_delete_task, state_rename_task, TASKS_LOADING, TASKS_ERROR, TASKS, DELETE_CURRENT, DELETE_TOTAL};
+use crate::blocks::dashboard::state::{LABELS, state_load_labels};
 use crate::atoms::tasks::api::{api_assign_task, api_set_reviewer};
 use crate::users::state::USER;
 use crate::users::api::{User, UserRole, list_users};
@@ -55,6 +56,7 @@ pub fn TasksListPage(block_id: String, block_name: String, block_type: String) -
             } else {
                 state_load_tasks_silent(&block_id).await;
             }
+            state_load_labels(&block_id).await;
         }
     });
 
@@ -109,7 +111,7 @@ pub fn TasksListPage(block_id: String, block_name: String, block_type: String) -
             style { {TASKS_LIST_CSS} }
             AppNavbar {}
             div { class: "tasks-page",
-                div { style: "color: red;", "Error loading tasks: {err}" }
+                div { class:"task-label-name", "Error loading tasks: {err}" }
             }
         };
     }
@@ -372,21 +374,49 @@ pub fn TasksListPage(block_id: String, block_name: String, block_type: String) -
                                                 }
                                             }
                                         }
+
+                                        div {
+                                            class: "task-labels-row",
+                                            for label in &*LABELS.read() {{
+                                                let label_count:u32 = task.images.iter()
+                                                    .filter_map(|img| img.labels_count.get(&label.label_name).copied()).sum();
+                                                let bbox_count:u32 = task.images.iter()
+                                                    .filter_map(|img| img.bbox_count.get(&label.label_name).copied()).sum();
+                                                let polygon_count:u32 = task.images.iter()
+                                                    .filter_map(|img| img.polygon_count.get(&label.label_name).copied()).sum();
+                                                rsx! {
+                                                    div {
+                                                        class: "task-label-row",
+                                                        span { class: "task-label-name", "{label.label_name}" }
+                                                        span { class: "task-label-count", "{label_count}" }
+                                                    }
+                                                }
+                                            }}
+                                        }
                                         
                                         // Last updated and counts row
-                                        div { class: "task-info-row",
-                                            // Last updated info
-                                            div { class: "task-updated-info",
-                                                "Last updated by User on Dec.5.2025"
+                                        {{
+                                            let total_bbox: u32 = task.images.iter()
+                                                .flat_map(|img| img.bbox_count.values()).sum();
+                                            let total_polygon: u32 = task.images.iter()
+                                                .flat_map(|img| img.polygon_count.values()).sum();
+                                            rsx! {
+                                                div { class: "task-info-row",
+                                                    div { class: "task-updated-info",
+                                                        "Last updated by User on Dec.5.2025"
+                                                    }
+                                                    div { class: "task-counts",
+                                                        span { class: "task-count-item", "{task.images.len()} images" }
+                                                        span { class: "task-count-divider", "/" }
+                                                        span { class: "task-count-item", "{task.annotation_count} annotations" }
+                                                        span { class: "task-count-divider", "/" }
+                                                        span { class: "task-count-item", "{total_bbox} bbox" }
+                                                        span { class: "task-count-divider", "/" }
+                                                        span { class: "task-count-item", "{total_polygon} polygons" }
+                                                    }
+                                                }
                                             }
-                                            
-                                            // Image and annotation counts
-                                            div { class: "task-counts",
-                                                span { class: "task-count-item", "{task.images.len()} images" }
-                                                span { class: "task-count-divider", "/" }
-                                                span { class: "task-count-item", "{task.annotation_count} annotations" }
-                                            }
-                                        }
+                                        }}
                                     }
                                 }
                             }

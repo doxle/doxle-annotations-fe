@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 pub struct Image {
@@ -9,5 +10,9 @@ pub struct Image {
 	pub url: String,
 	pub locked:bool,
 	pub order:Option<i32>,
+	pub annotation_count:u32,
+	pub labels_count:HashMap<String, u32>,
+	pub bbox_count:HashMap<String, u32>,
+	pub polygon_count:HashMap<String, u32>,
 	pub uploaded_at:String
 }

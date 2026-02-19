@@ -192,10 +192,12 @@ padding: 60px 16.8px 12px 16.8px; /* Top padding to start below navbar */
     cursor: pointer;
     border-radius: 2px;
     line-height: 14px;
+    width: fit-content;
+    justify-self: start;
 }
 
 .labels-table-cell.label-name:hover {
-    background-color: var(--bg-card-hover);
+    background-color: transparent;
 }
 
 .labels-table-cell.label-count {
@@ -205,14 +207,25 @@ padding: 60px 16.8px 12px 16.8px; /* Top padding to start below navbar */
 }
 
 /* Geometry type indicators */
-.label-geo-types {
+.label-geom-types {
     display: flex;
-    gap: 1.5px;
+    gap: 4px;
     align-items: center;
     justify-content: flex-end;
+    opacity: 0;
+    transition: opacity 0.15s;
 }
 
-.label-geo-tag {
+.labels-table-row:hover .label-geom-types,
+.labels-table-row.selected .label-geom-types {
+    opacity: 1;
+}
+
+.labels-table-row.total-row .label-geom-types {
+    opacity: 1;
+}
+
+.label-geom-tag {
     display: flex;
     align-items: center;
     gap: 0;
@@ -221,15 +234,21 @@ padding: 60px 16.8px 12px 16.8px; /* Top padding to start below navbar */
     font-weight: 300;
 }
 
+.label-geom-group {
+    display: flex;
+    align-items: center;
+    gap: 1.5px;
+}
+
 .label-geom-icon {
-    width: 10px;
-    height: 10px;
+    width: 8px;
+    height: 8px;
     margin-right: 0;
 }
 
 .label-geom-icon-poly {
     width: 9px;
-    height: 8px;
+    height: 9px;
     margin-right: 0;
 }
 
