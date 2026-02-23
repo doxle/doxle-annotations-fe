@@ -1,5 +1,4 @@
 use dioxus::prelude::*;
-use std::time::Duration;
 
 #[derive(Clone, PartialEq, Debug)]
 pub enum StatusType {
@@ -48,7 +47,18 @@ pub fn show_info_for(msg: &str, seconds: u32) {
     set_status(msg, StatusType::Info, seconds * 1000);
 }
 
+// Show info that stays until manually cleared or replaced
+pub fn show_info_persistent(msg: &str) {
+    *STATUS.write() = Some(Status {
+        message: msg.to_string(),
+        status_type: StatusType::Info,
+    });
+}
 
+// Clear status immediately
+pub fn clear_status() {
+    *STATUS.write() = None;
+}
 
 // Internal setter with auto-clear
 fn set_status(msg: &str, status_type: StatusType, duration:u32) {
@@ -57,12 +67,8 @@ fn set_status(msg: &str, status_type: StatusType, duration:u32) {
         status_type,
     });
 
-    // Auto-clear after 3 seconds
-    spawn(async move {
-        gloo_timers::future::TimeoutFuture::new(duration).await;
-        // Only clear if the status hasn't changed in the meantime
-        // Note: A perfect implementation might use IDs to track specific messages,
-        // but for a solo dev/simple app, clearing unconditionally after 3s is usually fine UX.
+    // Use gloo Timeout callback (not spawn) so the timer survives component unmounts/navigation
+    gloo_timers::callback::Timeout::new(duration, || {
         *STATUS.write() = None;
-    });
+    }).forget();
 }

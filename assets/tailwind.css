@@ -228,9 +228,6 @@
   .resize {
     resize: both;
   }
-  .flex-wrap {
-    flex-wrap: wrap;
-  }
   .items-center {
     align-items: center;
   }
@@ -254,9 +251,6 @@
   }
   .lowercase {
     text-transform: lowercase;
-  }
-  .italic {
-    font-style: italic;
   }
   .outline {
     outline-style: var(--tw-outline-style);

@@ -1,7 +1,7 @@
 #![allow(dead_code, unused_imports, unused_variables, unused_mut, deprecated)]
 
 use dioxus::prelude::*;
-use blocks::{DashboardPage, CreateBlockPage};
+use blocks::{DashboardPage, CreateBlockPage, ImportBlockPage};
 use atoms::tasks::{TasksListPage, CreateTaskPage};
 use blocks::annotations::AnnotationCanvasPage;
 use home::upload::UploadPage;
@@ -170,6 +170,8 @@ enum Route {
     DashboardPage{},
     #[route("/blocks/new")]
     CreateBlockPage{},
+    #[route("/blocks/:block_id/:block_name/:block_type/import")]
+    ImportBlockPage { block_id: String, block_name: String, block_type: String },
     #[route("/blocks/:block_id/:block_name/:block_type/tasks/new")]
     CreateTaskPage { block_id: String, block_name: String, block_type: String },
     #[route("/blocks/:block_id/:block_name/:block_type/tasks")]

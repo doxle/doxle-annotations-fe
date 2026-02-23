@@ -96,7 +96,7 @@ pub fn SignInPage() -> Element {
                                 if let Some(document) = window.document() {
                                     if let Some(active) = document.active_element() {
                                         if let Ok(el) = active.dyn_into::<web_sys::HtmlElement>() {
-                                            el.blur();
+                                            let _ = el.blur();
                                         }
                                     }
                                 }

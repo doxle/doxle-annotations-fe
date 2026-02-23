@@ -107,9 +107,10 @@ pub fn AppNavbar(
     //     tracing::info!(" USER {:?}", user);
     // };
     rsx!{
+        // Status bar rendered outside nav to avoid stacking context trapping z-index
+        StatusBar {}
         nav{
             class:"app-navbar",
-            style: "position: relative;", // Ensure status bar centers relative to navbar
              // Home icon (left) - click to show dropdown
              div {
                  class: "app-navbar-logo-container",
@@ -362,8 +363,6 @@ pub fn AppNavbar(
                 {children}
             }
 
-            // Status bar (always visible - position: fixed)
-            StatusBar {}
 
             // Sidebar tabs (only when sidebar is open)
             if let (Some(mut tab_signal), Some(open_signal)) = (sidebar_tab, sidebar_open) {

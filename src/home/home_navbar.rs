@@ -13,7 +13,7 @@ fn blur_active_element_and_scroll_to_top() {
         if let Some(document) = window.document() {
             if let Some(active) = document.active_element() {
                 if let Ok(el) = active.dyn_into::<web_sys::HtmlElement>() {
-                    el.blur();
+                    let _ = el.blur();
                 }
             }
         }

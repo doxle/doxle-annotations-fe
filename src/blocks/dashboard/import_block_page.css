@@ -1,0 +1,223 @@
+/* Import Block Page - standalone styles */
+
+html.dark .import-page {
+  background: var(--bg-primary);
+}
+
+.import-page {
+  background: var(--bg-primary);
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+}
+
+.import-form-container {
+  width: 600px;
+  max-width: 90vw;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  padding: 0 20px;
+}
+
+.import-title-row {
+  display: flex;
+  align-items: center;
+  color: var(--text-primary);
+  gap: 15px;
+  width: 100%;
+  margin-bottom: 18px;
+}
+
+.import-title {
+  font-family: 'HelveticaNeue', Helvetica, Arial, sans-serif;
+  font-size: 45px;
+  font-weight: 100;
+  color: var(--text-primary);
+  margin: 0 0 2px 0;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.import-form {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.import-form-group {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 10px;
+}
+
+.import-file-upload-container {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 5px;
+}
+
+.import-hidden-file-input {
+  display: none !important;
+}
+
+.import-upload-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 132px;
+  width: 100%;
+  padding: 0 16px;
+  border: 1px solid var(--border-color);
+  background: transparent;
+  color: var(--text-tertiary);
+  border-radius: 4px;
+  font-family: 'Modular Houseplant', monospace;
+  font-weight: 300;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-size: 14px;
+}
+
+.import-upload-button:hover {
+  background: var(--bg-card-hover);
+  border-color: var(--text-primary);
+  color: var(--text-primary);
+}
+
+html.dark .import-upload-button {
+  border-color: var(--border-color);
+  color: var(--text-tertiary);
+}
+
+html.dark .import-upload-button:hover {
+  border-color: var(--text-primary);
+  color: var(--text-primary);
+}
+
+/* Progress Bar */
+.import-progress-container {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 16px;
+  width: 100%;
+}
+
+.import-progress-bar {
+  width: 100%;
+  height: 6px;
+  background-color: var(--bg-card);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.import-progress-fill {
+  height: 100%;
+  background-color: var(--dx-blue);
+  border-radius: 3px;
+  transition: width 0.3s ease-out;
+  position: relative;
+}
+
+.import-progress-fill::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.3),
+    transparent
+  );
+  animation: import-progress-shimmer 1.5s infinite;
+}
+
+@keyframes import-progress-shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+.import-progress-text {
+  font-family: 'Modular Houseplant', monospace;
+  font-size: 12px;
+  color: var(--text-secondary);
+  text-align: center;
+}
+
+/* Form Actions */
+.import-form-actions {
+  width: 100%;
+  display: flex;
+  flex-direction: row;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.import-back-button {
+  height: 33px;
+  padding: 0 16px;
+  background: transparent;
+  border: 1px solid var(--border-color);
+  color: var(--text-secondary);
+  border-radius: 4px;
+  font-family: 'HelveticaNeue', Helvetica, Arial, sans-serif;
+  font-weight: 300;
+  cursor: pointer;
+  transition: opacity 0.2s;
+  width: auto;
+}
+
+.import-back-button:hover {
+  border: 1px solid var(--text-tertiary);
+}
+
+.import-submit-button {
+  height: 33px;
+  padding: 0 16px;
+  background-color: var(--primary-button-bg);
+  color: var(--primary-button-text);
+  border: none;
+  border-radius: 4px;
+  font-family: 'HelveticaNeue', Helvetica, Arial, sans-serif;
+  font-weight: 300;
+  cursor: pointer;
+  transition: opacity 0.2s;
+  width: auto;
+}
+
+.import-submit-button:hover {
+  background-color: var(--dx-blue);
+  color: white;
+}
+
+.import-stop-button {
+  height: 33px;
+  padding: 0 16px;
+  background-color: #E6194B;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  font-family: 'HelveticaNeue', Helvetica, Arial, sans-serif;
+  font-weight: 300;
+  cursor: pointer;
+  transition: opacity 0.2s;
+  width: auto;
+}
+
+.import-stop-button:hover {
+  opacity: 0.85;
+}

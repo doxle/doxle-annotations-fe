@@ -29,7 +29,7 @@
 /* Container for header and list - centered */
 .blocks-list-container {
   width: 100%;
-  max-width: 800px;
+  max-width: 75vw;
   margin: 0 auto;
   display: flex;
   flex-direction: column;
@@ -434,6 +434,12 @@ html.dark .blocks-create-button-centered:hover {
   width: 30%;
   background: linear-gradient(90deg, var(--dx-blue), var(--dx-blue));
   animation: deleting-progress 1s ease-in-out infinite;
+}
+
+@media (min-width: 1440px) {
+  .blocks-list-container {
+    max-width: 60vw;
+  }
 }
 
 @keyframes deleting-progress {

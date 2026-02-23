@@ -190,6 +190,7 @@ pub fn DashboardPage()->Element{
                                                 rsx!{
                                                     BlockMenu {
                                                     block_id: bid.clone(),
+                                                    block_type: block_type.as_str().to_string(),
                                                     is_open: open_menu_id() == Some(block.block_id.clone()),
                                                     on_toggle: move |_| {
                                                         let b = bid_toggle.clone();
@@ -210,6 +211,19 @@ pub fn DashboardPage()->Element{
                                                     on_archive: move |_| {
                                                         // TODO: archive block
                                                         open_menu_id.set(None);
+                                                    },
+                                                    on_import: {
+                                                        let bid_import = block.block_id.clone();
+                                                        let bname_import = block.block_name.clone();
+                                                        let btype_import = block.block_type.clone();
+                                                        move |_| {
+                                                            open_menu_id.set(None);
+                                                            navigator.push(Route::ImportBlockPage {
+                                                                block_id: bid_import.clone(),
+                                                                block_name: bname_import.clone(),
+                                                                block_type: btype_import.as_str().to_string(),
+                                                            });
+                                                        }
                                                     },
                                                     on_delete: move |_| {
                                                         let id = bid_delete.clone();
