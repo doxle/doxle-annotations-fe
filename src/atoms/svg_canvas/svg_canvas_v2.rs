@@ -602,14 +602,16 @@ pub fn SvgCanvasV2(
 			// World group: everything that pans/zooms together
 			g{
 				transform:"translate({pan_x()}, {pan_y()}) scale({zoom()})",
-				// Dot grid behind image
-				rect { 
-					x: "-10000", 
-					y: "-10000", 
-					width: "20000", 
-					height: "20000", 
-					fill: "url(#dot-pattern)", 
-					pointer_events: "none",
+			// Dot grid behind image (hidden until image loads to prevent zoomed-in flash)
+				if image_size() != (0.0, 0.0) {
+					rect { 
+						x: "-10000", 
+						y: "-10000", 
+						width: "20000", 
+						height: "20000", 
+						fill: "url(#dot-pattern)", 
+						pointer_events: "none",
+					}
 				}
 				//Image (non-interactive) - renders on top of dots
 				r#image {
@@ -652,44 +654,52 @@ pub fn SvgCanvasV2(
 						}
 					}
 				}
-				// CURRENT DRAWING
-				DrawArea {
-					image_size: image_size(), 
-					selected_tool: selected_tool, 
-					zoom: zoom, 
-					pan_x: pan_x, 
-					pan_y: pan_y, 
-					active_drawing:active_drawing, 
-					annotations: annotations, 
-					selected_label_id:selected_label_id_for_draw_area,
-					selected_ann_id: selected_ann_id,
-					is_panning:is_panning,
-				},
+				if image_size() != (0.0, 0.0) {
+					// CURRENT DRAWING
+					DrawArea {
+						image_size: image_size(), 
+						selected_tool: selected_tool, 
+						zoom: zoom, 
+						pan_x: pan_x, 
+						pan_y: pan_y, 
+						active_drawing:active_drawing, 
+						annotations: annotations, 
+						selected_label_id:selected_label_id_for_draw_area,
+						selected_ann_id: selected_ann_id,
+						is_panning:is_panning,
+					},
 
-				// PREVIEW DRAWING
-				PolygonPreview { points: active_drawing(), cursor_world_pos: cursor_world(), zoom: zoom(), selected_label_id: selected_label_id.clone() },
-				BboxPreview { bbox_start: bbox_start(), cursor_world_pos: cursor_world(), zoom: zoom(), selected_label_id: selected_label_id.clone() },
+					// PREVIEW DRAWING
+					PolygonPreview { points: active_drawing(), cursor_world_pos: cursor_world(), zoom: zoom(), selected_label_id: selected_label_id.clone() },
+					BboxPreview { bbox_start: bbox_start(), cursor_world_pos: cursor_world(), zoom: zoom(), selected_label_id: selected_label_id.clone() },
 
-				// SAVED DRAWING
-				SavedAnnotation {
-					block_id:block_id.clone(),
-					annotations:annotations,
-					on_annotation_context_menu:on_annotation_context_menu,
-					selected_ann_id: selected_ann_id,
-					dragging_node: dragging_node,
-					cursor_world: cursor_world,
-					zoom:zoom,
-					image_id: image_id.clone(),
-					dirty_ann_ids:dirty_ann_ids,
-					last_dirty_tick:last_dirty_tick,
-					skip_polygon_insert: skip_polygon_insert,
-					hidden_label_ids:hidden_label_ids.clone(),
-					hovered_label_id: hovered_label_id,
+					// SAVED DRAWING
+					SavedAnnotation {
+						block_id:block_id.clone(),
+						annotations:annotations,
+						on_annotation_context_menu:on_annotation_context_menu,
+						selected_ann_id: selected_ann_id,
+						dragging_node: dragging_node,
+						cursor_world: cursor_world,
+						zoom:zoom,
+						image_id: image_id.clone(),
+						dirty_ann_ids:dirty_ann_ids,
+						last_dirty_tick:last_dirty_tick,
+						skip_polygon_insert: skip_polygon_insert,
+						hidden_label_ids:hidden_label_ids.clone(),
+						hovered_label_id: hovered_label_id,
+					}
+					if show_comments {
+						CommentMarkers { threads: comment_threads(), zoom: zoom(), active_thread_id: active_thread_id.clone() }
+					}
 				}
-				if show_comments {
-					CommentMarkers { threads: comment_threads(), zoom: zoom(), active_thread_id: active_thread_id.clone() }
-				}
 
+			}
+		}
+		if image_size() == (0.0, 0.0) {
+			div {
+				style: "position:absolute; top:50%; left:50%; transform:translate(-50%, -50%); font-family:'Helvetica Neue', Helvetica, Arial, sans-serif; font-size:12px; font-weight:300; color:var(--text-secondary); pointer-events:none;",
+				"Loading image..."
 			}
 		}
 		CrosshairOverlay {		// Uses div has to be outsidfe svg{}

@@ -259,7 +259,7 @@ pub fn AppNavbar(
            
             
              // Center content (custom or image navigation or default StatusBar)
-            if prev_img.is_some() || next_img.is_some() {
+            if prev_img.is_some() || next_img.is_some() || selected_tool.is_some() {
                 div {
                     class: "app-navbar-image-nav",
                     // Left arrow

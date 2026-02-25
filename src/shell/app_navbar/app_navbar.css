@@ -533,8 +533,14 @@ html.dark .app-navbar-center-button:hover .app-navbar-center-button-icon {
 }
 
 .app-navbar-tool-icon img.app-navbar-tool-icon-polygon {
-    width: 18px;
-    height: 18px;
+    width: 16px;
+    height: 16px;
+    border-radius: 1px;
+}
+
+html.dark .app-navbar-tool-icon img.app-navbar-tool-icon-polygon {
+    width: 17px;
+    height: 17px;
 }
 
 .app-navbar-tool-icon.app-navbar-tool-icon-comment img {

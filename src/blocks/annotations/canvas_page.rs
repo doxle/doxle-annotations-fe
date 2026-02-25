@@ -60,6 +60,7 @@ use super::annotations_layer::AnnotationsLayer;
 use super::models::Annotation;
 use super::state::{state_load_annotations, state_update_annotation_label, state_delete_annotation, state_load_threads, state_create_thread, state_add_comment, state_delete_thread, state_resolve_thread};
 use crate::shell::{AppNavbar, app_sidebar::{AppSidebar, SidebarTab}};
+use crate::shell::loading::LoadingPage;
 use super::keyboard_shortcuts::setup_keyboard_shortcuts;
 use crate::blocks::dashboard::state::{LABELS, LABELS_LOADING, state_load_labels};
 use super::context_menu::AnnotationContextMenu;
@@ -82,13 +83,20 @@ pub fn AnnotationCanvasPage(
 
     info!("Canvas Page:: mounted ::+ image_id={}", image_id);
     info!("task-name: {:?}, image_name: {:?}", task_name, image_name);
+    info!("🔍 PROP block_id = {}", block_id);
+    let mut initial_tasks_booting: Signal<bool> = use_signal(|| true);
 
     
     // LOAD TASKS
     let block_id_tasks = block_id.clone();
     use_resource(move || {
         let bid = block_id_tasks.clone();
-        async move { state_load_tasks(&bid).await }
+        info!("🔍 USE_RESOURCE sees block_id = {}", bid);
+        async move {
+            initial_tasks_booting.set(true);
+            state_load_tasks(&bid).await;
+            initial_tasks_booting.set(false);
+        }
     });
 
     // LOAD BLOCK LABELS
@@ -187,8 +195,8 @@ pub fn AnnotationCanvasPage(
         }
         div { class: "annotation-canvas-page",
             div { class: "canvas-area",
-                if TASKS_LOADING() {
-                    div { class: "no-image-text", "Loading..." }
+                if initial_tasks_booting() || TASKS_LOADING() {
+                    LoadingPage {}
                 } else if task.is_none() {
                     div { class: "no-image-text", "Task not found" }
                 } else if let Some(url) = image_url {

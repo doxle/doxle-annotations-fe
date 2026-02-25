@@ -40,25 +40,19 @@ pub fn TasksListPage(block_id: String, block_name: String, block_type: String) -
     let nav = use_navigator();
 
 
-    
-    // Set current block on mount
-    use_hook(||{
-        state_set_current_block(&block_id_for_hook.clone());
-    });
-    
-    // Load tasks on for a block mount
-    use_resource(move || {
-        let block_id = block_id_for_resource.clone();
-        let is_empty = TASKS.peek().is_empty();
-        async move {
-            if is_empty {
-                state_load_tasks(&block_id).await;
-            } else {
-                state_load_tasks_silent(&block_id).await;
-            }
-            state_load_labels(&block_id).await;
-        }
-    });
+    // Load tasks + labels whenever block_id changes (clears stale data from previous block)
+    let mut last_loaded_block_id: Signal<String> = use_signal(|| String::new());
+
+    if last_loaded_block_id() != block_id {
+        let bid = block_id.clone();
+        last_loaded_block_id.set(bid.clone());
+        state_set_current_block(&bid);
+        *TASKS.write() = Vec::new(); // Clear tasks
+        spawn(async move {
+            state_load_tasks(&bid).await;
+            state_load_labels(&bid).await;
+        });
+    }
 
 
 

@@ -78,6 +78,9 @@ pub fn to_cloudfront_url(s3_url: &str) -> String {
         format!("{}/proxy-image/{}", CLOUDFRONT_URL, path)
     } else if let Some(path) = s3_url.split("s3.amazonaws.com/doxle-app/").nth(1) {
         format!("{}/proxy-image/{}", CLOUDFRONT_URL, path)
+    } else if !s3_url.starts_with("http") {
+        // Treat as a raw S3 key (e.g. "annotations/blocks/.../image.png")
+        format!("{}/proxy-image/{}", CLOUDFRONT_URL, s3_url)
     } else {
         // Fallback to original URL if parsing fails
         s3_url.to_string()
