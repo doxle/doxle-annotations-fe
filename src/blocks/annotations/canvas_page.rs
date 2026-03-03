@@ -48,10 +48,10 @@ When SvgCanvas modifies signals that canvas_page reads:
 **/
 
 
-use std::collections::HashSet;
+use std::collections::{HashSet, HashMap};
 use dioxus::prelude::*;
 use dioxus::logger::tracing::info;
-use crate::atoms::svg_canvas::{SvgCanvas, SvgCanvasV2};
+use crate::atoms::svg_canvas::{SvgCanvas, SvgCanvasV2, Geometry};
 use crate::atoms::svg_canvas::state::Tool;
 use crate::atoms::tasks::state::{TASKS, TASKS_LOADING, state_load_tasks};
 use crate::atoms::tasks::model::Task;
@@ -67,7 +67,7 @@ use crate::blocks::dashboard::state::CURRENT_BLOCK;
 use super::context_menu::AnnotationContextMenu;
 use super::comment_dialog::CommentDialog;
 use super::models::CommentThread;
-
+use crate::Route;
 
 const CSS: &str = include_str!("canvas_page.css");
 
@@ -88,11 +88,11 @@ pub fn AnnotationCanvasPage(
     
 
     
-    // Use cached tasks — only fetch if not loaded for this block (uses prop block_id so hot reload works)
+    // Use cached tasks — only fetch if not loaded for this block
     let block_id_tasks = block_id.clone();
     use_effect(move || {
-        let has_tasks = TASKS.read().iter().any(|t| t.block_id == block_id_tasks);
-        if !has_tasks {
+        let current_bid = crate::blocks::dashboard::state::CURRENT_BLOCK().map(|b| b.block_id.clone()).unwrap_or_default();
+        if current_bid != block_id_tasks {
             let bid = block_id_tasks.clone();
             spawn(async move {
                 state_load_tasks(&bid).await;
@@ -126,7 +126,11 @@ pub fn AnnotationCanvasPage(
     let mut comment_threads: Signal<Vec<CommentThread>> = use_signal(|| Vec::new());
     let mut comment_dialog: Signal<Option<(f64, f64, f64, f64, String)>> = use_signal(|| None); // (world_x, world_y, screen_x, screen_y, thread_id)
     let mut scroll_to_thread: Signal<Option<String>> = use_signal(|| None);
-    setup_keyboard_shortcuts(sidebar_open, grid_visible, selected_tool, active_drawing, hidden_label_ids, hovered_label_id, show_shortcuts, sidebar_tab);
+    let mut nav_direction: Signal<Option<i32>> = use_signal(|| None);
+    let mut clipboard: Signal<Option<(Geometry, String)>> = use_signal(|| None);
+    let mut paste_mode: Signal<bool> = use_signal(|| false);
+    let mut copy_requested: Signal<u32> = use_signal(|| 0);
+    setup_keyboard_shortcuts(sidebar_open, grid_visible, selected_tool, active_drawing, hidden_label_ids, hovered_label_id, show_shortcuts, sidebar_tab, nav_direction, copy_requested, paste_mode);
 
 
 
@@ -151,26 +155,81 @@ pub fn AnnotationCanvasPage(
         }
     });
 
+    // Navigate to next/prev image on f/b key press
+    let nav = use_navigator();
+    let nav_block_id = block_id.clone();
+    let nav_block_name = block_name.clone();
+    let nav_block_type = block_type.clone();
+    let nav_task_id = task_id.clone();
+    let nav_task_name = task_name.clone();
+    let nav_image_id = image_id.clone();
+    use_effect(move || {
+        if let Some(dir) = nav_direction() {
+            nav_direction.set(None);
+            let tasks = TASKS.read();
+            if let Some(task) = tasks.iter().find(|t| t.task_id == nav_task_id) {
+                if let Some(idx) = task.images.iter().position(|img| img.image_id == nav_image_id) {
+                    let new_idx = idx as i32 + dir;
+                    if new_idx >= 0 && (new_idx as usize) < task.images.len() {
+                        let new_img = &task.images[new_idx as usize];
+                        nav.replace(Route::AnnotationCanvasPage {
+                            block_id: nav_block_id.clone(),
+                            block_name: nav_block_name.clone(),
+                            block_type: nav_block_type.clone(),
+                            task_id: nav_task_id.clone(),
+                            task_name: nav_task_name.clone(),
+                            image_id: new_img.image_id.clone(),
+                            image_name: format!("{}.png", new_img.image_id),
+                        });
+                    }
+                }
+            }
+        }
+    });
+
     //*** - COMPONENT IS NOT REMOUNTED BUT ONLY RERENDERED ****//
     let mount_id = use_hook(move || uuid::Uuid::new_v4().to_string());
     info!("Component mount_id: {}", mount_id);
 
-    // Load annotations whenever img id changes
+    // Load annotations whenever img id changes — cache per image for instant back/forward
     let mut last_loaded_image_id: Signal<String> = use_signal(|| String::new());
+    let mut ann_cache: Signal<HashMap<String, Vec<Annotation>>> = use_signal(HashMap::new);
+    let mut thread_cache: Signal<HashMap<String, Vec<CommentThread>>> = use_signal(HashMap::new);
     
     if last_loaded_image_id() != image_id {
+        let old_iid = last_loaded_image_id();
+        // Save current data to cache before switching
+        if !old_iid.is_empty() {
+            ann_cache.write().insert(old_iid.clone(), annotations().clone());
+            thread_cache.write().insert(old_iid.clone(), comment_threads().clone());
+        }
+
         let iid = image_id.clone();
         info!("Loading annotations for image_id: {}", iid);
         last_loaded_image_id.set(iid.clone());
-        annotations.write().clear();
-        comment_threads.write().clear();
-        spawn(async move {
-            state_load_annotations(&iid, annotations).await;
-        });
-        let iid2 = image_id.clone();
-        spawn(async move {
-            state_load_threads(&iid2, comment_threads).await;
-        });
+
+        // Check cache first — instant if previously visited
+        if let Some(cached_anns) = ann_cache.read().get(&iid).cloned() {
+            *annotations.write() = cached_anns;
+            info!("✅ Annotations loaded from cache");
+        } else {
+            annotations.write().clear();
+            let iid_clone = iid.clone();
+            spawn(async move {
+                state_load_annotations(&iid_clone, annotations).await;
+            });
+        }
+
+        if let Some(cached_threads) = thread_cache.read().get(&iid).cloned() {
+            *comment_threads.write() = cached_threads;
+            info!("✅ Threads loaded from cache");
+        } else {
+            comment_threads.write().clear();
+            let iid_clone = iid.clone();
+            spawn(async move {
+                state_load_threads(&iid_clone, comment_threads).await;
+            });
+        }
     }
 
     // Get task to find image URL
@@ -238,6 +297,9 @@ pub fn AnnotationCanvasPage(
                         scroll_to_thread: scroll_to_thread,
                         show_comments: sidebar_tab() == SidebarTab::Comments,
                         annotation_opacity: annotation_opacity(),
+                        clipboard: clipboard,
+                        paste_mode: paste_mode,
+                        copy_requested: copy_requested,
                         on_annotation_context_menu:move|(ann_id, label_id, x, y)| {
                             context_menu.set(Some((ann_id, label_id, x, y)));
                         },
@@ -264,6 +326,7 @@ pub fn AnnotationCanvasPage(
                             }
                             if let Some(t) = comment_threads.read().iter().find(|t| t.id == tid).cloned() {
                                 comment_dialog.set(Some((t.world_x, t.world_y, sx, sy, tid)));
+                                selected_tool.set(Tool::Comment);
                             }
                         },
                     }
@@ -368,7 +431,6 @@ pub fn AnnotationCanvasPage(
                             }
                             // Close dialog immediately — server persists in the background
                             comment_dialog.set(None);
-                            selected_tool.set(Tool::Select);
                         },
                         on_resolve: move |_| {
                             if let Some((_, _, _, _, ref tid)) = comment_dialog() {
@@ -445,6 +507,22 @@ pub fn AnnotationCanvasPage(
                     div { class: "shortcut-item",
                         span { class: "shortcut-key", "⌘+click" }
                         span { class: "shortcut-desc", "Add/remove node" }
+                    }
+                    div { class: "shortcut-item",
+                        span { class: "shortcut-key", "F" }
+                        span { class: "shortcut-desc", "Next image (forward)" }
+                    }
+                    div { class: "shortcut-item",
+                        span { class: "shortcut-key", "D" }
+                        span { class: "shortcut-desc", "Previous image (backward)" }
+                    }
+                    div { class: "shortcut-item",
+                        span { class: "shortcut-key", "⌘C" }
+                        span { class: "shortcut-desc", "Copy selected annotation" }
+                    }
+                    div { class: "shortcut-item",
+                        span { class: "shortcut-key", "⌘V" }
+                        span { class: "shortcut-desc", "Paste annotation (follows cursor)" }
                     }
                     div { class: "shortcut-item",
                         span { class: "shortcut-key", "Space" }

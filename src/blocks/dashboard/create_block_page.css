@@ -29,7 +29,7 @@ html.dark input:focus {
 /* Container for title and form - centered, max 30% width */
 .blocks-form-container {
   width: 30vw;
-  max-width: 30vw;
+  max-width: 480px;
   min-width: 300px;
   display: flex;
   flex-direction: column;

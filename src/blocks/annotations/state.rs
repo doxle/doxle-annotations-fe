@@ -30,32 +30,28 @@ pub async fn state_load_annotations(image_id:&str, mut annotations: Signal<Vec<A
 
 /// Create annotation with optimistic update
 pub async fn state_create_annotation(block_id:&str, image_id:&str, label_id:&str, label_name:&str, geometry:Geometry, mut annotations:Signal<Vec<Annotation>>) {
-	// let ann_id = uuid::Uuid::new_v4().to_string();
+	 let ann_id = uuid::Uuid::new_v4().to_string();
 
 	 // Optimistic UI update
-	 // let new_annotation = Annotation {
-	 // 	id:ann_id.clone(),
-	 // 	label_id: label_id.to_string(),
-	 // 	geometry: geometry.clone(),
-	 // };
+	 let new_annotation = Annotation {
+	 	id:ann_id.clone(),
+	 	label_id: label_id.to_string(),
+	 	geometry: geometry.clone(),
+	 };
 
-	 // annotations.write().push(new_annotation);
-	 // tracing::info!("✅ Annotation added to UI (optimistic)");
+	 annotations.write().push(new_annotation);
+	 tracing::info!("✅ Annotation added to UI (optimistic)");
 
 	  // API call
-	  match api::api_create_annotation(block_id, image_id, label_id, label_name, geometry.clone()).await {
+	  match api::api_create_annotation(block_id, image_id, label_id, &ann_id, label_name, geometry.clone()).await {
 	  	Ok(server_ann_id) => {
 	  		 tracing::info!("✅ Annotation created on server: {}", server_ann_id);
-	  		 // Add to UI with server ID
-             let new_annotation = Annotation {
-                id: server_ann_id,
-                label_id: label_id.to_string(),
-                geometry,
-            };
-            annotations.write().push(new_annotation);
+	  		 
 	  	}
 	  	Err(e)=> {
-	  		tracing::error!("❌ Failed to create annotation: {}", e);	
+	  		tracing::error!("❌ Failed to create annotation: {}", e);
+            // Rollback
+            annotations.write().retain(|a| a.id != ann_id);	
 	  	}
 	}
 

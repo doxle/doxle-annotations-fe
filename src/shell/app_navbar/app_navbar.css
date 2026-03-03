@@ -689,7 +689,7 @@ html.dark .app-navbar-tool-icon img.app-navbar-tool-icon-polygon {
 /* Sidebar tabs in navbar - positioned to align with sidebar content */
 .navbar-sidebar-tabs {
     position: absolute;
-    left: calc(100% - 15vw + 26.8px); /* Left edge aligns with sidebar content left edge */
+    left: calc(100% - min(15vw, 260px) + 16.8px);
     display: flex;
     gap: 24px;
 }

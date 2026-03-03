@@ -93,6 +93,9 @@ pub fn SvgCanvasV2(
 	hovered_label_id: Signal<Option<String>>,
 	show_comments: bool,
 	#[props(default = 0.2)] annotation_opacity: f64,
+	clipboard: Signal<Option<(Geometry, String)>>,
+	paste_mode: Signal<bool>,
+	copy_requested: Signal<u32>,
 
 ) -> Element {
 	let mut pan_x = use_signal(|| 0.0_f64);
@@ -167,7 +170,18 @@ pub fn SvgCanvasV2(
 		}
 	});
 
-	
+	// Copy selected annotation to clipboard when Ctrl+C is pressed
+	use_effect(move || {
+		let tick = copy_requested();
+		if tick == 0 { return; }
+		let aid = selected_ann_id();
+		if aid.is_empty() { return; }
+		if let Some(ann) = annotations().iter().find(|a| a.id == aid) {
+			clipboard.set(Some((ann.geometry.clone(), ann.label_id.clone())));
+			tracing::info!("📋 Annotation copied to clipboard");
+		}
+	});
+
 	// Scroll to thread when sidebar triggers it (animated)
 	use_effect(move || {
 		if let Some(tid) = scroll_to_thread() {
@@ -225,7 +239,9 @@ pub fn SvgCanvasV2(
 			style: {
 				let comment_cursor = COMMENT_CURSOR_BLUE;
 				let comment_cursor_style = format!("cursor:url('{}') 0 16, auto;", comment_cursor);
-				if selected_tool == Tool::Polygon {
+				if paste_mode() {
+					"cursor:crosshair;".to_string()
+				} else if selected_tool == Tool::Polygon {
 					"cursor:none;".to_string()
 				} else if selected_tool == Tool::BBox {
 					"cursor:none;".to_string()
@@ -440,6 +456,30 @@ pub fn SvgCanvasV2(
 
     			// if it was a pan, stop here
 			    if was_pan { return; }
+
+			    // ══════════════════════════════════════════════════════════
+			    // PASTE MODE: click to place copied annotation
+			    // ══════════════════════════════════════════════════════════
+			    if paste_mode() {
+			        if let Some((ref geom, ref label_id)) = clipboard() {
+			            let wx = (p.x - pan_x()) / zoom();
+			            let wy = (p.y - pan_y()) / zoom();
+			            let new_geom = offset_geometry_to(geom, wx, wy);
+			            let label_id = label_id.clone();
+			            let label_name = crate::blocks::dashboard::state::LABELS.read()
+			                .iter()
+			                .find(|l| l.label_id == label_id)
+			                .map(|l| l.label_name.clone())
+			                .unwrap_or_default();
+			            let img_id = image_id.clone();
+			            let block_id1 = block_id.clone();
+			            spawn(async move {
+			                state_create_annotation(&block_id1, &img_id, &label_id, &label_name, new_geom, annotations).await;
+			            });
+			        }
+			        paste_mode.set(false);
+			        return;
+			    }
 
 			    // Check if click hit an existing comment marker (only when not drawing and comments visible)
 			    if show_comments && active_drawing().is_empty() {
@@ -674,6 +714,11 @@ let factor = (-dy * 0.009).exp().clamp(0.7,1.4); // zoom speed
 					PolygonPreview { points: active_drawing(), cursor_world_pos: cursor_world(), zoom: zoom(), selected_label_id: selected_label_id.clone() },
 					BboxPreview { bbox_start: bbox_start(), cursor_world_pos: cursor_world(), zoom: zoom(), selected_label_id: selected_label_id.clone() },
 
+					// PASTE PREVIEW (ghost following cursor)
+					if paste_mode() {
+						PastePreview { clipboard: clipboard(), cursor_world_pos: cursor_world(), zoom: zoom() }
+					}
+
 					// SAVED DRAWING
 					SavedAnnotation {
 						block_id:block_id.clone(),
@@ -768,8 +813,8 @@ fn CommentMarkers(
 		for (i, thread) in threads.iter().enumerate() {
 			{
 				let is_active = active_thread_id.as_ref() == Some(&thread.id);
-let size = if is_active { (9.0 / zoom).clamp(6.0, 14.0) } else { (18.0 / zoom).clamp(10.0, 28.0) };
-let font_size = if is_active { (5.0 / zoom).clamp(3.0, 7.0) } else { (10.0 / zoom).clamp(5.0, 14.0) };
+                let size = if is_active { 14.0 / zoom } else { 24.0 / zoom };
+                let font_size = if is_active { 7.0 / zoom } else { 12.0 / zoom };
 				let scale = size / 16.0;
 				let tx = thread.world_x;
 				let ty = thread.world_y - size;
@@ -792,7 +837,7 @@ let font_size = if is_active { (5.0 / zoom).clamp(3.0, 7.0) } else { (10.0 / zoo
 							fill: "white",
 							font_size: "{font_size}",
 							font_family: "Helvetica Neue Light, Helvetica Light, Helvetica, Arial, sans-serif",
-							font_weight: "300",
+                            font_weight: "400",
 							"{i + 1}"
 						}
 					}
@@ -988,6 +1033,102 @@ fn BboxPreview(
 				stroke: "white",
 				stroke_width: "{stroke_w}",
 				pointer_events: "none",
+			}
+		}
+	}
+}
+
+// ---------- Offset geometry centroid to target position (for copy-paste) ----------
+fn offset_geometry_to(geom: &Geometry, target_x: f64, target_y: f64) -> Geometry {
+	match geom {
+		Geometry::Polygon { points } => {
+			let n = points.len() as f64;
+			if n == 0.0 { return geom.clone(); }
+			let cx = points.iter().map(|p| p.x).sum::<f64>() / n;
+			let cy = points.iter().map(|p| p.y).sum::<f64>() / n;
+			let dx = target_x - cx;
+			let dy = target_y - cy;
+			Geometry::Polygon {
+				points: points.iter().map(|p| Point { x: p.x + dx, y: p.y + dy }).collect()
+			}
+		}
+		Geometry::BBox { start, end } => {
+			let cx = (start.x + end.x) / 2.0;
+			let cy = (start.y + end.y) / 2.0;
+			let dx = target_x - cx;
+			let dy = target_y - cy;
+			Geometry::BBox {
+				start: Point { x: start.x + dx, y: start.y + dy },
+				end: Point { x: end.x + dx, y: end.y + dy },
+			}
+		}
+	}
+}
+
+#[component]
+fn PastePreview(
+	clipboard: Option<(Geometry, String)>,
+	cursor_world_pos: (f64, f64),
+	zoom: f64,
+) -> Element {
+	let Some((ref geom, ref label_id)) = clipboard else { return rsx!{}; };
+
+	// Get label color
+	let labels = LABELS();
+	let label_color = labels.iter()
+		.find(|l| l.label_id == *label_id)
+		.map(|l| l.label_color.clone())
+		.unwrap_or_else(|| "#22C55E".to_string());
+
+	// Semi-transparent fill
+	let fill_rgba = if label_color.starts_with("#") && label_color.len() == 7 {
+		let r = u8::from_str_radix(&label_color[1..3], 16).unwrap_or(0);
+		let g = u8::from_str_radix(&label_color[3..5], 16).unwrap_or(0);
+		let b = u8::from_str_radix(&label_color[5..7], 16).unwrap_or(0);
+		format!("rgba({},{},{},0.25)", r, g, b)
+	} else {
+		"rgba(0,0,0,0.25)".to_string()
+	};
+
+	// Offset geometry so centroid follows cursor
+	let offset_geom = offset_geometry_to(geom, cursor_world_pos.0, cursor_world_pos.1);
+
+	match offset_geom {
+		Geometry::Polygon { ref points } => {
+			let points_str = points.iter()
+				.map(|p| format!("{},{}", p.x, p.y))
+				.collect::<Vec<_>>()
+				.join(" ");
+			rsx! {
+				polygon {
+					points: "{points_str}",
+					fill: "{fill_rgba}",
+					stroke: "{label_color}",
+					stroke_width: "1.5",
+					stroke_dasharray: "6 3",
+					vector_effect: "non-scaling-stroke",
+					pointer_events: "none",
+				}
+			}
+		}
+		Geometry::BBox { ref start, ref end } => {
+			let x = start.x.min(end.x);
+			let y = start.y.min(end.y);
+			let w = (end.x - start.x).abs();
+			let h = (end.y - start.y).abs();
+			rsx! {
+				rect {
+					x: "{x}",
+					y: "{y}",
+					width: "{w}",
+					height: "{h}",
+					fill: "{fill_rgba}",
+					stroke: "{label_color}",
+					stroke_width: "1.5",
+					stroke_dasharray: "6 3",
+					vector_effect: "non-scaling-stroke",
+					pointer_events: "none",
+				}
 			}
 		}
 	}
@@ -1375,16 +1516,16 @@ fn SavedAnnotation(
                         let min_y = points.iter().map(|p| p.y).fold(f64::INFINITY, f64::min);
                         let max_y = points.iter().map(|p| p.y).fold(f64::NEG_INFINITY, f64::max);
                         let mid_y = (min_y + max_y) / 2.0;
-                        let gap = (6.0 / z).clamp(2.0, 12.0);
+                        let gap = 6.0 / z;
                         let tx = max_x + gap;
                         let label_name = labels.iter()
                             .find(|l| l.label_id == label_id)
                             .map(|l| l.label_name.clone())
                             .unwrap_or_default();
-                        let font_size = (12.0 / z).clamp(4.0, 24.0);
-                        let pad_x = (4.0 / z).clamp(1.5, 8.0);
-                        let pad_y = (3.0 / z).clamp(1.0, 6.0);
-                        let bg_rx = (3.0 / z).clamp(1.0, 6.0);
+                        let font_size = 16.0 / z;
+                        let pad_x = 4.0 / z;
+                        let pad_y = 3.0 / z;
+                        let bg_rx = 3.0 / z;
                         let text_w = label_name.len() as f64 * font_size * 0.6;
                         let bg_w = text_w + pad_x * 2.0;
                         let bg_h = font_size + pad_y * 2.0;

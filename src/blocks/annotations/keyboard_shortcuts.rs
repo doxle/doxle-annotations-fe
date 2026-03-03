@@ -17,6 +17,9 @@ pub fn setup_keyboard_shortcuts(
 	hovered_label_id: Signal<Option<String>>,
 	mut show_shortcuts: Signal<bool>,
 	mut sidebar_tab: Signal<SidebarTab>,
+	mut nav_direction: Signal<Option<i32>>,
+	mut copy_requested: Signal<u32>,
+	mut paste_mode: Signal<bool>,
 )
 {
 	use_effect(move || {
@@ -55,17 +58,28 @@ pub fn setup_keyboard_shortcuts(
 				selected_tool.set(Tool::BBox);
 				sidebar_tab.set(SidebarTab::Labels);
 			}
-			// c - enable comment mode + switch sidebar to Comments
-			if key == "c" || key == "C" {
+			// Ctrl+C - copy selected annotation
+			if (key == "c" || key == "C") && (evt.ctrl_key() || evt.meta_key()) {
+				evt.prevent_default();
+				copy_requested.set(copy_requested() + 1);
+			}
+			// Ctrl+V - paste copied annotation
+			else if (key == "v" || key == "V") && (evt.ctrl_key() || evt.meta_key()) {
+				evt.prevent_default();
+				paste_mode.set(true);
+			}
+			// c - enable comment mode + switch sidebar to Comments (skip if Ctrl/Cmd held)
+			else if key == "c" || key == "C" {
 				selected_tool.set(Tool::Comment);
 				sidebar_open.set(true);
 				sidebar_tab.set(SidebarTab::Comments);
 			}
-			// Escape - return to arrow/select mode, clear drawing
+			// Escape - return to arrow/select mode, clear drawing, exit paste mode
 			if key == "Escape" {
 				selected_tool.set(Tool::Select);
 				active_drawing.write().clear();
 				sidebar_tab.set(SidebarTab::Labels);
+				paste_mode.set(false);
 			}
 			// "ha" - toggle hide/show ALL labels
 			if (key == "a" || key == "A") && (prev == "h" || prev == "H") {
@@ -87,6 +101,14 @@ pub fn setup_keyboard_shortcuts(
 				}
 				*lk.borrow_mut() = key;
 				return;
+			}
+			// f - forward (next image) — skip if Ctrl/Cmd held (browser find)
+			if (key == "f" || key == "F") && !evt.ctrl_key() && !evt.meta_key() {
+				nav_direction.set(Some(1));
+			}
+			// d - backward (previous image)
+			if key == "d" || key == "D" {
+				nav_direction.set(Some(-1));
 			}
 			// Space - toggle shortcuts help
 			if key == " " {
