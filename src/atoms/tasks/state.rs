@@ -8,8 +8,6 @@ pub static TASKS:GlobalSignal<Vec<Task>> = Signal::global(|| Vec::new());
 pub static TASKS_LOADING:GlobalSignal<bool> = Signal::global(|| false);
 pub static TASKS_ERROR:GlobalSignal<Option<String>> = Signal::global(|| None);
 pub static CURRENT_TASK_ID:GlobalSignal<Option<String>> = Signal::global(|| None);
-pub static DELETE_CURRENT: GlobalSignal<usize> = Signal::global(|| 0);
-pub static DELETE_TOTAL: GlobalSignal<usize> = Signal::global(|| 0);
 
 pub async fn state_load_tasks(block_id:&str){
  	*TASKS_LOADING.write() = true;
@@ -46,10 +44,12 @@ pub async fn state_create_task(block_id:&str, name:String) -> Result<Task, Strin
  		Ok(task) => {
  			TASKS.write().push(task.clone());
  			tracing::info!("✅ Task created: {}", task.task_name);
+ 			crate::shell::progress::show_success(&format!("Task '{}' created", task.task_name));
  			Ok(task)
  		}
  		Err(e) => {
  			tracing::error!("❌ Failed to create task: {}", e);
+ 			crate::shell::progress::show_error(&format!("Failed to create task: {}", e));
  			Err(e)
  		}
  	}
@@ -91,39 +91,56 @@ pub async fn state_upload_task_file(block_id:&str, task_id:&str, file:web_sys::F
 }
 
 pub async fn state_delete_task(block_id: &str, task_id: &str) {
-    // Get images from the task before deleting
-    let images: Vec<(String, String)> = TASKS.read()
+    use crate::shell::progress::{show_progress_danger, show_success, clear_status};
+
+    // Get images with annotation counts from the task before deleting
+    let images: Vec<(String, String, u32)> = TASKS.read()
         .iter()
         .find(|t| t.task_id == task_id)
-        .map(|t| t.images.iter().map(|img| (img.image_id.clone(), block_id.to_string())).collect())
+        .map(|t| t.images.iter().map(|img| (
+            img.image_id.clone(),
+            block_id.to_string(),
+            img.annotation_count,
+        )).collect())
         .unwrap_or_default();
 
     let total = images.len() + 1; // images + task record
-    *DELETE_CURRENT.write() = 0;
-    *DELETE_TOTAL.write() = total;
+    let start = web_time::Instant::now();
+    show_progress_danger(&format!("Deleting 0/{}", total), 0, total, 0);
 
     // Delete images one by one with progress
-    for (i, (image_id, bid)) in images.iter().enumerate() {
+    for (i, (image_id, bid, ann_count)) in images.iter().enumerate() {
+        show_progress_danger(
+            &format!("Deleting img {}/{} ({} annotations)", i + 1, total, ann_count),
+            i, total, start.elapsed().as_secs(),
+        );
         if let Err(e) = crate::atoms::media::api::api_delete_image(&bid, &image_id).await {
             tracing::error!("❌ Failed to delete image {}: {}", image_id, e);
         }
-        *DELETE_CURRENT.write() = i + 1;
+        let done = i + 1;
+        show_progress_danger(
+            &format!("Deleting {}/{}", done, total),
+            done, total, start.elapsed().as_secs(),
+        );
     }
 
     // Delete the task record
+    show_progress_danger(
+        &format!("Deleting {}/{}", total, total),
+        total, total, start.elapsed().as_secs(),
+    );
     match api::api_delete_task(block_id, task_id).await {
         Ok(_) => {
             TASKS.write().retain(|t| t.task_id != task_id);
             tracing::info!("✅ Task deleted: {}", task_id);
+            let elapsed = start.elapsed().as_secs();
+            show_success(&format!("Deleted in {}s", elapsed));
         }
         Err(e) => {
             tracing::error!("❌ Failed to delete task: {}", e);
+            crate::shell::progress::show_error(&format!("Delete failed: {}", e));
         }
     }
-
-    *DELETE_CURRENT.write() = total;
-    *DELETE_CURRENT.write() = 0;
-    *DELETE_TOTAL.write() = 0;
 }
 
 pub async fn state_rename_task(block_id: &str, task_id: &str, new_name: String) {

@@ -92,6 +92,7 @@ pub fn SvgCanvasV2(
 	hidden_label_ids:HashSet<String>,
 	hovered_label_id: Signal<Option<String>>,
 	show_comments: bool,
+	#[props(default = 0.2)] annotation_opacity: f64,
 
 ) -> Element {
 	let mut pan_x = use_signal(|| 0.0_f64);
@@ -553,7 +554,7 @@ pub fn SvgCanvasV2(
 			        evt.data.modifiers().shift());
 				evt.prevent_default();
 				let dy = evt.delta().strip_units().y; // scroll wheel up and down
-				let factor = (-dy * 0.0020).exp().clamp(0.85,1.15); // zoom speed
+let factor = (-dy * 0.009).exp().clamp(0.7,1.4); // zoom speed
 				let new_zoom = (zoom() * factor).clamp(0.1, 10.0);
 
 				// Cursor-based zoom: adjust pan so point under cursor stays the same
@@ -688,6 +689,8 @@ pub fn SvgCanvasV2(
 						skip_polygon_insert: skip_polygon_insert,
 						hidden_label_ids:hidden_label_ids.clone(),
 						hovered_label_id: hovered_label_id,
+						annotation_opacity: annotation_opacity,
+						selected_tool: selected_tool,
 					}
 					if show_comments {
 						CommentMarkers { threads: comment_threads(), zoom: zoom(), active_thread_id: active_thread_id.clone() }
@@ -1096,6 +1099,8 @@ fn SavedAnnotation(
 	skip_polygon_insert: Signal<bool>,
 	hidden_label_ids:HashSet<String>,
 	hovered_label_id: Signal<Option<String>>,
+	#[props(default = 0.2)] annotation_opacity: f64,
+	selected_tool: Tool,
 	)->Element{
 	let is_dark = THEME() == Theme::Dark;
 	// tracing::info!("What is the theme: {}", is_dark);
@@ -1165,6 +1170,8 @@ fn SavedAnnotation(
 		area_b.partial_cmp(&area_a).unwrap_or(std::cmp::Ordering::Equal)
 	});
 
+	let mut hovered_ann_id: Signal<Option<String>> = use_signal(|| None);
+
 	rsx!{
 		// Loop through sorted annotations (largest first, smallest on top)
 	    for ann in sorted_anns.into_iter() {{
@@ -1174,10 +1181,9 @@ fn SavedAnnotation(
 			let label_id = ann.label_id.clone();
 			let color = get_color(&ann.label_id);
 
-			// Check if THIS annotation is the selected one
+			// Check if THIS annotation is the selected or hovered one
             let is_selected = ann_id == selected_ann_id();
-
-          
+            let is_hovered = hovered_ann_id() == Some(ann_id.clone()) && !is_selected;
 
             // Extract points from geometry (we only handle Polygon for now)
             let points: Vec<Point> = match &ann.geometry {
@@ -1204,7 +1210,9 @@ fn SavedAnnotation(
                 // POLYGON SHAPE (the filled annotation)
                 // ═══════════════════════════════════════════════════════════
 				{{
-					let fill_color = if is_selected { color_with_opacity(&color, 0.4) } else { color_with_opacity(&color, 0.2) };
+					let selected_opacity = (annotation_opacity + 0.2).min(1.0);
+					let hovered_opacity = (annotation_opacity + 0.15).min(1.0);
+					let fill_color = if is_selected { color_with_opacity(&color, selected_opacity) } else if is_hovered { color_with_opacity(&color, hovered_opacity) } else { color_with_opacity(&color, annotation_opacity) };
 					// Wider invisible hit area for edges (3px buffer for adding nodes)
 					let hit_stroke_w = (6.0 / z).clamp(3.0, 12.0);
 					let aid_hit = ann_id.clone();
@@ -1217,10 +1225,10 @@ fn SavedAnnotation(
 							fill: "{fill_color}",
 					// Selected = label color border
                     stroke: "{color}",
-					// Selected = thicker stroke to make selection obvious
-                    stroke_width: if is_selected { "{selected_stroke_w}" } else { "1.5" },
+					// Selected/hovered = thicker stroke
+                    stroke_width: if is_selected || is_hovered { "2.5" } else { "1.5" },
 					vector_effect:"non-scaling-stroke",
-					pointer_events:"auto",
+					pointer_events: if selected_tool == Tool::Comment { "none" } else { "auto" },
 					cursor: "default",
 
 
@@ -1233,15 +1241,18 @@ fn SavedAnnotation(
                         }
                     },
 
-                    // HOVER: Track hovered label for 'h' key hide
+                    // HOVER: Track hovered label + visual hover effect
                     onmouseenter: {
                         let lid = label_id.clone();
+                        let aid = ann_id.clone();
                         move |_| {
                             hovered_label_id.set(Some(lid.clone()));
+                            hovered_ann_id.set(Some(aid.clone()));
                         }
                     },
                     onmouseleave: move |_| {
                         hovered_label_id.set(None);
+                        hovered_ann_id.set(None);
                     },
 
 					// Bubble up to parent SVG selection is handled by onclick
@@ -1356,8 +1367,55 @@ fn SavedAnnotation(
 					}
 				}}
 
-				 // Draggable nodes (only when selected)
-                if is_selected {
+				 // Label name tooltip on hover
+                if is_hovered {
+                    {{
+                        // Position tooltip to the right of the bounding box, vertically centered
+                        let max_x = points.iter().map(|p| p.x).fold(f64::NEG_INFINITY, f64::max);
+                        let min_y = points.iter().map(|p| p.y).fold(f64::INFINITY, f64::min);
+                        let max_y = points.iter().map(|p| p.y).fold(f64::NEG_INFINITY, f64::max);
+                        let mid_y = (min_y + max_y) / 2.0;
+                        let gap = (6.0 / z).clamp(2.0, 12.0);
+                        let tx = max_x + gap;
+                        let label_name = labels.iter()
+                            .find(|l| l.label_id == label_id)
+                            .map(|l| l.label_name.clone())
+                            .unwrap_or_default();
+                        let font_size = (12.0 / z).clamp(4.0, 24.0);
+                        let pad_x = (4.0 / z).clamp(1.5, 8.0);
+                        let pad_y = (3.0 / z).clamp(1.0, 6.0);
+                        let bg_rx = (3.0 / z).clamp(1.0, 6.0);
+                        let text_w = label_name.len() as f64 * font_size * 0.6;
+                        let bg_w = text_w + pad_x * 2.0;
+                        let bg_h = font_size + pad_y * 2.0;
+                        rsx! {
+                            rect {
+                                x: "{tx}",
+                                y: "{mid_y - bg_h / 2.0}",
+                                width: "{bg_w}",
+                                height: "{bg_h}",
+                                rx: "{bg_rx}",
+                                fill: "rgba(0,0,0,0.75)",
+                                pointer_events: "none",
+                            }
+                            text {
+                                x: "{tx + bg_w / 2.0}",
+                                y: "{mid_y}",
+                                text_anchor: "middle",
+                                dominant_baseline: "central",
+                                fill: "white",
+                                font_size: "{font_size}",
+                                font_family: "Helvetica Neue, Helvetica, Arial, sans-serif",
+                                font_weight: "500",
+                                pointer_events: "none",
+                                "{label_name}"
+                            }
+                        }
+                    }}
+                }
+
+				 // Draggable nodes (when selected or hovered)
+                if is_selected || is_hovered {
                     for (i, pt) in points.iter().enumerate() {
                         DraggableNode {
                         	block_id: block_id.clone(),

@@ -63,6 +63,7 @@ use crate::shell::{AppNavbar, app_sidebar::{AppSidebar, SidebarTab}};
 use crate::shell::loading::LoadingPage;
 use super::keyboard_shortcuts::setup_keyboard_shortcuts;
 use crate::blocks::dashboard::state::{LABELS, LABELS_LOADING, state_load_labels};
+use crate::blocks::dashboard::state::CURRENT_BLOCK;
 use super::context_menu::AnnotationContextMenu;
 use super::comment_dialog::CommentDialog;
 use super::models::CommentThread;
@@ -84,18 +85,18 @@ pub fn AnnotationCanvasPage(
     info!("Canvas Page:: mounted ::+ image_id={}", image_id);
     info!("task-name: {:?}, image_name: {:?}", task_name, image_name);
     info!("🔍 PROP block_id = {}", block_id);
-    let mut initial_tasks_booting: Signal<bool> = use_signal(|| true);
+    
 
     
-    // LOAD TASKS
+    // Use cached tasks — only fetch if not loaded for this block (uses prop block_id so hot reload works)
     let block_id_tasks = block_id.clone();
-    use_resource(move || {
-        let bid = block_id_tasks.clone();
-        info!("🔍 USE_RESOURCE sees block_id = {}", bid);
-        async move {
-            initial_tasks_booting.set(true);
-            state_load_tasks(&bid).await;
-            initial_tasks_booting.set(false);
+    use_effect(move || {
+        let has_tasks = TASKS.read().iter().any(|t| t.block_id == block_id_tasks);
+        if !has_tasks {
+            let bid = block_id_tasks.clone();
+            spawn(async move {
+                state_load_tasks(&bid).await;
+            });
         }
     });
 
@@ -121,6 +122,7 @@ pub fn AnnotationCanvasPage(
     let mut hovered_label_id:Signal<Option<String>> = use_signal(|| None);
     let mut show_shortcuts:Signal<bool> = use_signal(|| false);
     let sidebar_tab: Signal<SidebarTab> = use_signal(|| SidebarTab::Labels);
+    let annotation_opacity: Signal<f64> = use_signal(|| 0.2);
     let mut comment_threads: Signal<Vec<CommentThread>> = use_signal(|| Vec::new());
     let mut comment_dialog: Signal<Option<(f64, f64, f64, f64, String)>> = use_signal(|| None); // (world_x, world_y, screen_x, screen_y, thread_id)
     let mut scroll_to_thread: Signal<Option<String>> = use_signal(|| None);
@@ -184,7 +186,7 @@ pub fn AnnotationCanvasPage(
     });
     tracing::info!("image_url: {:?}", image_url);
 
-
+    info!("Canvas render: LABELS count = {}", LABELS().len());
 
     rsx! {
         style { {CSS} }
@@ -192,10 +194,11 @@ pub fn AnnotationCanvasPage(
             sidebar_tab: Some(sidebar_tab),
             sidebar_open: Some(sidebar_open),
             selected_tool: Some(selected_tool),
+            annotation_opacity: Some(annotation_opacity),
         }
         div { class: "annotation-canvas-page",
             div { class: "canvas-area",
-                if initial_tasks_booting() || TASKS_LOADING() {
+                if TASKS_LOADING() {
                     LoadingPage {}
                 } else if task.is_none() {
                     div { class: "no-image-text", "Task not found" }
@@ -234,18 +237,24 @@ pub fn AnnotationCanvasPage(
                         active_thread_id: comment_dialog().map(|(_, _, _, _, ref tid)| tid.clone()),
                         scroll_to_thread: scroll_to_thread,
                         show_comments: sidebar_tab() == SidebarTab::Comments,
+                        annotation_opacity: annotation_opacity(),
                         on_annotation_context_menu:move|(ann_id, label_id, x, y)| {
                             context_menu.set(Some((ann_id, label_id, x, y)));
                         },
                         on_comment_click: {
                             let image_id = image_id.clone();
                             move |(wx, wy, sx, sy)| {
-                            let iid = image_id.clone();
-                            spawn(async move {
-                                if let Some(tid) = state_create_thread(&iid, wx, wy, None, comment_threads).await {
-                                    comment_dialog.set(Some((wx, wy, sx, sy, tid)));
-                                }
+                            // Generate UUID locally, add placeholder thread, open dialog instantly
+                            let tid = uuid::Uuid::new_v4().to_string();
+                            comment_threads.write().push(CommentThread {
+                                id: tid.clone(),
+                                world_x: wx,
+                                world_y: wy,
+                                resolved: false,
+                                comments: Vec::new(),
+                                persisted: false,
                             });
+                            comment_dialog.set(Some((wx, wy, sx, sy, tid)));
                         }},
                         on_marker_click: move |(tid, sx, sy): (String, f64, f64)| {
                             // Clean up existing empty thread if dialog is open
@@ -338,9 +347,28 @@ pub fn AnnotationCanvasPage(
                         on_post: move |text: String| {
                             let iid = image_id_for_post.clone();
                             let tid = thread_id.clone();
-                            spawn(async move {
-                                state_add_comment(&iid, &tid, &text, comment_threads).await;
-                            });
+                            // Check if thread has comments — if not, this is the first post (create on server)
+                            let has_comments = comment_threads.read().iter()
+                                .find(|t| t.id == tid)
+                                .map_or(false, |t| !t.comments.is_empty());
+                            if has_comments {
+                                // Existing thread — just add comment
+                                spawn(async move {
+                                    state_add_comment(&iid, &tid, &text, comment_threads).await;
+                                });
+                            } else {
+                                // First comment — create thread + comment on server
+                                let (wx, wy) = (world_x, world_y);
+                                spawn(async move {
+                                    let ok = state_create_thread(&iid, &tid, wx, wy, &text, comment_threads).await;
+                                    if !ok {
+                                        crate::shell::progress::show_error("Failed to save comment");
+                                    }
+                                });
+                            }
+                            // Close dialog immediately — server persists in the background
+                            comment_dialog.set(None);
+                            selected_tool.set(Tool::Select);
                         },
                         on_resolve: move |_| {
                             if let Some((_, _, _, _, ref tid)) = comment_dialog() {
@@ -362,21 +390,19 @@ pub fn AnnotationCanvasPage(
                             }
                         },
                         on_close: move |_| {
-                            // Delete thread from server if user closed without posting any comment
+                            // Remove local-only thread if user closed without posting
                             if let Some((_, _, _, _, ref tid)) = comment_dialog() {
                                 let tid = tid.clone();
                                 let has_comments = comment_threads.read().iter()
                                     .find(|t| t.id == tid)
                                     .map_or(false, |t| !t.comments.is_empty());
                                 if !has_comments {
-                                    let iid = image_id_for_close.clone();
-                                    spawn(async move {
-                                        state_delete_thread(&iid, &tid, comment_threads).await;
-                                    });
+                                    // Thread was never sent to server — just remove locally
+                                    comment_threads.write().retain(|t| t.id != tid);
                                 }
                             }
                             comment_dialog.set(None);
-            selected_tool.set(Tool::Select);
+                            selected_tool.set(Tool::Select);
                         },
                     }
                 }

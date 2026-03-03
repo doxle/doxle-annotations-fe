@@ -7,6 +7,10 @@ pub static BLOCKS_LOADING: GlobalSignal<bool> = Signal::global(|| false);
 pub static BLOCKS_ERROR: GlobalSignal<Option<String>> = Signal::global(|| None);
 pub static CURRENT_BLOCK: GlobalSignal<Option<Block>> = Signal::global(|| None);
 
+/// Track which block_id the current TASKS data belongs to
+pub static TASKS_BLOCK_ID:GlobalSignal<String> = Signal::global(|| String::new());
+
+
 pub static LABELS: GlobalSignal<Vec<BlockLabel>> = Signal::global(|| Vec::new());
 pub static LABELS_LOADING:GlobalSignal<bool> = Signal::global(||false);
 
@@ -80,60 +84,119 @@ pub fn state_get_current_block()->Option<Block>{
     CURRENT_BLOCK.read().clone()
 }
 
-/// Delete a block with optimistic update and rollback
+/// Delete a block with per-image, per-task progress reporting
 pub async fn state_delete_block(block_id: &str) {
+    use crate::shell::progress::{show_progress_danger, push_log_danger, show_success, show_error};
+    use crate::atoms::tasks::api::api_list_tasks;
+    use crate::atoms::tasks::api::api_delete_task;
+    use crate::atoms::media::api::api_delete_image;
+
     tracing::info!("🗑️ Delete block requested: {}", block_id);
+    let start = web_time::Instant::now();
 
-    // Always set loading during delete so dashboard doesn't auto-redirect while we work
-    *BLOCKS_LOADING.write() = true;
-
-    // Step 1: Save backup for rollback (if we do optimistic removal)
+    // Save backup for rollback
     let block_backup = BLOCKS
         .read()
         .iter()
         .find(|b| b.block_id == block_id)
         .cloned();
 
-    // Step 2: Decide optimistic vs conservative
-    let total = BLOCKS.read().len();
-    let optimistic = total > 1; // If it's the last block, DON'T remove yet
+    let block_name = block_backup.as_ref().map(|b| b.block_name.clone()).unwrap_or_default();
 
+    // Optimistic UI removal
+    let optimistic = BLOCKS.read().len() > 1;
     if optimistic {
-        // Optimistic UI update - remove immediately
         BLOCKS.write().retain(|b| b.block_id != block_id);
-        tracing::info!("⚡ Block removed from UI immediately (optimistic)");
-    } else {
-        tracing::info!("⌛ Last block - delaying UI removal until server confirms");
     }
 
-    // Step 3: API call
+    // Fetch tasks for this block
+    show_progress_danger(&format!("Loading tasks for '{}'", block_name), 0, 1, 0);
+    let tasks = match api_list_tasks(block_id).await {
+        Ok(t) => t,
+        Err(e) => {
+            tracing::error!("❌ Failed to fetch tasks: {}", e);
+            if optimistic {
+                if let Some(block) = block_backup {
+                    BLOCKS.write().push(block);
+                }
+            }
+            show_error(&format!("Delete failed: {}", e));
+            return;
+        }
+    };
+
+    let task_count = tasks.len();
+    // Total steps = all images across all tasks + task records + block cleanup
+    let total_images: usize = tasks.iter().map(|t| t.images.len()).sum();
+    let total = total_images + task_count + 1;
+    let mut done: usize = 0;
+
+    // Delete each task: images first, then task record
+    for (ti, task) in tasks.iter().enumerate() {
+        let img_count = task.images.len();
+        let ann_count = task.annotation_count;
+
+        // Delete each image in this task
+        for (ii, image) in task.images.iter().enumerate() {
+            show_progress_danger(
+                &format!("Task {}/{} '{}' — img {}/{}", ti + 1, task_count, task.task_name, ii + 1, img_count),
+                done, total, start.elapsed().as_secs(),
+            );
+            if let Err(e) = api_delete_image(block_id, &image.image_id).await {
+                tracing::error!("❌ Failed to delete image {}: {}", image.image_id, e);
+            }
+            done += 1;
+        }
+
+        // Delete the task record
+        show_progress_danger(
+            &format!("Removing task {}/{} '{}'", ti + 1, task_count, task.task_name),
+            done, total, start.elapsed().as_secs(),
+        );
+        match api_delete_task(block_id, &task.task_id).await {
+            Ok(_) => {
+                done += 1;
+                let log_line = format!(
+                    "✓ Task {}/{} '{}' ({} imgs, {} ann)",
+                    ti + 1, task_count, task.task_name, img_count, ann_count
+                );
+                push_log_danger(
+                    &log_line,
+                    &format!("Deleted task {}/{}", ti + 1, task_count),
+                    done, total, start.elapsed().as_secs(),
+                );
+            }
+            Err(e) => {
+                done += 1;
+                tracing::error!("❌ Failed to delete task {}: {}", task.task_name, e);
+            }
+        }
+    }
+
+    // Delete the block record (labels, remaining block images, block itself)
+    show_progress_danger(
+        &format!("Cleaning up block '{}'", block_name),
+        done, total, start.elapsed().as_secs(),
+    );
     match api_delete_block(block_id).await {
         Ok(_) => {
-            tracing::info!("✅ Block delete confirmed by server: {}", block_id);
             state_reset_block_context();
-            
             if !optimistic {
-                // Now remove it for real (this triggers redirect effect after we drop loading)
                 BLOCKS.write().retain(|b| b.block_id != block_id);
             }
+            let elapsed = start.elapsed().as_secs();
+            show_success(&format!("Block '{}' deleted in {}s", block_name, elapsed));
         }
         Err(e) => {
             tracing::error!("❌ Block delete failed: {}", e);
-            // Rollback optimistic removal if needed
             if optimistic {
                 if let Some(block) = block_backup {
-                    BLOCKS.write().push(block.clone());
-                    tracing::info!("🔄 Block restored to UI: {}", block.block_name);
+                    BLOCKS.write().push(block);
                 }
             }
-            if let Some(window) = web_sys::window() {
-                let _ = window.alert_with_message(&format!("Failed to delete block: {}", e));
-            }
+            show_error(&format!("Delete failed: {}", e));
         }
     }
-
-    // Step 4: Done
-    *BLOCKS_LOADING.write() = false;
 }
 
 /// Rename a block with optimistic update and rollback

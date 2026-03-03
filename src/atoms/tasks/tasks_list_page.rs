@@ -1,10 +1,10 @@
 use dioxus::prelude::*;
 use crate::Route;
 use crate::blocks::dashboard::state::state_set_current_block;
-use crate::atoms::tasks::state::{state_load_tasks, state_load_tasks_silent, state_delete_task, state_rename_task, TASKS_LOADING, TASKS_ERROR, TASKS, DELETE_CURRENT, DELETE_TOTAL};
-use crate::blocks::dashboard::state::{LABELS, state_load_labels};
+use crate::atoms::tasks::state::{state_load_tasks,  state_delete_task, state_rename_task, TASKS_LOADING, TASKS_ERROR, TASKS};
+use crate::blocks::dashboard::state::{CURRENT_BLOCK, LABELS, state_load_labels};
 use crate::atoms::tasks::api::{api_assign_task, api_set_reviewer};
-use crate::users::state::USER;
+use crate::users::state::{USER, USERS};
 use crate::users::api::{User, UserRole, list_users};
 use super::task_menu::TaskMenu;
 use super::edit_task_modal::EditTaskModal;
@@ -40,23 +40,26 @@ pub fn TasksListPage(block_id: String, block_name: String, block_type: String) -
     let nav = use_navigator();
 
 
-    // Load tasks + labels whenever block_id changes (clears stale data from previous block)
-    let mut last_loaded_block_id: Signal<String> = use_signal(|| String::new());
-
-    if last_loaded_block_id() != block_id {
-        let bid = block_id.clone();
-        last_loaded_block_id.set(bid.clone());
-        state_set_current_block(&bid);
-        *TASKS.write() = Vec::new(); // Clear tasks
-        spawn(async move {
-            state_load_tasks(&bid).await;
-            state_load_labels(&bid).await;
-        });
-    }
-
-
-
     
+    let bid = block_id.clone();
+    
+    // Load tasks when block change
+    use_effect(move || {
+        let current_block_id =  CURRENT_BLOCK().map(|b| b.block_id.clone()).unwrap_or_default();
+        info!("Current {:?} != block {:?}", &current_block_id, &bid);
+        if current_block_id != bid {
+            let bid = bid.clone();
+            state_set_current_block(&bid);
+            *TASKS.write() = Vec::new(); // Clear tasks
+            *LABELS.write() = Vec::new(); // Clear labels
+            spawn(async move {
+                state_load_tasks(&bid).await;
+                // state_load_labels(&bid).await;
+            });
+        }
+    });
+
+   
 
     let _creating = use_signal(|| false);
     let mut deleting_task_id: Signal<Option<String>> = use_signal(|| None);
@@ -64,18 +67,31 @@ pub fn TasksListPage(block_id: String, block_name: String, block_type: String) -
     let is_dark = THEME() == Theme::Dark;
 
     // Load users for assignee/reviewer dropdowns
-    let mut users: Signal<Vec<User>> = use_signal(Vec::new);
-    use_resource(move || async move {
-        match list_users().await {
-            Ok(u) => users.set(u),
-            Err(e) => tracing::error!("Failed to load users: {}", e),
+    let mut users_loaded = use_signal(|| false);
+
+    use_effect(move || { 
+        if !users_loaded() && USERS.read().is_empty()
+        {
+             users_loaded.set(true);
+             spawn( async move{
+                match list_users().await {
+                    Ok(u) => *USERS.write() = u,
+                    Err(e) => tracing::error!("Failed to load users: {}", e),
+                }
+             });
         }
     });
+
+    
+
+    
+       
+    
 
     // Filter users by block type: annotation -> annotators+admins, file/building -> builders+admins
     let filtered_users: Vec<User> = {
         let bt = block_type.to_lowercase();
-        users.read().iter().filter(|u| {
+        USERS.read().iter().filter(|u| {
             u.user_role == UserRole::Admin || match bt.as_str() {
                 "annotation" => u.user_role == UserRole::Annotator,
                 _ => u.user_role == UserRole::Builder,
@@ -174,8 +190,6 @@ pub fn TasksListPage(block_id: String, block_name: String, block_type: String) -
                                 .unwrap_or_else(|| ("no-image".to_string(), "No Image".to_string()));
 
                             let is_deleting = deleting_task_id() == Some(task.task_id.clone());
-                            let del_current = DELETE_CURRENT();
-                            let del_total = DELETE_TOTAL();
                             rsx! {
                                 li {
                                     key: "{task.task_id}",
@@ -334,23 +348,6 @@ pub fn TasksListPage(block_id: String, block_name: String, block_type: String) -
                                             }
                                         }
                                         
-                                        // Delete progress overlay
-                                        if is_deleting && del_total > 0 {
-                                            div {
-                                                class: "task-delete-progress",
-                                                div {
-                                                    class: "task-delete-progress-bar",
-                                                    div {
-                                                        class: "task-delete-progress-fill",
-                                                        style: "width: {(del_current as f64 / del_total as f64 * 100.0) as u32}%",
-                                                    }
-                                                }
-                                                span {
-                                                    class: "task-delete-progress-text",
-                                                    "Deleting {del_current}/{del_total}"
-                                                }
-                                            }
-                                        }
 
                                         // Divider
                                         div { class: "task-divider" }

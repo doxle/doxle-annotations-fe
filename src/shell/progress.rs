@@ -5,12 +5,22 @@ pub enum StatusType {
     Success,
     Error,
     Info,
+    Danger,
 }
 
 #[derive(Clone, PartialEq, Debug)]
 pub struct Status {
     pub message: String,
     pub status_type: StatusType,
+    pub progress: Option<Progress>,
+    pub log: Vec<String>,
+}
+
+#[derive(Clone, PartialEq, Debug)]
+pub struct Progress {
+    pub current: usize,
+    pub total: usize,
+    pub elapsed_secs: u64,
 }
 
 // Global Status Signal
@@ -52,7 +62,46 @@ pub fn show_info_persistent(msg: &str) {
     *STATUS.write() = Some(Status {
         message: msg.to_string(),
         status_type: StatusType::Info,
+        progress: None,
+        log: Vec::new(),
     });
+}
+
+// Show progress status (persistent, with progress bar + timer)
+pub fn show_progress(msg: &str, current: usize, total: usize, elapsed_secs: u64) {
+    *STATUS.write() = Some(Status {
+        message: msg.to_string(),
+        status_type: StatusType::Info,
+        progress: Some(Progress { current, total, elapsed_secs }),
+        log: Vec::new(),
+    });
+}
+
+// Show danger/delete progress (red bar)
+pub fn show_progress_danger(msg: &str, current: usize, total: usize, elapsed_secs: u64) {
+    *STATUS.write() = Some(Status {
+        message: msg.to_string(),
+        status_type: StatusType::Danger,
+        progress: Some(Progress { current, total, elapsed_secs }),
+        log: Vec::new(),
+    });
+}
+
+// Push a completed log line and update progress message
+pub fn push_log_danger(log_line: &str, msg: &str, current: usize, total: usize, elapsed_secs: u64) {
+    let mut status = STATUS.write();
+    if let Some(ref mut s) = *status {
+        s.log.push(log_line.to_string());
+        s.message = msg.to_string();
+        s.progress = Some(Progress { current, total, elapsed_secs });
+    } else {
+        *status = Some(Status {
+            message: msg.to_string(),
+            status_type: StatusType::Danger,
+            progress: Some(Progress { current, total, elapsed_secs }),
+            log: vec![log_line.to_string()],
+        });
+    }
 }
 
 // Clear status immediately
@@ -65,6 +114,8 @@ fn set_status(msg: &str, status_type: StatusType, duration:u32) {
     *STATUS.write() = Some(Status {
         message: msg.to_string(),
         status_type,
+        progress: None,
+        log: Vec::new(),
     });
 
     // Use gloo Timeout callback (not spawn) so the timer survives component unmounts/navigation

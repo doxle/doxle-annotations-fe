@@ -48,6 +48,7 @@ pub fn CommentDialog(
     };
 
     let has_comments = thread.as_ref().map_or(false, |t| !t.comments.is_empty());
+    let is_persisted = thread.as_ref().map_or(false, |t| t.persisted);
     let is_thread_resolved = thread.as_ref().map_or(false, |t| t.resolved);
     let placeholder = if has_comments { "Reply..." } else { "Add a comment..." };
 
@@ -66,8 +67,8 @@ pub fn CommentDialog(
             style: "left: {dialog_x}px; top: {dialog_y}px;",
             onclick: move |evt| evt.stop_propagation(),
 
-            // Header (only when thread has comments)
-            if has_comments {
+            // Header (only when thread has comments and persisted to server)
+            if has_comments && is_persisted {
                 div {
                     class: "comment-dialog-header",
                     span { class: "comment-dialog-title", "Comment" }

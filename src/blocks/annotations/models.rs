@@ -43,7 +43,12 @@ pub struct CommentThread {
     pub world_y: f64,
     pub resolved: bool,
     pub comments: Vec<Comment>,
+    /// Whether this thread has been persisted to the server
+    #[serde(default = "default_persisted")]
+    pub persisted: bool,
 }
+
+fn default_persisted() -> bool { true }
 
 // ============================================
 // API Response Types (match BE models)

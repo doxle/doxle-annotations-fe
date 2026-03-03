@@ -67,9 +67,9 @@ pub async fn handle_create_task(
                     }
                 }
                 if fail_count > 0 {
-                    crate::shell::status::show_error(&format!("Uploaded {} images, {} failed", success_count, fail_count));
+                    crate::shell::progress::show_error(&format!("Uploaded {} images, {} failed", success_count, fail_count));
                 } else {
-                    crate::shell::status::show_success(&format!("✅ Uploaded {} images", success_count));
+                    crate::shell::progress::show_success(&format!("✅ Uploaded {} images", success_count));
                 }
             }
 
@@ -77,7 +77,7 @@ pub async fn handle_create_task(
         },
         Err(e) => {
             error!("❌ Failed to create task: {}", e);
-            crate::shell::status::show_error(&format!("Failed to create task: {}", e));
+            crate::shell::progress::show_error(&format!("Failed to create task: {}", e));
         }
     }
     

@@ -433,7 +433,7 @@ html.dark .blocks-create-button-centered:hover {
   height: 3px;
   width: 30%;
   background: linear-gradient(90deg, var(--dx-blue), var(--dx-blue));
-  animation: deleting-progress 1s ease-in-out infinite;
+  animation: block-deleting-progress 1.2s ease-in-out infinite alternate;
 }
 
 @media (min-width: 1440px) {
@@ -442,13 +442,9 @@ html.dark .blocks-create-button-centered:hover {
   }
 }
 
-@keyframes deleting-progress {
+@keyframes block-deleting-progress {
   0% {
     left: 0;
-    width: 30%;
-  }
-  50% {
-    left: 35%;
     width: 30%;
   }
   100% {

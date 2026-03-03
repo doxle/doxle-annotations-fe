@@ -14,10 +14,12 @@
   background-color: var(--bg-primary);
   display: flex;
   flex-direction: row;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
-  min-height: 100vh;
+  height: calc(100vh - 40px);
   overflow-y: auto;
+  padding-top: 40px;
+  padding-bottom: 40px;
 }
 
 /* Container for header and list - centered */

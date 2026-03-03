@@ -1,0 +1,115 @@
+.status-dialog {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  z-index: 999999;
+  font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', 'Consolas', monospace;
+  font-size: 12px;
+  font-weight: 400;
+  padding: 12px 16px;
+  border-radius: 6px;
+  background-color: var(--bg-card);
+  border: 0.8px solid var(--border-subtle);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+  animation: status-dialog-slide-in 0.25s ease-out;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 200px;
+}
+
+.status-dialog-timer {
+  color: var(--text-secondary);
+  font-size: 11px;
+  letter-spacing: 0.5px;
+}
+
+.status-dialog-message {
+  color: var(--text-primary);
+  font-size: 13px;
+}
+
+/* Typewriter: pure CSS, uses monospace ch units */
+.typewriter {
+  overflow: hidden;
+  white-space: nowrap;
+  width: 0;
+  animation: typewriter-reveal var(--duration, 0.5s) steps(var(--chars, 30), end) forwards;
+}
+
+@keyframes typewriter-reveal {
+  to { width: calc(var(--chars) * 1ch + 1ch); }
+}
+
+.status-dialog-progress-bar {
+  width: 100%;
+  height: 3px;
+  background-color: var(--bg-primary);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.status-dialog-progress-fill {
+  height: 100%;
+  background-color: var(--dx-blue);
+  border-radius: 2px;
+  transition: width 0.3s ease-out;
+}
+
+.status-dialog-progress-fill-danger {
+  background-color: #EF4444;
+}
+
+/* Log lines (completed steps) */
+.status-dialog-log {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-height: 120px;
+  overflow-y: auto;
+}
+
+.status-dialog-log-line {
+  color: var(--text-secondary);
+  font-size: 11px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Plain message (no progress) */
+.status-dialog-plain {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  z-index: 999999;
+  font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', 'Consolas', monospace;
+  font-size: 13px;
+  font-weight: 400;
+  padding: 10px 18px;
+  border-radius: 6px;
+  background-color: var(--bg-card);
+  color: var(--text-primary);
+  border: 0.8px solid var(--border-subtle);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+  animation: status-dialog-slide-in 0.25s ease-out;
+}
+
+.status-dialog-error {
+  border-color: #EF4444;
+}
+
+.status-dialog-success {
+  border-color: var(--dx-blue);
+}
+
+@keyframes status-dialog-slide-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

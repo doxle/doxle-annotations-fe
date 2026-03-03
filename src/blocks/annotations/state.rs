@@ -167,6 +167,7 @@ fn api_thread_to_model(api: &super::models::ApiCommentThread) -> CommentThread {
             text: c.text.clone(),
             created_at: c.created_at.clone(),
         }).collect(),
+        persisted: true,
     }
 }
 
@@ -186,27 +187,31 @@ pub async fn state_load_threads(parent_id: &str, mut threads: Signal<Vec<Comment
     }
 }
 
-/// Create a thread via API, add to local signal, return the server thread_id
+/// Create a thread via API (thread already exists in local signal)
 pub async fn state_create_thread(
     parent_id: &str,
+    thread_id: &str,
     world_x: f64,
     world_y: f64,
-    text: Option<String>,
+    text: &str,
     mut threads: Signal<Vec<CommentThread>>,
-) -> Option<String> {
+) -> bool {
     let metadata = serde_json::to_string(&ThreadMetadata { world_x, world_y }).ok();
 
-    match api::api_create_thread(parent_id, metadata, text).await {
+    match api::api_create_thread(parent_id, thread_id, metadata, text).await {
         Ok(api_thread) => {
-            let thread = api_thread_to_model(&api_thread);
-            let tid = thread.id.clone();
-            threads.write().push(thread);
-            tracing::info!("✅ Thread created: {}", tid);
-            Some(tid)
+            // Replace local placeholder with server-confirmed thread
+            let confirmed = api_thread_to_model(&api_thread);
+            let mut w = threads.write();
+            if let Some(t) = w.iter_mut().find(|t| t.id == thread_id) {
+                *t = confirmed;
+            }
+            tracing::info!("✅ Thread persisted: {}", thread_id);
+            true
         }
         Err(e) => {
             tracing::error!("❌ Failed to create thread: {}", e);
-            None
+            false
         }
     }
 }

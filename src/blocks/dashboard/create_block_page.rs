@@ -126,7 +126,7 @@ pub fn CreateBlockPage() -> Element {
         evt.prevent_default();
 
         if *is_submitting.read() {
-            crate::shell::status::show_info("Creating block ...");
+            crate::shell::progress::show_info("Creating block ...");
             return;
         }
 
@@ -134,7 +134,7 @@ pub fn CreateBlockPage() -> Element {
         let b_type = match block_type() {
             Some(bt) => bt,
             None => {
-                crate::shell::status::show_error("Please select a block type");
+                crate::shell::progress::show_error("Please select a block type");
                 return;
             }
         };
@@ -152,7 +152,7 @@ pub fn CreateBlockPage() -> Element {
         };
 
         if name.is_empty() {
-            crate::shell::status::show_error("Block name is required");
+            crate::shell::progress::show_error("Block name is required");
             return;
         }
 
@@ -160,11 +160,14 @@ pub fn CreateBlockPage() -> Element {
         is_submitting.set(true);
         // DIRECT CALL - No callback needed
         spawn(async move {
-            match state_create_block(name, b_type, comp).await {
-                Ok(_) => {navigator.push(Route::DashboardPage {});}
+            match state_create_block(name.clone(), b_type, comp).await {
+                Ok(_) => {
+                    crate::shell::progress::show_success(&format!("Block '{}' created", name));
+                    navigator.push(Route::DashboardPage {});
+                }
                 Err(e) => {
                     tracing::error!("Failed to create block: {}", e);
-                    crate::shell::status::show_error(&format!("Failed to create block:{}", e));
+                    crate::shell::progress::show_error(&format!("Failed to create block:{}", e));
                     is_submitting.set(false);
                 }
             }

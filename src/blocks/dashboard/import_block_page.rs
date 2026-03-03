@@ -81,14 +81,14 @@ pub fn ImportBlockPage(props: ImportBlockPageProps) -> Element {
         evt.stop_propagation();
 
         if *is_uploading.read() {
-            crate::shell::status::show_info("Upload in progress...");
+            crate::shell::progress::show_info("Upload in progress...");
             return;
         }
 
         let file = match selected_file.read().clone() {
             Some(f) => f,
             None => {
-                crate::shell::status::show_error("Please select a zip file to import");
+                crate::shell::progress::show_error("Please select a zip file to import");
                 return;
             }
         };
@@ -137,7 +137,7 @@ pub fn ImportBlockPage(props: ImportBlockPageProps) -> Element {
                     let manifest = match bulk_import_api::parse_import(&block_id, &import_id, &s3_key).await {
                         Ok(m) => m,
                         Err(e) => {
-                            crate::shell::status::show_error_for(&format!("Parse failed: {}", e), 5);
+                            crate::shell::progress::show_error_for(&format!("Parse failed: {}", e), 5);
                             is_uploading.set(false);
                             return;
                         }
@@ -163,7 +163,7 @@ pub fn ImportBlockPage(props: ImportBlockPageProps) -> Element {
                                     phase_done.set(offset.min(manifest.total_labels));
                                 }
                                 Err(e) => {
-                                    crate::shell::status::show_error_for(&format!("Labels failed: {}", e), 5);
+                                    crate::shell::progress::show_error_for(&format!("Labels failed: {}", e), 5);
                                     is_uploading.set(false);
                                     return;
                                 }
@@ -186,7 +186,7 @@ pub fn ImportBlockPage(props: ImportBlockPageProps) -> Element {
                                     phase_done.set(offset.min(manifest.total_tasks));
                                 }
                                 Err(e) => {
-                                    crate::shell::status::show_error_for(&format!("Tasks failed: {}", e), 5);
+                                    crate::shell::progress::show_error_for(&format!("Tasks failed: {}", e), 5);
                                     is_uploading.set(false);
                                     return;
                                 }
@@ -211,7 +211,7 @@ pub fn ImportBlockPage(props: ImportBlockPageProps) -> Element {
                                     total_annotations.set(cumulative_annotations);
                                 }
                                 Err(e) => {
-                                    crate::shell::status::show_error_for(&format!("Images failed: {}", e), 5);
+                                    crate::shell::progress::show_error_for(&format!("Images failed: {}", e), 5);
                                     is_uploading.set(false);
                                     return;
                                 }
@@ -222,7 +222,7 @@ pub fn ImportBlockPage(props: ImportBlockPageProps) -> Element {
                     // ── Step 5: Cleanup ──
                     let _ = bulk_import_api::cleanup_import(&block_id, &s3_key).await;
 
-                    crate::shell::status::show_success_for(
+                    crate::shell::progress::show_success_for(
                         &format!("Import complete — {} images, {} annotations, {} labels",
                             cumulative_images, cumulative_annotations, cumulative_labels),
                         5,
@@ -234,11 +234,11 @@ pub fn ImportBlockPage(props: ImportBlockPageProps) -> Element {
                     });
                 }
                 Err(e) if e == "cancelled" => {
-                    crate::shell::status::show_info("Upload cancelled");
+                    crate::shell::progress::show_info("Upload cancelled");
                 }
                 Err(e) => {
                     dioxus::logger::tracing::error!("❌ Import upload failed: {}", e);
-                    crate::shell::status::show_error(&format!("Import failed: {}", e));
+                    crate::shell::progress::show_error(&format!("Import failed: {}", e));
                 }
             }
             is_uploading.set(false);
@@ -304,7 +304,7 @@ pub fn ImportBlockPage(props: ImportBlockPageProps) -> Element {
                                                     if let Some(files) = input.files() {
                                                         if let Some(file) = files.get(0) {
                                                             let size = file.size();
-                                                            crate::shell::status::show_info_for(
+                                                            crate::shell::progress::show_info_for(
                                                                 &format!("Selected: {} ({})", file.name(), format_size(size)),
                                                                 2,
                                                             );

@@ -562,6 +562,84 @@ html.dark .app-navbar-tool-icon img.app-navbar-tool-icon-polygon {
     display: none;
 }
 
+/* Opacity control */
+.app-navbar-opacity-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.opacity-slider-backdrop {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 1000; /* Below navbar (1001) so dropdown stays interactive, but above canvas */
+}
+
+.opacity-slider-dropdown {
+    position: absolute;
+    top: calc(100% + 8px);
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    padding: 12px 8px;
+    background: var(--bg-primary);
+    border: 1px solid var(--border-subtle);
+    border-radius: 6px;
+    z-index: 1003;
+    opacity: 0.85;
+}
+
+.opacity-range-input {
+    -webkit-appearance: none;
+    appearance: none;
+    writing-mode: vertical-lr;
+    direction: rtl;
+    width: 2px;
+    height: 100px;
+    background: var(--border-subtle);
+    border-radius: 2px;
+    outline: none;
+    opacity: 0.7;
+    cursor: pointer;
+}
+
+.opacity-range-input:hover {
+    opacity: 1;
+}
+
+.opacity-range-input::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: var(--text-primary);
+    cursor: pointer;
+}
+
+.opacity-range-input::-moz-range-thumb {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: var(--text-primary);
+    border: none;
+    cursor: pointer;
+}
+
+.opacity-slider-label {
+    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    font-size: 10px;
+    font-weight: 400;
+    color: var(--text-primary);
+    opacity: 0.7;
+}
+
 .app-navbar-username {
     font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
     font-size: 13px;

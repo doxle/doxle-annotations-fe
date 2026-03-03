@@ -17,7 +17,6 @@ impl Default for UserRole {
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct User {
     pub user_id: String,
-    #[serde(default)]
     pub user_name: String,
     pub user_email: String,
     pub user_company: Option<String>,

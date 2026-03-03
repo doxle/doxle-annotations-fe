@@ -1,7 +1,7 @@
 use crate::Route;
 use dioxus::prelude::*;
 use crate::shell::{THEME, Theme, AppNavbar, ProtectedRoute};
-use crate::blocks::dashboard::state::{BLOCKS, BLOCKS_LOADING, state_load_blocks, state_load_blocks_silent,  state_delete_block, state_set_current_block, state_rename_block};
+use crate::blocks::dashboard::state::{BLOCKS, BLOCKS_LOADING, state_load_blocks,state_delete_block, state_set_current_block, state_rename_block};
 use crate::blocks::dashboard::api::BlockType;
 use crate::users::state::USER;
 use crate::users::api::UserRole;
@@ -62,10 +62,6 @@ pub fn DashboardPage()->Element{
         if BLOCKS.peek().is_empty() {
             info!("Loading dashboard page - first load");
             state_load_blocks().await;
-        }
-        else {
-            info!("Loading dashboard page - silent refresh");
-            state_load_blocks_silent().await;
         }
     });
 
@@ -169,7 +165,6 @@ pub fn DashboardPage()->Element{
                                             return;
                                         }
                                         let id = block_id.clone();
-                                        state_set_current_block(&id.clone());
                                         navigator.push(Route::TasksListPage { block_id: id, block_name: block_name.clone(), block_type: block_type.as_str().to_string() });
                                     },
                                     

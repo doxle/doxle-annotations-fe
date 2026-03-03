@@ -7,7 +7,8 @@ pub mod protected_route;
 pub mod shapes;
 pub mod client;
 pub mod theme;
-pub mod status;
+pub mod progress;
+pub mod status_dialog;
 
 pub use app_navbar::AppNavbar;
 pub use app_sidebar::{AppSidebar, SidebarTab};
@@ -16,4 +17,4 @@ pub use global_keyboard::setup_global_keyboard_shortcuts;
 pub use protected_route::ProtectedRoute;
 pub use shapes::{BBox, BBoxAction, Geometry, Point, Polygon};
 pub use theme::{apply_theme_class, is_dark_theme, load_theme_preference, Theme, THEME};
-pub use status::{STATUS, show_success, show_error, show_info};
+pub use progress::{STATUS, show_success, show_error, show_info, show_progress, show_progress_danger, push_log_danger, clear_status};

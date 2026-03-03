@@ -55,7 +55,7 @@ const EDIT_BLOCK_MODAL_CSS: &str = r#"
     color: var(--text-primary);
 }
 .edit-modal-btn-save {
-    background: var(--accent-blue);
+    background: var(--dx-blue);
     color: white;
 }
 .edit-modal-btn-save:disabled {

@@ -6,7 +6,7 @@ use crate::atoms::tasks::state::TASKS;
 use crate::atoms::media::Image;
 use crate::atoms::svg_canvas::state::Tool;
 use crate::users::state::{USER, load_user};
-use super::status_bar::StatusBar;
+use crate::shell::status_dialog::StatusDialog;
 use crate::api;
 use crate::blocks::dashboard::state::{state_load_labels, LABELS};
 use crate::blocks::dashboard::api::api_update_label_properties;
@@ -42,6 +42,8 @@ const ARROW_CENTER_MENU_LIGHT: Asset = asset!("/assets/icons/arrow-center-menu-l
 const ARROW_CENTER_MENU_DARK: Asset = asset!("/assets/icons/arrow-center-menu-dark.svg");
 const PAN_CENTER_MENU_LIGHT: Asset = asset!("/assets/icons/pan-center-menu-light.svg");
 const PAN_CENTER_MENU_DARK: Asset = asset!("/assets/icons/pan-center-menu-dark.svg");
+const OPACITY_ICON_LIGHT: Asset = asset!("/assets/icons/opacity-light.svg");
+const OPACITY_ICON_DARK: Asset = asset!("/assets/icons/opacity-dark.svg");
 
 #[component]
 pub fn AppNavbar(
@@ -49,6 +51,7 @@ pub fn AppNavbar(
     #[props(default)] sidebar_tab: Option<Signal<SidebarTab>>,
     #[props(default)] sidebar_open: Option<Signal<bool>>,
     #[props(default)] selected_tool: Option<Signal<Tool>>,
+    #[props(default)] annotation_opacity: Option<Signal<f64>>,
 ) -> Element {
     let route = use_route::<Route>();
     let nav = use_navigator();
@@ -56,6 +59,7 @@ pub fn AppNavbar(
     let mut logo_menu_open = use_signal(|| false);
     let mut show_account_panel = use_signal(|| false);
     let mut show_settings = use_signal(|| false);
+    let mut show_opacity_slider = use_signal(|| false);
 
     // Load user once when AppNavbar mounts (no signal reads = runs once, won't loop)
     use_effect(|| {
@@ -107,8 +111,15 @@ pub fn AppNavbar(
     //     tracing::info!(" USER {:?}", user);
     // };
     rsx!{
-        // Status bar rendered outside nav to avoid stacking context trapping z-index
-        StatusBar {}
+        // Status dialog rendered outside nav to avoid stacking context trapping z-index
+        StatusDialog {}
+        // Opacity slider backdrop — rendered outside nav so it covers the full page including canvas
+        if show_opacity_slider() {
+            div {
+                class: "opacity-slider-backdrop",
+                onclick: move |_| show_opacity_slider.set(false),
+            }
+        }
         nav{
             class:"app-navbar",
              // Home icon (left) - click to show dropdown
@@ -353,6 +364,41 @@ pub fn AppNavbar(
                                         class: if current_tool == Tool::Comment { "app-navbar-tool-icon app-navbar-tool-icon-comment active" } else { "app-navbar-tool-icon app-navbar-tool-icon-comment" },
                                         onclick: move |_| tool_signal.set(Tool::Comment),
                                         img { src: if is_dark { COMMENT_CENTER_MENU_DARK } else { COMMENT_CENTER_MENU_LIGHT }, alt: "Comment" }
+                                    }
+                                    // Opacity control
+                                    if let Some(mut opacity_signal) = annotation_opacity {
+                                        div {
+                                            class: "app-navbar-opacity-wrapper",
+                                            div {
+                                                class: if show_opacity_slider() { "app-navbar-tool-icon active" } else { "app-navbar-tool-icon" },
+                                                onclick: move |_| show_opacity_slider.set(!show_opacity_slider()),
+                                                img { src: if is_dark { OPACITY_ICON_DARK } else { OPACITY_ICON_LIGHT }, alt: "Opacity" }
+                                            }
+                                            if show_opacity_slider() {
+                                                div {
+                                                    class: "opacity-slider-dropdown",
+                                                    onclick: move |e| e.stop_propagation(),
+                                                    onmousedown: move |e| e.stop_propagation(),
+                                                    input {
+                                                        r#type: "range",
+                                                        class: "opacity-range-input",
+                                                        min: "0",
+                                                        max: "100",
+                                                        step: "1",
+                                                        value: "{(opacity_signal() * 100.0) as i32}",
+                                                        oninput: move |e| {
+                                                            if let Ok(v) = e.value().parse::<f64>() {
+                                                                opacity_signal.set(v / 100.0);
+                                                            }
+                                                        },
+                                                    }
+                                                    span {
+                                                        class: "opacity-slider-label",
+                                                        "{(opacity_signal() * 100.0) as i32}%"
+                                                    }
+                                                }
+                                            }
+                                        }
                                     }
                                 }
                             }

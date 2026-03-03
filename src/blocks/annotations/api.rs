@@ -90,8 +90,9 @@ use super::models::{ApiCommentThread, ApiComment};
 
 #[derive(Debug, Serialize)]
 struct CreateThreadRequest {
+    thread_id: String,
     metadata: Option<String>,
-    text: Option<String>,
+    text: String,
 }
 
 #[derive(Debug, Serialize)]
@@ -117,11 +118,12 @@ pub async fn api_list_threads(parent_id: &str) -> Result<Vec<ApiCommentThread>, 
 /// Create a new thread under a parent resource
 pub async fn api_create_thread(
     parent_id: &str,
+    thread_id: &str,
     metadata: Option<String>,
-    text: Option<String>,
+    text: &str,
 ) -> Result<ApiCommentThread, String> {
     let endpoint = format!("/comments/{}/threads", parent_id);
-    let payload = CreateThreadRequest { metadata, text };
+    let payload = CreateThreadRequest { thread_id: thread_id.to_string(), metadata, text: text.to_string() };
     client::post(&endpoint, &payload).await
 }
 

@@ -62,20 +62,20 @@ pub fn CreateTaskPage(props: CreateTaskPageProps) -> Element {
         // is_submitting.set(true); // So create task button cannot be pressed twice
 
         if *is_submitting.read() { 
-            crate::shell::status::show_info("Creating task ....");
+            crate::shell::progress::show_info("Creating task ....");
             return; 
         }
 
         let name = task_name.read().trim().to_string();
         if name.is_empty() { 
-            crate::shell::status::show_error("Task name is required:");
+            crate::shell::progress::show_error("Task name is required:");
             return; 
         }
 
         let images_to_upload = pending_uploads.read().clone();
         if images_to_upload.is_empty() {
             error!("Cannot create task without images");
-            crate::shell::status::show_error("Cannot create task without images:");
+            crate::shell::progress::show_error("Cannot create task without images:");
             return;
         }
 
@@ -159,7 +159,7 @@ pub fn CreateTaskPage(props: CreateTaskPageProps) -> Element {
                                                         // Calculate sum
                                                         let total_bytes: f64 = pending_uploads.iter().map(|u| u.file.size()).sum();
                                                         // Show status
-                                                        crate::shell::status::show_info_for(&format!("Total upload size: {}", format_size(total_bytes)), 1);
+                                                        crate::shell::progress::show_info_for(&format!("Total upload size: {}", format_size(total_bytes)), 1);
 
 
                                                     }
@@ -193,7 +193,7 @@ pub fn CreateTaskPage(props: CreateTaskPageProps) -> Element {
                                                     pending_uploads.write().remove(idx); 
                                                     // Recalculate sum when imgs are removed
                                                     let total_bytes: f64 = pending_uploads.iter().map(|u| u.file.size()).sum();
-                                                    crate::shell::status::show_info(&format!("Total upload size: {}", format_size(total_bytes)));
+                                                    crate::shell::progress::show_info(&format!("Total upload size: {}", format_size(total_bytes)));
                                                 },
                                                 img {
                                                     src: close_icon,
