@@ -127,6 +127,7 @@ pub fn AnnotationCanvasPage(
     let mut comment_dialog: Signal<Option<(f64, f64, f64, f64, String)>> = use_signal(|| None); // (world_x, world_y, screen_x, screen_y, thread_id)
     let mut scroll_to_thread: Signal<Option<String>> = use_signal(|| None);
     let mut nav_direction: Signal<Option<i32>> = use_signal(|| None);
+    let mut image_states: Signal<HashMap<String, String>> = use_signal(HashMap::new);
     let mut clipboard: Signal<Option<(Geometry, String)>> = use_signal(|| None);
     let mut paste_mode: Signal<bool> = use_signal(|| false);
     let mut copy_requested: Signal<u32> = use_signal(|| 0);
@@ -254,6 +255,8 @@ pub fn AnnotationCanvasPage(
             sidebar_open: Some(sidebar_open),
             selected_tool: Some(selected_tool),
             annotation_opacity: Some(annotation_opacity),
+            image_states: Some(image_states),
+            current_image_id: Some(image_id.clone()),
         }
         div { class: "annotation-canvas-page",
             div { class: "canvas-area",
@@ -334,6 +337,64 @@ pub fn AnnotationCanvasPage(
                     div { class: "no-image-text", "No image" }
                 }
             }
+            // Bottom image review strip
+            if let Some(ref t) = task {
+                {
+                    let strip_block_id = block_id.clone();
+                    let strip_block_name = block_name.clone();
+                    let strip_block_type = block_type.clone();
+                    let strip_task_id = task_id.clone();
+                    let strip_task_name = task_name.clone();
+                    rsx! {
+                        div { class: "image-review-strip",
+                            for (i, img) in t.images.iter().enumerate() {
+                                {
+                                    let img_id = img.image_id.clone();
+                                    let is_current = img.image_id == image_id;
+                                    let explicit_state = image_states.read().get(&img.image_id).cloned().unwrap_or_default();
+                                    let ann_total: u32 = img.bbox_count.values().sum::<u32>() + img.polygon_count.values().sum::<u32>();
+                                    let state_class = if !explicit_state.is_empty() {
+                                        explicit_state.as_str().to_string()
+                                    } else if ann_total > 0 {
+                                        "working".to_string()
+                                    } else {
+                                        "todo".to_string()
+                                    };
+                                    let cls = if is_current {
+                                        format!("review-strip-rect current {}", state_class)
+                                    } else {
+                                        format!("review-strip-rect {}", state_class)
+                                    };
+                                    let nav_bid = strip_block_id.clone();
+                                    let nav_bname = strip_block_name.clone();
+                                    let nav_btype = strip_block_type.clone();
+                                    let nav_tid = strip_task_id.clone();
+                                    let nav_tname = strip_task_name.clone();
+                                    rsx! {
+                                        div {
+                                            key: "{img_id}",
+                                            class: "{cls}",
+                                            onclick: move |e| {
+                                                e.stop_propagation();
+                                                nav.replace(Route::AnnotationCanvasPage {
+                                                    block_id: nav_bid.clone(),
+                                                    block_name: nav_bname.clone(),
+                                                    block_type: nav_btype.clone(),
+                                                    task_id: nav_tid.clone(),
+                                                    task_name: nav_tname.clone(),
+                                                    image_id: img_id.clone(),
+                                                    image_name: format!("{}.png", img_id),
+                                                });
+                                            },
+                                            "{i + 1}"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
             AppSidebar{
                 open:sidebar_open, 
                 task_name: task_name.clone(), 
@@ -381,6 +442,8 @@ pub fn AnnotationCanvasPage(
                             let image_id_for_update1 = image_id_for_update.clone();
                             let ann_id_for_update1 = ann_id_for_update.clone();
                             
+                            selected_label_id.set(new_label_id.clone());
+
                             spawn(async move{
                                 state_update_annotation_label(&block_id_upd, &image_id_for_update1, &ann_id_for_update1, &new_label_id, annotations).await;
                             });

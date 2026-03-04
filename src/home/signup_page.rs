@@ -19,6 +19,39 @@ pub fn SignupPage() -> Element {
     let mut show_password = use_signal(|| false);
     let mut show_confirm_password = use_signal(|| false);
     let nav = navigator();
+    // Prefill invite code from URL query or session storage.
+    use_effect(move || {
+        #[cfg(target_arch = "wasm32")]
+        {
+            if let Some(window) = web_sys::window() {
+                // First preference: URL query params (?code=... or ?invite_code=...)
+                if let Ok(search) = window.location().search() {
+                    if !search.is_empty() {
+                        if let Ok(params) = web_sys::UrlSearchParams::new_with_str(&search) {
+                            if let Some(code) = params.get("code").or_else(|| params.get("invite_code")) {
+                                if !code.trim().is_empty() {
+                                    invite_code.set(code.clone());
+                                    if let Ok(Some(storage)) = window.session_storage() {
+                                        let _ = storage.set_item("invite_code", &code);
+                                    }
+                                    return;
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Fallback: code stashed from home page invite redirect
+                if let Ok(Some(storage)) = window.session_storage() {
+                    if let Ok(Some(stored_code)) = storage.get_item("invite_code") {
+                        if !stored_code.trim().is_empty() {
+                            invite_code.set(stored_code);
+                        }
+                    }
+                }
+            }
+        }
+    });
 
     let handle_submit = move |evt: Event<FormData>| {
         evt.prevent_default();

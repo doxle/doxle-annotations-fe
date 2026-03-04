@@ -86,10 +86,16 @@
 .comment-dialog-thread {
     max-height: 240px;
     overflow-y: auto;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
     padding: 10px 14px 4px;
     display: flex;
     flex-direction: column;
     gap: 10px;
+}
+
+.comment-dialog-thread::-webkit-scrollbar {
+    display: none;
 }
 
 .comment-entry {

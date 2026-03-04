@@ -222,11 +222,17 @@
   .min-h-screen {
     min-height: 100vh;
   }
+  .flex-shrink {
+    flex-shrink: 1;
+  }
   .transform {
     transform: var(--tw-rotate-x,) var(--tw-rotate-y,) var(--tw-rotate-z,) var(--tw-skew-x,) var(--tw-skew-y,);
   }
   .resize {
     resize: both;
+  }
+  .flex-wrap {
+    flex-wrap: wrap;
   }
   .items-center {
     align-items: center;
@@ -251,6 +257,9 @@
   }
   .lowercase {
     text-transform: lowercase;
+  }
+  .italic {
+    font-style: italic;
   }
   .outline {
     outline-style: var(--tw-outline-style);

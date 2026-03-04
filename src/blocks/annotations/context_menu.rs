@@ -18,7 +18,7 @@ pub fn AnnotationContextMenu(
 	)->Element{
 
     let is_dark = THEME() == Theme::Dark;
-	let trash_icon = if is_dark { TRASH_ICON_DARK } else { TRASH_ICON_LIGHT };
+	let trash_icon = TRASH_ICON_DARK;
 
     // Calculate menu height estimate (items + padding + delete)
     let menu_height = (labels.len() as f64 * 32.0) + 80.0;
@@ -58,17 +58,22 @@ pub fn AnnotationContextMenu(
             div {
                 class: "context-menu-labels",
                 for label in labels {
-                    div {
-                        class: "context-menu-item",
-                        onclick: {
-                            let lid = label.label_id.clone();
-                            move |_| on_change_label.call(lid.clone())
-                        },
-                        span {
-                            class: "label-color-square",
-                            style: "background: {label.label_color};",
+                    {
+                        let is_current = label.label_id == current_label_id;
+                        rsx! {
+                            div {
+                                class: if is_current { "context-menu-item current" } else { "context-menu-item" },
+                                onclick: {
+                                    let lid = label.label_id.clone();
+                                    move |_| on_change_label.call(lid.clone())
+                                },
+                                span {
+                                    class: "label-color-square",
+                                    style: "background: {label.label_color};",
+                                }
+                                span { "{label.label_name}" }
+                            }
                         }
-                        span { "{label.label_name}" }
                     }
                 }
             }

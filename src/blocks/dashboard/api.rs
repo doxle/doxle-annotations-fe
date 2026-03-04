@@ -160,8 +160,11 @@ pub struct BlockLabel {
     pub label_name: String,
     pub label_color: String,
     pub label_properties: Option<serde_json::Value>,
+    #[serde(default)]
     pub label_count: u32,
+    #[serde(default)]
     pub bbox_count: u32,
+    #[serde(default)]
     pub polygon_count: u32,
 }
 

@@ -21,14 +21,9 @@ impl std::fmt::Display for ApiError {
     }
 }
 
-// Shared API configuration
-// Set API_BASE_URL env var at compile time, e.g.:
-//   API_BASE_URL=https://api.doxle.ai dx build --release
-// Defaults to http://localhost:9000 for local dev.
-pub const API_BASE_URL: &str = match option_env!("API_BASE_URL") {
-    Some(url) => url,
-    None => "http://localhost:9000",
-};
+// Shared API configuration — toggle comment for local vs deploy
+pub const API_BASE_URL: &str = "http://localhost:9000"; // LOCAL
+// pub const API_BASE_URL: &str = "https://api.doxle.ai"; // DEPLOY
 
 // CloudFront CDN for image caching
 pub const CLOUDFRONT_URL: &str = "https://d1flb4kxeu5kb6.cloudfront.net";

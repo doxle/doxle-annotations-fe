@@ -399,7 +399,7 @@ pub fn TasksListPage(block_id: String, block_name: String, block_type: String) -
                                                     div { class: "task-counts",
                                                         span { class: "task-count-item", "{task.images.len()} images" }
                                                         span { class: "task-count-divider", "/" }
-                                                        span { class: "task-count-item", "{task.annotation_count} annotations" }
+                                                        span { class: "task-count-item", "{total_bbox + total_polygon} annotations" }
                                                         span { class: "task-count-divider", "/" }
                                                         span { class: "task-count-item", "{total_bbox} bbox" }
                                                         span { class: "task-count-divider", "/" }

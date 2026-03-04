@@ -14,5 +14,7 @@ pub struct Image {
 	pub labels_count:HashMap<String, u32>,
 	pub bbox_count:HashMap<String, u32>,
 	pub polygon_count:HashMap<String, u32>,
+	#[serde(default)]
+	pub image_state:String,
 	pub uploaded_at:String
 }

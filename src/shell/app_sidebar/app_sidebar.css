@@ -124,12 +124,14 @@ padding: 60px 16.8px 12px 16.8px; /* Top padding to start below navbar */
     background-color: var(--hover-color);
 }
 
-.labels-table-row.selected {
-    background-color: var(--hover-color);
-}
-
-.labels-table-row.selected .labels-table-cell {
-    color: var(--text-primary);
+.label-active-dot {
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--dx-blue);
+    margin-left: 4px;
+    vertical-align: middle;
 }
 
 /* Hidden label - strikethrough */

@@ -532,6 +532,11 @@ html.dark .app-navbar-center-button:hover .app-navbar-center-button-icon {
     height: 16px;
 }
 
+.app-navbar-tool-icon img.navbar-close-icon {
+    width: 12px;
+    height: 12px;
+}
+
 .app-navbar-tool-icon img.app-navbar-tool-icon-polygon {
     width: 16px;
     height: 16px;
@@ -685,6 +690,7 @@ html.dark .app-navbar-tool-icon img.app-navbar-tool-icon-polygon {
 .invite-button:hover {
     background: var(--dx-blue-hover, #0056b3);
 }
+
 
 /* Sidebar tabs in navbar - positioned to align with sidebar content */
 .navbar-sidebar-tabs {
@@ -896,7 +902,7 @@ html.dark .app-navbar-tool-icon img.app-navbar-tool-icon-polygon {
     display: flex;
     justify-content: space-between;
     align-items: flex-end;
-    padding: 16px 24px;
+    padding: 45px 24px;
     padding-bottom: 34px;
     border-top: 1px solid var(--dog-menu-divider);
     background: var(--dog-menu-bg);

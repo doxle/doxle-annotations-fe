@@ -144,6 +144,9 @@ pub fn AppSidebar(
                                         }
                                     },
                                     "{label.label_name}"
+                                    if is_selected {
+                                        span { class: "label-active-dot" }
+                                    }
                                 }
                                 span {class:"labels-table-cell label-count", "{count:02}" }
                                 // Geometry type indicators (only show > 0)

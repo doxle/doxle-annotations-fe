@@ -80,6 +80,48 @@ fn main() {
 
 #[component]
 fn App() -> Element {
+    // Canonical host redirect: always use doxle.ai in production.
+    use_effect(move || {
+        #[cfg(target_arch = "wasm32")]
+        {
+            if let Some(window) = web_sys::window() {
+                if let Ok(hostname) = window.location().hostname() {
+                    if hostname == "doxle.com" || hostname == "www.doxle.com" || hostname == "www.doxle.ai" {
+                        let pathname = window.location().pathname().unwrap_or_else(|_| "/".to_string());
+                        let search = window.location().search().unwrap_or_default();
+                        let hash = window.location().hash().unwrap_or_default();
+                        let target = format!("https://doxle.ai{}{}{}", pathname, search, hash);
+                        let _ = window.location().set_href(&target);
+                    }
+                }
+            }
+        }
+    });
+    // Capture invite code from query params BEFORE the router strips them.
+    // Stash in sessionStorage; HomePage will read it and navigate to signup.
+    use_hook(|| {
+        #[cfg(target_arch = "wasm32")]
+        {
+            let window = match web_sys::window() {
+                Some(w) => w,
+                None => return,
+            };
+            let search = window.location().search().unwrap_or_default();
+            if search.is_empty() { return; }
+            let params = match web_sys::UrlSearchParams::new_with_str(&search) {
+                Ok(p) => p,
+                Err(_) => return,
+            };
+            if let Some(code) = params.get("code").or_else(|| params.get("invite_code")) {
+                if !code.trim().is_empty() {
+                    if let Ok(Some(storage)) = window.session_storage() {
+                        let _ = storage.set_item("invite_code", &code);
+                    }
+                }
+            }
+        }
+    });
+
     // Load saved theme on app startup AND apply immediately
     use_hook(|| {
         if let Some(saved_theme) = load_theme_preference() {

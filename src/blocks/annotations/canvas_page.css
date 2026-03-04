@@ -20,6 +20,126 @@
     color: var(--text-secondary);
 }
 
+/* Review Buttons - top right of canvas */
+.review-buttons {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    display: flex;
+    gap: 6px;
+    z-index: 50;
+}
+
+.review-btn {
+    border: none;
+    border-radius: 4px;
+    padding: 4px 12px;
+    font-family: 'HelveticaNeue', Helvetica, Arial, sans-serif;
+    font-size: 11px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: opacity 0.15s, box-shadow 0.15s;
+    opacity: 0.9;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25), 0 0 1px rgba(0, 0, 0, 0.1);
+}
+
+.review-btn:hover {
+    opacity: 1;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3), 0 0 2px rgba(0, 0, 0, 0.15);
+}
+
+.review-btn.reject {
+    background: #E53935;
+    color: #fff;
+}
+
+.review-btn.approve {
+    background: #43A047;
+    color: #fff;
+}
+
+.review-btn.active {
+    opacity: 1;
+    outline: 2px solid var(--text-primary);
+    outline-offset: 1px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35), 0 0 2px rgba(0, 0, 0, 0.2);
+}
+
+/* Image Review Strip - bottom bar */
+.image-review-strip {
+    display: flex;
+    align-items: center;
+    gap: 0.75px;
+    padding: 6px 12px;
+    background: var(--bg-primary);
+    overflow-x: auto;
+    flex-shrink: 0;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+
+.image-review-strip::-webkit-scrollbar {
+    display: none;
+}
+
+.review-strip-rect {
+    min-width: 18px;
+    height: 20px;
+    border-radius: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'SF Mono', 'Monaco', monospace;
+    font-size: 8px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: outline 0.1s, background 0.15s;
+    flex-shrink: 0;
+    color: var(--text-secondary);
+    background: var(--bg-card, #2a2a2a);
+    border: 1px solid var(--border-subtle);
+}
+
+.review-strip-rect:hover {
+    outline: 0.75px solid var(--text-primary);
+    outline-offset: 0px;
+}
+
+.review-strip-rect.current {
+    outline: 0.75px solid var(--text-primary);
+    outline-offset: 0px;
+}
+
+.review-strip-rect.todo {
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    border-color: var(--border-subtle);
+}
+
+.review-strip-rect.approved {
+    background: #43A047;
+    color: #fff;
+    border-color: #43A047;
+}
+
+.review-strip-rect.rejected {
+    background: #E53935;
+    color: #fff;
+    border-color: #E53935;
+}
+
+.review-strip-rect.working {
+    background: #1E88E5;
+    color: #fff;
+    border-color: #1E88E5;
+}
+
+.review-strip-rect.submitted {
+    background: #FB8C00;
+    color: #fff;
+    border-color: #FB8C00;
+}
+
 /* Shortcuts Modal */
 .shortcuts-modal-backdrop {
     position: fixed;

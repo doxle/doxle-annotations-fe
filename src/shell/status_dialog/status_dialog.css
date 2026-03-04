@@ -67,6 +67,12 @@
   gap: 2px;
   max-height: 120px;
   overflow-y: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.status-dialog-log::-webkit-scrollbar {
+  display: none;
 }
 
 .status-dialog-log-line {

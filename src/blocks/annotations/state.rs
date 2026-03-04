@@ -3,6 +3,7 @@ use super::models::{Annotation, CommentThread, Comment, ThreadMetadata};
 use crate::atoms::svg_canvas::Geometry;
 use dioxus::prelude::*;
 use crate::blocks::dashboard::state::state_refresh_block_labels;
+use crate::shell::progress::{show_success, show_error};
 
 
 /// Load annotations for an image
@@ -29,8 +30,8 @@ pub async fn state_load_annotations(image_id:&str, mut annotations: Signal<Vec<A
 }
 
 /// Create annotation with optimistic update
-pub async fn state_create_annotation(block_id:&str, image_id:&str, label_id:&str, label_name:&str, geometry:Geometry, mut annotations:Signal<Vec<Annotation>>) {
-	 let ann_id = uuid::Uuid::new_v4().to_string();
+pub async fn state_create_annotation(block_id:&str, image_id:&str, ann_id:&str, label_id:&str, label_name:&str, geometry:Geometry, mut annotations:Signal<Vec<Annotation>>) {
+	 let ann_id = ann_id.to_string();
 
 	 // Optimistic UI update
 	 let new_annotation = Annotation {
@@ -43,7 +44,7 @@ pub async fn state_create_annotation(block_id:&str, image_id:&str, label_id:&str
 	 tracing::info!("✅ Annotation added to UI (optimistic)");
 
 	  // API call
-	  match api::api_create_annotation(block_id, image_id, label_id, &ann_id, label_name, geometry.clone()).await {
+	  match api::api_create_annotation(block_id, image_id, &ann_id, label_id, label_name, geometry.clone()).await {
 	  	Ok(server_ann_id) => {
 	  		 tracing::info!("✅ Annotation created on server: {}", server_ann_id);
 	  		 
@@ -93,26 +94,28 @@ pub async fn state_update_annotation_label(block_id:&str, image_id:&str, annotat
 	} 
 }
 
-/// Delete annotation
+/// Delete annotation (optimistic)
 pub async fn state_delete_annotation(block_id:&str, image_id:&str, annotation_id:&str, mut annotations:Signal<Vec<Annotation>>){
-	// Save old label id for rollback
-	let old_ann_id = annotations.read().iter().find(|a| a.id == annotation_id).map(|a| a.id.clone());
-	tracing::info!("del is being called");
+	// Save annotation for rollback
+	let removed_ann = annotations.read().iter().find(|a| a.id == annotation_id).cloned();
+
+	// Optimistic: remove from UI immediately
+	annotations.write().retain(|a| a.id != annotation_id);
+	show_success("Annotation deleted");
+
+	// API call
 	match api::api_delete_annotation(block_id, image_id, annotation_id).await {
 		Ok(_)=>{
-			// Update the signal so it removes the annotation once be is updated without refresh
-			annotations.write().retain(|a| a.id != annotation_id);
 			tracing::info!("✅ Annotation deleted on server");
 		},
 		Err(e)=>{
 			tracing::error!("❌ Failed to delete annotation: {}", e);
-            // Rollback - restore the annotation
-            if let Some(old_id) = old_ann_id {
-            	annotations.write().iter_mut().find(|a| a.id == old_id).map(|a| a.id = old_id);
-				
-            }
-        }
-            
+			show_error("Failed to delete annotation");
+			// Rollback - restore the annotation
+			if let Some(ann) = removed_ann {
+				annotations.write().push(ann);
+			}
+		}
 	}
 }
 

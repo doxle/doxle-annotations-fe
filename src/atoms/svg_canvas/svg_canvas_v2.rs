@@ -121,7 +121,9 @@ pub fn SvgCanvasV2(
     let mut skip_polygon_insert = use_signal(|| false);
     let mut bbox_start: Signal<Option<(f64, f64)>> = use_signal(|| None);
 
-	
+	// Clear bbox first-click when leaving BBox tool (e.g. Escape)
+	if selected_tool != Tool::BBox { bbox_start.set(None); }
+
 	let dot_spacing = 30.0; // Dot spacing in world units
 	let dot_min_px = 15.0;  // minimum on-screen spacing so dots stay visible
 	let dot_world = {
@@ -175,11 +177,12 @@ pub fn SvgCanvasV2(
 		let tick = copy_requested();
 		if tick == 0 { return; }
 		let aid = selected_ann_id();
-		if aid.is_empty() { return; }
+		if aid.is_empty() { copy_requested.set(0); return; }
 		if let Some(ann) = annotations().iter().find(|a| a.id == aid) {
 			clipboard.set(Some((ann.geometry.clone(), ann.label_id.clone())));
 			tracing::info!("📋 Annotation copied to clipboard");
 		}
+		copy_requested.set(0);
 	});
 
 	// Scroll to thread when sidebar triggers it (animated)
@@ -346,6 +349,7 @@ pub fn SvgCanvasV2(
 				tracing::info!("🖱️ mousedown: button={:?}, mods={:?}", 
 		        evt.data.trigger_button(), 
 		        evt.data.modifiers());
+				if dragging_node() >= 0 { return; } // Node drag in progress, don't start pan
 				is_dragging.set(true);
 				is_panning.set(false);
 				undo_last_point.set(false);
@@ -375,9 +379,22 @@ pub fn SvgCanvasV2(
 				    {	
 				    	let mut anns = annotations.write();
 				        if let Some(a) = anns.iter_mut().find(|a| a.id == aid) {
-				            if let Geometry::Polygon { ref mut points } = a.geometry {
-				                if idx < points.len() {
-				                    points[idx] = Point { x: wx, y: wy };
+				            match &mut a.geometry {
+				                Geometry::Polygon { ref mut points } => {
+				                    if idx < points.len() {
+				                        points[idx] = Point { x: wx, y: wy };
+				                    }
+				                }
+				                Geometry::BBox { ref mut start, ref mut end } => {
+				                    // Corners: 0=TL(start.x,start.y) 1=TR(end.x,start.y)
+				                    //          2=BR(end.x,end.y)     3=BL(start.x,end.y)
+				                    match idx {
+				                        0 => { start.x = wx; start.y = wy; }
+				                        1 => { end.x = wx; start.y = wy; }
+				                        2 => { end.x = wx; end.y = wy; }
+				                        3 => { start.x = wx; end.y = wy; }
+				                        _ => {}
+				                    }
 				                }
 				            }
 				        }
@@ -460,11 +477,13 @@ pub fn SvgCanvasV2(
 			    // ══════════════════════════════════════════════════════════
 			    // PASTE MODE: click to place copied annotation
 			    // ══════════════════════════════════════════════════════════
-			    if paste_mode() {
+    if paste_mode() {
 			        if let Some((ref geom, ref label_id)) = clipboard() {
 			            let wx = (p.x - pan_x()) / zoom();
 			            let wy = (p.y - pan_y()) / zoom();
 			            let new_geom = offset_geometry_to(geom, wx, wy);
+			            let ann_id = uuid::Uuid::new_v4().to_string();
+			            selected_ann_id.set(ann_id.clone());
 			            let label_id = label_id.clone();
 			            let label_name = crate::blocks::dashboard::state::LABELS.read()
 			                .iter()
@@ -474,7 +493,7 @@ pub fn SvgCanvasV2(
 			            let img_id = image_id.clone();
 			            let block_id1 = block_id.clone();
 			            spawn(async move {
-			                state_create_annotation(&block_id1, &img_id, &label_id, &label_name, new_geom, annotations).await;
+			                state_create_annotation(&block_id1, &img_id, &ann_id, &label_id, &label_name, new_geom, annotations).await;
 			            });
 			        }
 			        paste_mode.set(false);
@@ -514,11 +533,13 @@ pub fn SvgCanvasV2(
 			            // Second click: create bbox annotation
 			            let width = (wx - sx).abs();
 			            let height = (wy - sy).abs();
-			            if width > 1.0 && height > 1.0 {
+            if width > 1.0 && height > 1.0 {
 			                let geometry = Geometry::BBox {
 			                    start: Point { x: sx.min(wx), y: sy.min(wy) },
 			                    end: Point { x: sx.max(wx), y: sy.max(wy) },
 			                };
+			                let ann_id = uuid::Uuid::new_v4().to_string();
+			                selected_ann_id.set(ann_id.clone()); // Auto-select so nodes appear immediately
 			                let label_id = selected_label_id_for_mouse_move1;
 			                let label_name = crate::blocks::dashboard::state::LABELS.read()
 			                    .iter()
@@ -528,7 +549,7 @@ pub fn SvgCanvasV2(
 			                let img_id = image_id.clone();
 			                let block_id1 = block_id.clone();
 			                spawn(async move {
-			                    state_create_annotation(&block_id1, &img_id, &label_id, &label_name, geometry, annotations).await;
+			                    state_create_annotation(&block_id1, &img_id, &ann_id, &label_id, &label_name, geometry, annotations).await;
 			                });
 			            }
 			            bbox_start.set(None);
@@ -557,9 +578,10 @@ pub fn SvgCanvasV2(
 			        if let Some(&(fx, fy)) = pts.first() {
 			            let dist = ((wx - fx).powi(2) + (wy - fy).powi(2)).sqrt();
 			            if dist < snap_threshold {
-			                let points: Vec<Point> = pts.iter().copied().map(|(x,y)| Point { x, y }).collect();
+                let points: Vec<Point> = pts.iter().copied().map(|(x,y)| Point { x, y }).collect();
 			                let geometry = Geometry::Polygon {points};
 			                let ann_id = uuid::Uuid::new_v4().to_string();
+			                selected_ann_id.set(ann_id.clone()); // Auto-select so nodes appear immediately
 			                let label_id = selected_label_id_for_mouse_move1;
 			                let label_name = crate::blocks::dashboard::state::LABELS.read()
 			                    .iter()
@@ -570,7 +592,7 @@ pub fn SvgCanvasV2(
 			            	
 			                let block_id1 = block_id.clone();
 			                spawn(async move{
-			                	state_create_annotation(&block_id1, &img_id, &label_id, &label_name, geometry, annotations).await;
+			                	state_create_annotation(&block_id1, &img_id, &ann_id, &label_id, &label_name, geometry, annotations).await;
 			                });
 			                
 			                tracing::info!("Polygon save intiated{}", annotations.read().len());
@@ -795,7 +817,12 @@ fn DrawArea(
 			fill: "transparent",
 			pointer_events:"auto",
 			onclick: move|_| {
-				selected_ann_id.set(String::new());	// Deselect selected annotation
+				// Only deselect with Arrow tool — drawing tools fire click on
+				// DrawArea right after creating an annotation (before the new
+				// polygon is in the DOM), which would undo the auto-select.
+				if selected_tool == Tool::Select {
+					selected_ann_id.set(String::new());
+				}
 			}
 		}
 	}
@@ -1347,6 +1374,21 @@ fn SavedAnnotation(
 
 
 			rsx!{
+				// Wrap annotation in <g> so hover is stable across polygon + nodes
+				g {
+					onmouseenter: {
+						let lid = label_id.clone();
+						let aid = ann_id.clone();
+						move |_| {
+							hovered_label_id.set(Some(lid.clone()));
+							hovered_ann_id.set(Some(aid.clone()));
+						}
+					},
+					onmouseleave: move |_| {
+						hovered_label_id.set(None);
+						hovered_ann_id.set(None);
+					},
+
 				// ═══════════════════════════════════════════════════════════
                 // POLYGON SHAPE (the filled annotation)
                 // ═══════════════════════════════════════════════════════════
@@ -1380,20 +1422,6 @@ fn SavedAnnotation(
                             evt.stop_propagation(); // Don't let click bubble to background
                             selected_ann_id.set(aid.clone()); // Mark this annotation as selected
                         }
-                    },
-
-                    // HOVER: Track hovered label + visual hover effect
-                    onmouseenter: {
-                        let lid = label_id.clone();
-                        let aid = ann_id.clone();
-                        move |_| {
-                            hovered_label_id.set(Some(lid.clone()));
-                            hovered_ann_id.set(Some(aid.clone()));
-                        }
-                    },
-                    onmouseleave: move |_| {
-                        hovered_label_id.set(None);
-                        hovered_ann_id.set(None);
                     },
 
 					// Bubble up to parent SVG selection is handled by onclick
@@ -1555,7 +1583,7 @@ fn SavedAnnotation(
                     }}
                 }
 
-				 // Draggable nodes (when selected or hovered)
+				// Draggable nodes (selected or hovered)
                 if is_selected || is_hovered {
                     for (i, pt) in points.iter().enumerate() {
                         DraggableNode {
@@ -1574,12 +1602,14 @@ fn SavedAnnotation(
                             dirty_ann_ids: dirty_ann_ids,
     						last_dirty_tick: last_dirty_tick,  
     						skip_polygon_insert: skip_polygon_insert,
+                            selected_ann_id: selected_ann_id,
                         }
                     }
                 }
 
 
-			}
+			} // close g
+			} // close rsx!
 
 		}}
 	}
@@ -1611,6 +1641,7 @@ fn DraggableNode(
     dirty_ann_ids: Signal<HashSet<String>>,  
     last_dirty_tick: Signal<Instant>, 
     skip_polygon_insert: Signal<bool>,
+    selected_ann_id: Signal<String>,
 ) -> Element {
 		let mut is_hovered = use_signal(||false);
 		
@@ -1632,9 +1663,12 @@ fn DraggableNode(
 	            // Only set which node we're dragging - actual movement handled at SVG level
 	            onmousedown: {
 	                let idx = node_index as i32;
+	                let ann_id = ann_id.clone();
 	                move |evt: MouseEvent| {
 	                    evt.prevent_default();
-	                    evt.stop_propagation();
+                    evt.stop_propagation();
+                    // Ensure this annotation is the active selection before dragging
+                    selected_ann_id.set(ann_id.clone());
 
 	                let mods = evt.data.modifiers();
                     if mods.meta() || mods.ctrl() {

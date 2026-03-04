@@ -1,5 +1,6 @@
 use dioxus::prelude::*;
 use crate::shell::{THEME, Theme};
+use crate::shell::progress::show_success;
 use crate::shell::app_sidebar::SidebarTab;
 use crate::Route;
 use crate::atoms::tasks::state::TASKS;
@@ -10,9 +11,7 @@ use crate::shell::status_dialog::StatusDialog;
 use crate::api;
 use crate::blocks::dashboard::state::{state_load_labels, LABELS};
 use crate::blocks::dashboard::api::api_update_label_properties;
-
-
-
+use std::collections::HashMap;
 
 // const D_FLAG2: Asset = asset!("/assets/icons/d-flag2.svg");
 const LOGO_LIGHT: Asset = asset!("/assets/icons/dog-light.svg");
@@ -44,6 +43,8 @@ const PAN_CENTER_MENU_LIGHT: Asset = asset!("/assets/icons/pan-center-menu-light
 const PAN_CENTER_MENU_DARK: Asset = asset!("/assets/icons/pan-center-menu-dark.svg");
 const OPACITY_ICON_LIGHT: Asset = asset!("/assets/icons/opacity-light.svg");
 const OPACITY_ICON_DARK: Asset = asset!("/assets/icons/opacity-dark.svg");
+const CHECKMARK_LIGHT: Asset = asset!("/assets/icons/checkmark_light.svg");
+const CHECKMARK_DARK: Asset = asset!("/assets/icons/checkmark_dark.svg");
 
 #[component]
 pub fn AppNavbar(
@@ -52,6 +53,8 @@ pub fn AppNavbar(
     #[props(default)] sidebar_open: Option<Signal<bool>>,
     #[props(default)] selected_tool: Option<Signal<Tool>>,
     #[props(default)] annotation_opacity: Option<Signal<f64>>,
+    #[props(default)] image_states: Option<Signal<HashMap<String, String>>>,
+    #[props(default)] current_image_id: Option<String>,
 ) -> Element {
     let route = use_route::<Route>();
     let nav = use_navigator();
@@ -396,6 +399,46 @@ pub fn AppNavbar(
                                                         class: "opacity-slider-label",
                                                         "{(opacity_signal() * 100.0) as i32}%"
                                                     }
+                                                }
+                                            }
+                                        }
+                                    }
+                                    // Review buttons (approve/reject)
+                                    if let (Some(mut img_states), Some(ref img_id)) = (image_states, &current_image_id) {
+                                        {
+                                            let current_state = img_states.read().get(img_id).cloned().unwrap_or_default();
+                                            let iid_reject = img_id.clone();
+                                            let iid_approve = img_id.clone();
+                                            rsx! {
+                                                div {
+                                                    class: if current_state == "rejected" { "app-navbar-tool-icon active" } else { "app-navbar-tool-icon" },
+                                                    onclick: move |e| {
+                                                        e.stop_propagation();
+                                                        let id = iid_reject.clone();
+                                                        let current = img_states.read().get(&id).cloned().unwrap_or_default();
+                                                        if current == "rejected" {
+                                                            img_states.write().remove(&id);
+                                                        } else {
+                                                            img_states.write().insert(id, "rejected".to_string());
+                                                            show_success("Image rejected");
+                                                        }
+                                                    },
+img { src: if is_dark { CLOSE_DARK } else { CLOSE_LIGHT }, class: "navbar-close-icon" }
+                                                }
+                                                div {
+                                                    class: if current_state == "approved" { "app-navbar-tool-icon active" } else { "app-navbar-tool-icon" },
+                                                    onclick: move |e| {
+                                                        e.stop_propagation();
+                                                        let id = iid_approve.clone();
+                                                        let current = img_states.read().get(&id).cloned().unwrap_or_default();
+                                                        if current == "approved" {
+                                                            img_states.write().remove(&id);
+                                                        } else {
+                                                            img_states.write().insert(id, "approved".to_string());
+                                                            show_success("Image approved");
+                                                        }
+                                                    },
+                                                    img { src: if is_dark { CHECKMARK_DARK } else { CHECKMARK_LIGHT } }
                                                 }
                                             }
                                         }

@@ -27,6 +27,16 @@ pub fn HomePage() -> Element {
             let window = web_sys::window().unwrap();
             let document = window.document().unwrap();
 
+            // If invite code was stashed by App, redirect to signup
+            if let Ok(Some(storage)) = window.session_storage() {
+                if let Ok(Some(code)) = storage.get_item("invite_code") {
+                    if !code.trim().is_empty() {
+                        nav.push(Route::SignupPage {});
+                        return;
+                    }
+                }
+            }
+
             // Reset scroll position (mobile keyboard can leave page scrolled)
             window.scroll_to_with_x_and_y(0.0, 0.0);
 
@@ -86,7 +96,7 @@ pub fn HomePage() -> Element {
                 }
                 button {
                     class: "upload-button",
-                    onclick: move |_| { navigator().push(Route::SignInPage {}); },
+                    onclick: move |_| { nav.push(Route::SignInPage {}); },
                     span {
                         class: "home-button-text",
                         "Upload Plans"
