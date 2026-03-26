@@ -15,8 +15,8 @@
 }
 
 .app-navbar-logo {
-    width: 30px;
-    height: 30px;
+    width: 24px;
+    height: 24px;
     cursor: pointer;
 }
 
@@ -112,6 +112,15 @@
     filter: brightness(0) invert(1);
 }
 
+.dog-menu-item.disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+}
+
+.dog-menu-item.disabled:hover {
+    background: none;
+}
+
 .dog-menu-divider {
     height: 1px;
     background: var(--dog-menu-divider);
@@ -137,11 +146,15 @@
     width: 645px;
     height: 657px;
     background: var(--dog-menu-bg);
-    border: var(--dog-menu-border);
+    border: none;
     border-radius: 15px;
     box-shadow: 0 4px 12px var(--dog-menu-shadow);
     display: flex;
     flex-direction: column;
+}
+
+html.dark .settings-dialog {
+    border: 1px solid var(--border-color);
 }
 
 .settings-tabs {
@@ -210,6 +223,67 @@
     display: flex;
     flex-direction: column;
     gap: 12px;
+}
+
+.settings-block-heading {
+    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    font-size: 11px;
+    font-weight: 400;
+    color: var(--settings-tab-inactive);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding-bottom: 4px;
+    margin-top: 28px;
+    border-bottom: 1px solid var(--dog-menu-divider);
+}
+
+.settings-block-heading:first-child {
+    margin-top: 0;
+}
+
+/* Skeleton preloader for label settings */
+@keyframes settings-shimmer {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+}
+
+.settings-skeleton-heading {
+    height: 11px;
+    width: 120px;
+    border-radius: 3px;
+    margin-top: 28px;
+    background: linear-gradient(90deg, rgb(40,40,40) 25%, rgb(55,55,55) 50%, rgb(40,40,40) 75%);
+    background-size: 200% 100%;
+    animation: settings-shimmer 1.5s ease-in-out infinite;
+}
+
+.settings-skeleton-heading:first-child {
+    margin-top: 0;
+}
+
+.settings-skeleton-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 4px 0;
+}
+
+.settings-skeleton-name {
+    height: 12px;
+    width: 80px;
+    border-radius: 3px;
+    background: linear-gradient(90deg, rgb(40,40,40) 25%, rgb(55,55,55) 50%, rgb(40,40,40) 75%);
+    background-size: 200% 100%;
+    animation: settings-shimmer 1.5s ease-in-out infinite;
+}
+
+.settings-skeleton-radios {
+    height: 12px;
+    width: 140px;
+    border-radius: 3px;
+    background: linear-gradient(90deg, rgb(40,40,40) 25%, rgb(55,55,55) 50%, rgb(40,40,40) 75%);
+    background-size: 200% 100%;
+    animation: settings-shimmer 1.5s ease-in-out infinite;
 }
 
 .settings-label-row {
@@ -734,10 +808,10 @@ html.dark .app-navbar-tool-icon img.app-navbar-tool-icon-polygon {
 }
 
 .user-avatar {
-    width: 28px;
-    height: 28px;
+    width: 24px;
+    height: 24px;
     border-radius: 50%;
-    background: var(--dx-blue);
+    background: var(--comment-blue);
     color: white;
     display: flex;
     align-items: center;

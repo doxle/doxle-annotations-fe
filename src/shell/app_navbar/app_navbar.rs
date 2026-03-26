@@ -9,8 +9,9 @@ use crate::atoms::svg_canvas::state::Tool;
 use crate::users::state::{USER, load_user};
 use crate::shell::status_dialog::StatusDialog;
 use crate::api;
-use crate::blocks::dashboard::state::{state_load_labels, LABELS};
-use crate::blocks::dashboard::api::api_update_label_properties;
+use crate::blocks::block_list::state::{state_load_labels, LABELS, BLOCKS, state_load_blocks};
+use crate::blocks::block_list::api::{api_update_label_properties, BlockLabel, api_get_labels};
+use crate::projects::state::{PROJECTS, state_load_projects};
 use std::collections::HashMap;
 
 // const D_FLAG2: Asset = asset!("/assets/icons/d-flag2.svg");
@@ -63,6 +64,7 @@ pub fn AppNavbar(
     let mut show_account_panel = use_signal(|| false);
     let mut show_settings = use_signal(|| false);
     let mut show_opacity_slider = use_signal(|| false);
+    let is_admin = USER.read().as_ref().map(|u| u.is_admin()).unwrap_or(false);
 
     // Load user once when AppNavbar mounts (no signal reads = runs once, won't loop)
     use_effect(|| {
@@ -71,17 +73,46 @@ pub fn AppNavbar(
         });
     });
 
+    let has_project_context = matches!(
+        &route,
+        Route::CreateTaskPage { .. }
+            | Route::TasksListPage { .. }
+            | Route::AnnotationCanvasPage { .. }
+            | Route::BlocksPage { .. }
+            | Route::CreateBlockPage { .. }
+            | Route::ImportBlockPage { .. }
+    );
+    use_effect(move || {
+        if has_project_context && PROJECTS.peek().is_empty() {
+            spawn(async move {
+                state_load_projects().await;
+            });
+        }
+    });
+
+
     // Extract data from route
+    // Extract project_id from route (used for navigation)
+    let project_id = match &route {
+        Route::CreateTaskPage { project_id, .. } => project_id.clone(),
+        Route::TasksListPage { project_id, .. } => project_id.clone(),
+        Route::AnnotationCanvasPage { project_id, .. } => project_id.clone(),
+        Route::BlocksPage { project_id } => project_id.clone(),
+        Route::CreateBlockPage { project_id } => project_id.clone(),
+        Route::ImportBlockPage { project_id, .. } => project_id.clone(),
+        _ => "default".to_string(),
+    };
+
     let (block_id, block_name, block_type_str, task_id, task_name, image_name, prev_img, next_img, current_idx, total_imgs): (
         Option<String>, Option<String>, String, Option<String>, Option<String>, Option<String>, Option<Image>, Option<Image>, usize, usize
     ) = match &route {
-        Route::CreateTaskPage { block_id, block_name, block_type } => {
+        Route::CreateTaskPage { project_id: _, block_id, block_name, block_type } => {
             (Some(block_id.clone()), Some(block_name.clone()), block_type.clone(), None, None, None, None, None, 0, 0)
         }
-        Route::TasksListPage { block_id, block_name, block_type } => {
+        Route::TasksListPage { project_id: _, block_id, block_name, block_type } => {
             (Some(block_id.clone()), Some(block_name.clone()), block_type.clone(), None, None, None, None, None, 0, 0)
         }
-        Route::AnnotationCanvasPage { block_id, block_name, block_type, task_id, task_name, image_id, image_name } => {
+        Route::AnnotationCanvasPage { project_id: _, block_id, block_name, block_type, task_id, task_name, image_id, image_name } => {
             let mut prev_img: Option<Image> = None;
             let mut next_img: Option<Image> = None;
             let mut current_idx: usize = 0;
@@ -104,12 +135,24 @@ pub fn AppNavbar(
     };
     
     // Clone for use in closures
+    let project_id_for_lookup = project_id.clone();
+    let project_name = if has_project_context {
+        PROJECTS
+            .read()
+            .iter()
+            .find(|p| p.project_id == project_id_for_lookup)
+            .map(|p| p.project_name.clone())
+            .unwrap_or_else(|| "Project".to_string())
+    } else {
+        String::new()
+    };
+    let project_id_for_signal = project_id.clone();
+    let pid = use_signal(move || project_id_for_signal.clone());
     let bid = block_id.clone().unwrap_or_default();
     let bname = block_name.clone().unwrap_or_default();
     let btype = block_type_str.clone();
     let tid = task_id.clone().unwrap_or_default();
     let tname = task_name.clone().unwrap_or_default();
-    
     // if let Some(user) = &*crate::users::state::USER.read() {
     //     tracing::info!(" USER {:?}", user);
     // };
@@ -151,7 +194,7 @@ pub fn AppNavbar(
                              div {
                                  class: "dog-menu-item",
                                  onclick: move |_| {
-                                     nav.push(Route::DashboardPage {});
+                                     nav.push(Route::ProjectsPage {});
                                      logo_menu_open.set(false);
                                  },
                                  img { class: "dog-menu-item-icon", src: HOME_ICON }
@@ -167,15 +210,17 @@ pub fn AppNavbar(
                                  img { class: "dog-menu-item-icon", src: THEME_ICON }
                                  "Theme"
                              }
-                             div {
-                                 class: "dog-menu-item",
-                                 onclick: move |_| {
-                                     show_settings.set(true);
-                                     logo_menu_open.set(false);
-                                 },
-                                 img { class: "dog-menu-item-icon", src: SETTINGS_ICON }
-                                 "Settings"
-                             }
+                            div {
+                                class: if is_admin { "dog-menu-item" } else { "dog-menu-item disabled" },
+                                onclick: move |_| {
+                                    if is_admin {
+                                        show_settings.set(true);
+                                        logo_menu_open.set(false);
+                                    }
+                                },
+                                img { class: "dog-menu-item-icon", src: SETTINGS_ICON }
+                                "Settings"
+                            }
                              div { class: "dog-menu-divider" }
                              div {
                                  class: "dog-menu-item",
@@ -212,12 +257,43 @@ pub fn AppNavbar(
 
              div {
                 class: "app-navbar-left-section",
+                // Project breadcrumb
+                if has_project_context {
+                    div {
+                        class: "app-breadcrumb-item clickable",
+                        onclick: move |_| {
+                            nav.push(Route::ProjectsPage {});
+                        },
+                        "Projects"
+                    }
+                    span {
+                        class: "app-breadcrumb-chevron",
+                        "/"
+                    }
+                    if block_name.is_some() || task_name.is_some() || image_name.is_some() {
+                        div {
+                            class: "app-breadcrumb-item clickable",
+                            onclick: move |_| {
+                                nav.push(Route::BlocksPage { project_id: pid().clone() });
+                            },
+                            "{project_name}"
+                        }
+                    } else {
+                        div { class: "app-breadcrumb-item current", "{project_name}" }
+                    }
+                }
                 // Breadcrumb - Block name clickable to go back to dashboard
                 if let Some(name) = &block_name {
+                    if has_project_context {
+                        span {
+                            class: "app-breadcrumb-chevron",
+                            "/"
+                        }
+                    }
                     div { 
                         class: "app-breadcrumb-item clickable",
                         onclick: move |_| {
-                            nav.push(Route::DashboardPage {});
+                            nav.push(Route::BlocksPage { project_id: pid().clone() });
                         },
                         "{name}"
                     }
@@ -242,7 +318,7 @@ pub fn AppNavbar(
                                 div { 
                                     class: "app-breadcrumb-item clickable",
                                     onclick: move |_| {
-                                    nav.push(Route::TasksListPage { block_id: bid.clone(), block_name: bname.clone(), block_type: btype.clone() });
+                                    nav.push(Route::TasksListPage { project_id: pid().clone(), block_id: bid.clone(), block_name: bname.clone(), block_type: btype.clone() });
                                     },
                                     "{name}" 
                                 }
@@ -292,6 +368,7 @@ pub fn AppNavbar(
                                     class: "app-nav-chevron",
                                     onclick: move |_| {
                                         nav.push(Route::AnnotationCanvasPage {
+                                            project_id: pid().clone(),
                                             block_id: bid.clone(),
                                             block_name: bname.clone(),
                                             block_type: btype.clone(),
@@ -328,6 +405,7 @@ pub fn AppNavbar(
                                     class: "app-nav-chevron",
                                     onclick: move |_| {
                                         nav.push(Route::AnnotationCanvasPage {
+                                            project_id: pid().clone(),
                                             block_id: bid.clone(),
                                             block_name: bname.clone(),
                                             block_type: btype.clone(),
@@ -512,7 +590,7 @@ img { src: if is_dark { CLOSE_DARK } else { CLOSE_LIGHT }, class: "navbar-close-
             }
             // Settings Dialog
             if show_settings() {
-                SettingsDialog { show: show_settings, block_id: bid.clone() }
+                SettingsDialog { show: show_settings, block_id: bid.clone(), project_id: pid().clone() }
             }
         }
     }
@@ -527,36 +605,57 @@ enum SettingsTab {
 }
 
 #[component]
-fn SettingsDialog(show: Signal<bool>, block_id: String) -> Element {
+fn SettingsDialog(show: Signal<bool>, block_id: String, project_id: String) -> Element {
+    let project_id = use_signal(move || project_id.clone());
     let mut active_tab = use_signal(|| SettingsTab::Label);
     let mut saving = use_signal(|| false);
 
     // Local draft: HashMap<label_id, tool_string> — only written to LABELS on Save
     let mut draft = use_signal(|| std::collections::HashMap::<String, String>::new());
+    // All blocks' labels: Vec<(block_id, block_name, Vec<BlockLabel>)>
+    let mut all_block_labels: Signal<Vec<(String, String, Vec<BlockLabel>)>> = use_signal(|| Vec::new());
+    let mut loading_labels = use_signal(|| true);
 
-    // Load labels if not already loaded
-    let bid = block_id.clone();
+    // Load blocks if not already loaded, then fetch labels for each annotation block
     use_effect(move || {
-        if !bid.is_empty() && LABELS().is_empty() {
-            let bid = bid.clone();
-            spawn(async move {
-                state_load_labels(&bid).await;
-            });
-        }
+        spawn(async move {
+            loading_labels.set(true);
+            if BLOCKS().is_empty() {
+                state_load_blocks(&project_id()).await;
+            }
+            let blocks = BLOCKS();
+            let mut result: Vec<(String, String, Vec<BlockLabel>)> = Vec::new();
+            for block in blocks.iter() {
+                // Only annotation blocks have labels to configure
+                if block.block_type.as_str() != "annotation" { continue; }
+                match api_get_labels(&project_id(), &block.block_id).await {
+                    Ok(labels) => {
+                        if !labels.is_empty() {
+                            result.push((block.block_id.clone(), block.block_name.clone(), labels));
+                        }
+                    }
+                    Err(e) => tracing::error!("Failed to load labels for block {}: {}", block.block_name, e),
+                }
+            }
+            all_block_labels.set(result);
+            loading_labels.set(false);
+        });
     });
 
-    // Initialize draft from LABELS once they load
+    // Initialize draft from all blocks' labels once they load
     use_effect(move || {
-        let labels = LABELS();
-        if !labels.is_empty() && draft().is_empty() {
+        let all = all_block_labels();
+        if !all.is_empty() && draft().is_empty() {
             let mut map = std::collections::HashMap::new();
-            for l in labels.iter() {
-                let tool = l.label_properties.as_ref()
-                    .and_then(|p| p.get("tool"))
-                    .and_then(|v| v.as_str())
-                    .unwrap_or("polygon")
-                    .to_string();
-                map.insert(l.label_id.clone(), tool);
+            for (_, _, labels) in all.iter() {
+                for l in labels.iter() {
+                    let tool = l.label_properties.as_ref()
+                        .and_then(|p| p.get("tool"))
+                        .and_then(|v| v.as_str())
+                        .unwrap_or("polygon")
+                        .to_string();
+                    map.insert(l.label_id.clone(), tool);
+                }
             }
             draft.set(map);
         }
@@ -591,42 +690,70 @@ fn SettingsDialog(show: Signal<bool>, block_id: String) -> Element {
                             div { class: "settings-label-title", "Label Settings" }
                             div { class: "settings-label-subtitle", "Configure the default geometry type for each label. Annotators will automatically switch to the correct tool." }
                         }
+                        if loading_labels() {
+                            div {
+                                class: "settings-label-list",
+                                for _ in 0..3 {
+                                    div { class: "settings-skeleton-heading" }
+                                    for _ in 0..4 {
+                                        div {
+                                            class: "settings-skeleton-row",
+                                            div { class: "settings-skeleton-name" }
+                                            div { class: "settings-skeleton-radios" }
+                                        }
+                                    }
+                                }
+                            }
+                        }
                         div {
                             class: "settings-label-list",
-                            for label in LABELS().iter() {
+                            for (bid, bname, labels) in all_block_labels().iter() {
                                 {{
-                                    let lid = label.label_id.clone();
-                                    let is_bbox = draft().get(&lid).map(|t| t == "bbox").unwrap_or(false);
-                                    let lid_bbox = lid.clone();
-                                    let lid_poly = lid.clone();
+                                    let bid = bid.clone();
+                                    let bname = bname.clone();
                                     rsx! {
                                         div {
-                                            class: "settings-label-row",
-                                            key: "{lid}",
-                                            span { class: "settings-label-name", "{label.label_name}" }
-                                            div {
-                                                class: "settings-radio-group",
-                                                div {
-                                                    class: if is_bbox { "settings-radio-option selected" } else { "settings-radio-option" },
-                                                    onclick: move |_| {
-                                                        draft.write().insert(lid_bbox.clone(), "bbox".to_string());
-                                                    },
-                                                    div { class: "settings-radio-outer",
-                                                        div { class: "settings-radio-inner" }
+                                            class: "settings-block-heading",
+                                            key: "{bid}",
+                                            "{bname}"
+                                        }
+                                        for label in labels.iter() {
+                                            {{
+                                                let lid = label.label_id.clone();
+                                                let is_bbox = draft().get(&lid).map(|t| t == "bbox").unwrap_or(false);
+                                                let lid_bbox = lid.clone();
+                                                let lid_poly = lid.clone();
+                                                rsx! {
+                                                    div {
+                                                        class: "settings-label-row",
+                                                        key: "{lid}",
+                                                        span { class: "settings-label-name", "{label.label_name}" }
+                                                        div {
+                                                            class: "settings-radio-group",
+                                                            div {
+                                                                class: if is_bbox { "settings-radio-option selected" } else { "settings-radio-option" },
+                                                                onclick: move |_| {
+                                                                    draft.write().insert(lid_bbox.clone(), "bbox".to_string());
+                                                                },
+                                                                div { class: "settings-radio-outer",
+                                                                    div { class: "settings-radio-inner" }
+                                                                }
+                                                                span { "BBox" }
+                                                            }
+                                                            div {
+                                                                class: if !is_bbox { "settings-radio-option selected" } else { "settings-radio-option" },
+                                                                onclick: move |_| {
+                                                                    draft.write().insert(lid_poly.clone(), "polygon".to_string());
+                                                                },
+                                                                div { class: "settings-radio-outer",
+                                                                    div { class: "settings-radio-inner" }
+                                                                }
+                                                                span { "Polygon" }
+                                                            }
+                                                        }
                                                     }
-                                                    span { "BBox" }
                                                 }
-                                                div {
-                                                    class: if !is_bbox { "settings-radio-option selected" } else { "settings-radio-option" },
-                                                    onclick: move |_| {
-                                                        draft.write().insert(lid_poly.clone(), "polygon".to_string());
-                                                    },
-                                                    div { class: "settings-radio-outer",
-                                                        div { class: "settings-radio-inner" }
-                                                    }
-                                                    span { "Polygon" }
-                                                }
-                                            }
+                                            }}
                                         }
                                     }
                                 }}
@@ -648,29 +775,51 @@ fn SettingsDialog(show: Signal<bool>, block_id: String) -> Element {
                                     let bid = block_id.clone();
                                     saving.set(true);
                                     spawn(async move {
-                                        for (lid, tool) in changes.iter() {
-                                            // Only save labels that actually changed from their current value
-                                            let current = LABELS.read().iter()
-                                                .find(|l| l.label_id == *lid)
-                                                .and_then(|l| l.label_properties.as_ref())
-                                                .and_then(|p| p.get("tool"))
-                                                .and_then(|v| v.as_str())
-                                                .unwrap_or("polygon")
-                                                .to_string();
-                                            if current != *tool {
-                                                let props = serde_json::json!({"tool": tool});
-                                                match api_update_label_properties(&bid, lid, props.clone()).await {
-                                                    Ok(_) => {
-                                                        LABELS.write().iter_mut().for_each(|l| {
-                                                            if l.label_id == *lid {
-                                                                l.label_properties = Some(props.clone());
-                                                            }
-                                                        });
-                                                    }
-                                                    Err(e) => tracing::error!("Failed to update label {}: {}", lid, e),
+                                        let all = all_block_labels();
+                                        // Collect all changed labels
+                                        let mut updates: Vec<(String, String, serde_json::Value)> = Vec::new();
+                                        for (block_id, _, labels) in all.iter() {
+                                            for label in labels.iter() {
+                                                let lid = &label.label_id;
+                                                let Some(tool) = changes.get(lid) else { continue };
+                                                let current = label.label_properties.as_ref()
+                                                    .and_then(|p| p.get("tool"))
+                                                    .and_then(|v| v.as_str())
+                                                    .unwrap_or("polygon")
+                                                    .to_string();
+                                                if current != *tool {
+                                                    let props = serde_json::json!({"tool": tool});
+                                                    updates.push((block_id.clone(), lid.clone(), props));
                                                 }
                                             }
                                         }
+                                        // Fire all API calls concurrently
+                                        let results = futures::future::join_all(
+                                            updates.iter().map(|(bid, lid, props)| {
+                                                let bid = bid.clone();
+                                                let lid = lid.clone();
+                                                let props = props.clone();
+                                                async move {
+                                                    let result = api_update_label_properties(&bid, &lid, props.clone()).await;
+                                                    (lid, props, result)
+                                                }
+                                            })
+                                        ).await;
+                                        // Single batch update to LABELS signal
+                                        let mut labels_guard = LABELS.write();
+                                        for (lid, props, result) in results {
+                                            match result {
+                                                Ok(_) => {
+                                                    labels_guard.iter_mut().for_each(|l| {
+                                                        if l.label_id == lid {
+                                                            l.label_properties = Some(props.clone());
+                                                        }
+                                                    });
+                                                }
+                                                Err(e) => tracing::error!("Failed to update label {}: {}", lid, e),
+                                            }
+                                        }
+                                        drop(labels_guard);
                                         saving.set(false);
                                         show.set(false);
                                     });

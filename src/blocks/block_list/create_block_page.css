@@ -50,7 +50,7 @@ html.dark input:focus {
 /* Instruction Text */
 .create-blocks-instruction {
   font-family: 'HelveticaNeue', Helvetica, Arial, sans-serif;
-  font-size: 45px;
+  font-size: 33px;
   font-weight: 100;
   color: var(--text-primary);
   margin-bottom: 2px;
@@ -194,6 +194,15 @@ input:focus {
   border-color: var(--text-primary);
 }
 
+.blocks-name-input {
+  font-family: 'HelveticaNeue-Light', 'HelveticaNeue', Helvetica, sans-serif;
+  font-size: 33px;
+  font-weight: 300;
+  line-height: 1;
+  height: 48px;
+  padding-bottom: 4px;
+}
+
 /* Labels column */
 .create-block-labels-column {
   width: 100%;
@@ -218,7 +227,7 @@ input:focus {
 .blocks-create-button{
   height: 33px;
   padding: 0 16px;
-  background-color: var(--primary-button-bg);
+  background-color: var(--project-card-hover-color);
   color: var(--primary-button-text);
   border: none;
   border-radius: 4px;
@@ -423,4 +432,137 @@ html.dark .blocks-type-select {
 
 html.dark .blocks-type-select--default {
   color: var(--text-secondary);
+}
+
+.create-block-form {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  position: relative;
+}
+
+.cb-idle-cursor {
+  position: absolute;
+  color: #ff0000;
+  font-family: 'HelveticaNeue', Helvetica, sans-serif;
+  font-weight: 400;
+  font-size: 33px;
+  animation: cb-blink 0.5s infinite;
+  user-select: none;
+  pointer-events: none;
+  line-height: 1;
+  transform: translateY(-1px);
+  z-index: 3;
+  display: none;
+}
+
+.cb-inline-cursor {
+  display: inline-block;
+  color: #ff0000;
+  font-family: 'HelveticaNeue', Helvetica, sans-serif;
+  font-weight: 400;
+  font-size: 33px;
+  animation: cb-blink 0.5s infinite;
+  margin-left: 2px;
+  transform: translateY(-1px);
+  user-select: none;
+  pointer-events: none;
+}
+
+.cb-live-cursor {
+  position: absolute;
+  color: #ff0000;
+  font-family: 'HelveticaNeue', Helvetica, sans-serif;
+  font-weight: 400;
+  font-size: 33px;
+  animation: cb-blink 0.5s infinite;
+  user-select: none;
+  pointer-events: none;
+  line-height: 1;
+  transform: translateY(-1px);
+  z-index: 3;
+  display: none;
+}
+
+@keyframes cb-blink {
+  0%, 49% { opacity: 1; }
+  50%, 100% { opacity: 0; }
+}
+
+.create-block-input {
+  font-family: 'HelveticaNeue-Light', 'HelveticaNeue', Helvetica, sans-serif;
+  font-weight: 300;
+  font-size: 33px;
+  color: var(--text-primary);
+  outline: none;
+  border: none;
+  background: none;
+  padding: 0;
+  width: fit-content;
+  min-width: 0;
+  max-width: calc(100vw - 120px);
+  caret-color: transparent !important;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.create-block-input.cb-placeholder {
+  color: var(--text-secondary);
+}
+
+.create-block-input b {
+  font-family: 'HelveticaNeue-Bold', 'HelveticaNeue', Helvetica, sans-serif;
+  font-weight: 700;
+}
+
+.create-block-submit {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  border: none;
+  background: var(--comment-blue);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: opacity 0.15s;
+}
+
+.create-block-submit:hover {
+  opacity: 0.85;
+}
+
+.create-block-submit:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.create-block-submit img {
+  width: 16px;
+  height: 16px;
+  filter: brightness(0) invert(1);
+}
+
+.create-block-submit-placeholder {
+  width: 38px;
+  height: 38px;
+  flex-shrink: 0;
+  visibility: hidden;
+}
+
+@media (max-width: 480px) {
+  .cb-idle-cursor {
+    font-size: 30px;
+  }
+  .cb-inline-cursor {
+    font-size: 30px;
+  }
+  .cb-live-cursor {
+    font-size: 30px;
+  }
+  .create-block-input {
+    font-size: 30px;
+    min-width: 0;
+  }
 }

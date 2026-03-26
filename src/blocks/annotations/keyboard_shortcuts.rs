@@ -2,9 +2,10 @@ use std::collections::HashSet;
 use std::cell::RefCell;
 use std::rc::Rc;
 use dioxus::prelude::*;
+use dioxus::dioxus_core::use_drop;
 use wasm_bindgen::{closure::Closure, JsCast};
 use crate::atoms::svg_canvas::state::Tool;
-use crate::blocks::dashboard::state::LABELS;
+use crate::blocks::block_list::state::LABELS;
 use crate::shell::app_sidebar::SidebarTab;
 
 
@@ -22,7 +23,12 @@ pub fn setup_keyboard_shortcuts(
 	mut paste_mode: Signal<bool>,
 )
 {
-	use_effect(move || {
+	let keydown_listener: Rc<RefCell<Option<Closure<dyn FnMut(web_sys::KeyboardEvent)>>>> =
+		use_hook(|| Rc::new(RefCell::new(None)));
+
+	use_effect({
+		let keydown_listener = keydown_listener.clone();
+		move || {
 		let Some(win) = web_sys::window() else {return};
 		let last_key: Rc<RefCell<String>> = Rc::new(RefCell::new(String::new()));
 		let lk = last_key.clone();
@@ -117,8 +123,24 @@ pub fn setup_keyboard_shortcuts(
 			}
 			*lk.borrow_mut() = key;
 		}) as Box<dyn FnMut(_)>);
+
+		if let Some(old) = keydown_listener.borrow_mut().take() {
+			let _ = win.remove_event_listener_with_callback("keydown", old.as_ref().unchecked_ref());
+		}
 		let _ = win.add_event_listener_with_callback("keydown", closure.as_ref().unchecked_ref());
-		closure.forget()
+		*keydown_listener.borrow_mut() = Some(closure);
+	}});
+
+	use_drop({
+		let keydown_listener = keydown_listener.clone();
+		move || {
+			if let Some(win) = web_sys::window() {
+				if let Some(closure) = keydown_listener.borrow().as_ref() {
+					let _ = win.remove_event_listener_with_callback("keydown", closure.as_ref().unchecked_ref());
+				}
+			}
+			keydown_listener.borrow_mut().take();
+		}
 	});
 }
 

@@ -124,27 +124,29 @@ pub struct CreateBlockRequest {
 }
 
 
-/// GET /blocks -> list all blocks
-pub async fn api_list_blocks() -> Result<Vec<Block>, String> {
-    client::get::<Vec<Block>>("/blocks").await
+/// GET /projects/{pid}/blocks -> list all blocks for project
+pub async fn api_list_blocks(project_id: &str) -> Result<Vec<Block>, String> {
+    let endpoint = format!("/projects/{}/blocks", project_id);
+    client::get::<Vec<Block>>(&endpoint).await
 }
 
-/// POST /blocks -> create a new block
-pub async fn api_create_block(block_name: String, block_type: BlockType, block_company: Option<String>) -> Result<Block, String> {
+/// POST /projects/{pid}/blocks -> create a new block
+pub async fn api_create_block(project_id: &str, block_name: String, block_type: BlockType, block_company: Option<String>) -> Result<Block, String> {
+    let endpoint = format!("/projects/{}/blocks", project_id);
     let body = CreateBlockRequest { block_name, block_type, block_company };
-    client::post::<CreateBlockRequest, Block>("/blocks", &body).await
+    client::post::<CreateBlockRequest, Block>(&endpoint, &body).await
 }
 
-/// PATCH /blocks/{id} - rename
-pub async fn api_rename_block(block_id: &str, new_name: String) -> Result<Block, String> {
-    let endpoint = format!("/blocks/{}", block_id);
+/// PATCH /projects/{pid}/blocks/{id} - rename
+pub async fn api_rename_block(project_id: &str, block_id: &str, new_name: String) -> Result<Block, String> {
+    let endpoint = format!("/projects/{}/blocks/{}", project_id, block_id);
     let body = serde_json::json!({ "block_name": new_name });
     client::patch(&endpoint, &body).await
 }
 
-/// DELETE /blocks/{id}
-pub async fn api_delete_block(block_id: &str) -> Result<(), String> {
-    let endpoint = format!("/blocks/{}", block_id);
+/// DELETE /projects/{pid}/blocks/{id}
+pub async fn api_delete_block(project_id: &str, block_id: &str) -> Result<(), String> {
+    let endpoint = format!("/projects/{}/blocks/{}", project_id, block_id);
     client::delete(&endpoint).await
 }
 
@@ -177,9 +179,9 @@ pub struct CreateLabelRequest {
 }
 
 
-/// GET /blocks/{block_id}/labels
-pub async fn api_get_labels(block_id:&str) -> Result<Vec<BlockLabel>, String> {
-    let endpoint = format!("/blocks/{}/labels", block_id);
+/// GET /projects/{pid}/blocks/{block_id}/labels
+pub async fn api_get_labels(project_id: &str, block_id:&str) -> Result<Vec<BlockLabel>, String> {
+    let endpoint = format!("/projects/{}/blocks/{}/labels", project_id, block_id);
     client::get::<Vec<BlockLabel>>(&endpoint).await
 }
 

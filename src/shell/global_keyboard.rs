@@ -19,6 +19,9 @@ pub fn setup_global_keyboard_shortcuts() {
                     if tag_name == "input" || tag_name == "textarea" || tag_name == "select" {
                         return;
                     }
+                    if element.get_attribute("contenteditable").as_deref() == Some("true") {
+                        return;
+                    }
                 }
             }
 

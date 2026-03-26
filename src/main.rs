@@ -1,7 +1,8 @@
 #![allow(dead_code, unused_imports, unused_variables, unused_mut, deprecated)]
 
 use dioxus::prelude::*;
-use blocks::{DashboardPage, CreateBlockPage, ImportBlockPage};
+use blocks::{BlocksPage, CreateBlockPage, ImportBlockPage};
+use projects::{ProjectsPage, CreateProjectPage};
 use atoms::tasks::{TasksListPage, CreateTaskPage};
 use blocks::annotations::AnnotationCanvasPage;
 use home::upload::UploadPage;
@@ -10,9 +11,12 @@ use matrix::MatrixPage;
 use stacking_bricks::StackingBricksPage;
 use letter_cycle::LetterCyclePage;
 use users::state::{USER, load_user};
+use viewer3d::ViewerPage;
+use shell::status_dialog::LiveTimer;
 
 mod blocks;
 mod atoms;
+mod projects;
 // mod old2; // Disabled (legacy)
 mod home;
 mod matrix;
@@ -24,6 +28,7 @@ mod api;
 // mod shared;
 mod shell;
 mod users;
+mod viewer3d;
 // mod core;
 // mod state;
 
@@ -66,6 +71,7 @@ const VISION_CSS: &str = include_str!("home/vision.css");
 const APP_SIDEBAR_CSS: &str = include_str!("shell/app_sidebar/app_sidebar.css");
 const APP_NAVBAR_CSS: &str = include_str!("shell/app_navbar/app_navbar.css");
 const DOTS_CSS: &str = include_str!("home/dots.css");
+const VIEWER3D_CSS: &str = include_str!("viewer3d/viewer_page.css");
 
 fn main() {
     // Initialize tracing and filter out noisy warnings
@@ -167,6 +173,7 @@ fn App() -> Element {
                 document::Style { {APP_SIDEBAR_CSS} }
                 document::Style { {APP_NAVBAR_CSS} }
                 document::Style { {DOTS_CSS} }
+                document::Style { {VIEWER3D_CSS} }
 
                 // Fonts from template with asset URLs
                 document::Style {
@@ -208,18 +215,22 @@ enum Route {
     SayHelloPage {},
     #[end_layout]
     // App pages (no layout - each page includes AppNavbar directly)
-    #[route("/blocks")]
-    DashboardPage{},
-    #[route("/blocks/new")]
-    CreateBlockPage{},
-    #[route("/blocks/:block_id/:block_name/:block_type/import")]
-    ImportBlockPage { block_id: String, block_name: String, block_type: String },
-    #[route("/blocks/:block_id/:block_name/:block_type/tasks/new")]
-    CreateTaskPage { block_id: String, block_name: String, block_type: String },
-    #[route("/blocks/:block_id/:block_name/:block_type/tasks")]
-    TasksListPage { block_id: String, block_name: String, block_type: String },
-    #[route("/blocks/:block_id/:block_name/:block_type/tasks/:task_id/:task_name/:image_id/:image_name/drawing")]
-    AnnotationCanvasPage { block_id: String, block_name: String, block_type: String, task_id: String, task_name: String, image_id: String, image_name: String },
+    #[route("/projects")]
+    ProjectsPage {},
+    #[route("/projects/new")]
+    CreateProjectPage {},
+    #[route("/projects/:project_id/blocks")]
+    BlocksPage{ project_id: String },
+    #[route("/projects/:project_id/blocks/new")]
+    CreateBlockPage{ project_id: String },
+    #[route("/projects/:project_id/blocks/:block_id/:block_name/:block_type/import")]
+    ImportBlockPage { project_id: String, block_id: String, block_name: String, block_type: String },
+    #[route("/projects/:project_id/blocks/:block_id/:block_name/:block_type/tasks/new")]
+    CreateTaskPage { project_id: String, block_id: String, block_name: String, block_type: String },
+    #[route("/projects/:project_id/blocks/:block_id/:block_name/:block_type/tasks")]
+    TasksListPage { project_id: String, block_id: String, block_name: String, block_type: String },
+    #[route("/projects/:project_id/blocks/:block_id/:block_name/:block_type/tasks/:task_id/:task_name/:image_id/:image_name/drawing")]
+    AnnotationCanvasPage { project_id: String, block_id: String, block_name: String, block_type: String, task_id: String, task_name: String, image_id: String, image_name: String },
     #[route("/matrix")]
     MatrixPage {},
     #[route("/bricks")]
@@ -234,6 +245,10 @@ enum Route {
     ConstellationPage {},
     #[route("/squares")]
     SquareGridPage {},
+    #[route("/viewer3d")]
+    ViewerPage {},
+    #[route("/livetimer")]
+    LiveTimerPreviewPage {},
 }
 
 
@@ -243,5 +258,15 @@ fn NavBar() -> Element {
     rsx! {
         Navbar {}
         Outlet::<Route> {}
+    }
+}
+
+#[component]
+fn LiveTimerPreviewPage() -> Element {
+    rsx! {
+        div {
+            style: "min-height: 100vh; display: flex; align-items: center; justify-content: center; background: var(--bg-primary);",
+            LiveTimer {}
+        }
     }
 }

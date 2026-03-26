@@ -1,7 +1,7 @@
 use dioxus::prelude::*;
 use std::collections::HashSet;
 use crate::shell::{THEME, Theme};
-use crate::blocks::dashboard::api::{BlockLabel, api_update_label_color};
+use crate::blocks::block_list::api::{BlockLabel, api_update_label_color};
 use crate::blocks::annotations::models::{Annotation, CommentThread};
 use crate::atoms::svg_canvas::state::Tool;
 use crate::users::state::USER;
@@ -91,7 +91,7 @@ pub fn AppSidebar(
                                     selected_label_id.set(lid_select.clone());
                                     // Auto-switch tool based on label_properties
                                     if let Some(mut tool_sig) = selected_tool {
-                                        if let Some(label) = crate::blocks::dashboard::state::LABELS.read().iter().find(|l| l.label_id == lid_select) {
+                                        if let Some(label) = crate::blocks::block_list::state::LABELS.read().iter().find(|l| l.label_id == lid_select) {
                                             let tool_str = label.label_properties.as_ref()
                                                 .and_then(|p| p.get("tool"))
                                                 .and_then(|v| v.as_str())
@@ -118,7 +118,7 @@ pub fn AppSidebar(
                                                 spawn(async move {
                                                     match api_update_label_color(&bid, &lid, new_color.clone()).await {
                                                         Ok(updated) => {
-                                                            crate::blocks::dashboard::state::LABELS.write().iter_mut().for_each(|l| {
+                                                            crate::blocks::block_list::state::LABELS.write().iter_mut().for_each(|l| {
                                                                 if l.label_id == lid {
                                                                     l.label_color = updated.label_color.clone();
                                                                 }

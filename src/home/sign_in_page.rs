@@ -62,7 +62,7 @@ pub fn SignInPage() -> Element {
                     }
 
                     // Always redirect to blocks dashboard after successful auth
-                    nav.push(Route::DashboardPage {});
+nav.push(Route::ProjectsPage {});
                 }
                 Err(e) => {
                     error_message.set(Some(format!("Sign in failed: {}", e)));

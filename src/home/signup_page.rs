@@ -109,7 +109,7 @@ pub fn SignupPage() -> Element {
                                 Ok(_) => {
                                     tracing::info!("✅ User profile created successfully");
                                     // Success! Redirect to projects
-                                    nav.push(Route::DashboardPage {});
+nav.push(Route::ProjectsPage {});
                                 }
                                 Err(e) => {
                                     tracing::error!("❌ Failed to create user profile: {}", e);

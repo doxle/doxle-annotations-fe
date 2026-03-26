@@ -24,6 +24,7 @@ pub fn BlockMenu(
     on_edit: EventHandler<()>,
     on_archive: EventHandler<()>,
     on_import: EventHandler<()>,
+    on_export: EventHandler<()>,
     on_delete: EventHandler<()>,
 ) -> Element {
     let is_dark = THEME() == Theme::Dark;
@@ -95,6 +96,19 @@ pub fn BlockMenu(
                                 alt: "Import"
                             }
                             "Import block"
+                        }
+                        div {
+                            class: "block-menu-item block-menu-item-edit",
+                            onclick: move |e| {
+                                e.stop_propagation();
+                                on_export.call(());
+                            },
+                            img {
+                                src: archive_icon,
+                                class: "block-menu-icon",
+                                alt: "Export"
+                            }
+                            "Export block"
                         }
                     }
                     div { class: "block-menu-divider" }

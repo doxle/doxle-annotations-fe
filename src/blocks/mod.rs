@@ -1,5 +1,5 @@
 pub mod annotations;
-pub mod dashboard;
+pub mod block_list;
 
-pub use dashboard::{DashboardPage, CreateBlockPage, ImportBlockPage};
+pub use block_list::{BlocksPage, CreateBlockPage, ImportBlockPage};
  

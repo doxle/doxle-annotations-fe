@@ -46,6 +46,16 @@ pub fn show_error_for(msg: &str, seconds: u32) {
     set_status(msg, StatusType::Error, seconds * 1000);
 }
 
+// Show error that stays until user clicks close
+pub fn show_error_persistent(msg: &str) {
+    *STATUS.write() = Some(Status {
+        message: msg.to_string(),
+        status_type: StatusType::Error,
+        progress: None,
+        log: Vec::new(),
+    });
+}
+
 
 // Helper to show info (White)
 pub fn show_info(msg: &str) {

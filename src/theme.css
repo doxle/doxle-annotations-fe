@@ -53,7 +53,7 @@ html.dark, html.dark body {
 
     /* Hover and focus colors */
     --hover-blue: rgb(99, 138, 255);
-    --hover-color:rgb(230,230,230);
+    --hover-color:rgb(245,245,245);
     --focus-blue: #4f5bf8;
     --outline-blue: rgba(51, 66, 255, 0.4);
     --breadcrumb-hover: rgb(79,91,248);
@@ -83,8 +83,11 @@ html.dark, html.dark body {
     --project-title-color: #000000;
     --project-card-bg: #ffffff;
     --project-card-image-bg: rgb(230, 230, 230);
+    --project-card-hover-color:rgb(241,247,255);
     --project-card-divider: #e5e5e5;
-    --project-button-bg: rgb(11, 153, 245);
+    --project-button-bg: rgb(46, 133, 219);
+    --project-button-text: #ffffff;
+    --project-overlay-bg: rgba(0, 0, 0, 0.4);
 
     /* Block card colors */
     --block-card-bg: rgb(230, 230, 230);
@@ -185,10 +188,10 @@ html.dark {
     --bg-secondary: rgb(15, 15, 18);
     --bg-card: rgb(3,3,5);
     --bg-card-hover: rgb(15,15,18);
-    --text-primary: #e5e5e5;
+    --text-primary: rgb(230,230,230);
     --text-secondary: rgba(255, 255, 255, 0.6);
-    --text-tertiary: #808080;
-    --border-subtle:rgb(36,36,36);
+    --text-tertiary: rgb(180,180,180);
+    --border-subtle:rgb(33,33,33);
     --border-color: rgb(45,45,45);
     --border-color-hover: rgb(60, 60, 60);
     --shadow: rgba(0, 0, 0, 0.3);
@@ -219,7 +222,7 @@ html.dark {
 
     /* Hover and focus colors (dark mode) */
     --hover-blue: rgb(99, 138, 255);
-    --hover-color:rgb(45,45,45);
+    --hover-color:rgb(33,33,33);
     --focus-blue: #4f5bf8;
     --outline-blue: rgba(51, 66, 255, 0.4);
     --breadcrumb-hover: rgb(79,91,248);
@@ -247,9 +250,12 @@ html.dark {
     /* Project page colors (dark mode) */
     --project-title-color: #ffffff;
     --project-card-bg: #252525;
+    --project-card-hover-color:rgb(25,39,54);
     --project-card-image-bg: rgb(60, 60, 60);
     --project-card-divider: #404040;
-    --project-button-bg: rgb(11, 153, 245);
+    --project-button-bg: rgb(46, 133, 219);
+    --project-button-text: #ffffff;
+    --project-overlay-bg: rgba(0, 0, 0, 0.4);
 
     /* Block card colors (dark mode) */
     --block-card-bg: rgb(60, 60, 60);

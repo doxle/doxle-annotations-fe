@@ -17,6 +17,7 @@ pub struct PendingUpload {
 }
 
 pub async fn handle_create_task(
+    project_id: String,
     block_id: String,
     block_name: String,
     block_type: String,
@@ -32,7 +33,7 @@ pub async fn handle_create_task(
     upload_total.set(total_uploads);
     upload_current.set(0);
 
-    match state_create_task(&block_id, task_name.clone()).await {
+    match state_create_task(&project_id, &block_id, task_name.clone()).await {
         Ok(task) => {
             info!("✅ Task created: {}", task.task_name);
 
@@ -40,10 +41,11 @@ pub async fn handle_create_task(
                 info!("Uploading {} images for task {}", uploads.len(), task.task_id);
                 
                 let uploads_iter = uploads.into_iter().map(|upload| {
+                    let p_id = project_id.clone();
                     let b_id = block_id.clone();
                     let t_id = task.task_id.clone();
                     async move {
-                        state_upload_task_file(&b_id, &t_id, upload.file).await
+                        state_upload_task_file(&p_id, &b_id, &t_id, upload.file).await
                     }
                 });
                 
@@ -67,17 +69,17 @@ pub async fn handle_create_task(
                     }
                 }
                 if fail_count > 0 {
-                    crate::shell::progress::show_error(&format!("Uploaded {} images, {} failed", success_count, fail_count));
+                    crate::shell::progress::show_error_persistent(&format!("Uploaded {} images, {} failed", success_count, fail_count));
                 } else {
                     crate::shell::progress::show_success(&format!("✅ Uploaded {} images", success_count));
                 }
             }
 
-            nav.push(Route::TasksListPage { block_id, block_name, block_type });
+            nav.push(Route::TasksListPage { project_id: project_id.clone(), block_id, block_name, block_type });
         },
         Err(e) => {
             error!("❌ Failed to create task: {}", e);
-            crate::shell::progress::show_error(&format!("Failed to create task: {}", e));
+            crate::shell::progress::show_error_persistent(&format!("Failed to create task: {}", e));
         }
     }
     

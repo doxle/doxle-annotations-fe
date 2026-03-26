@@ -1,16 +1,17 @@
 use dioxus::prelude::*;
-use crate::blocks::dashboard::state::state_delete_block;
-use crate::blocks::dashboard::api::Block;
+use crate::blocks::block_list::state::state_delete_block;
+use crate::blocks::block_list::api::Block;
 use crate::shell::{THEME, Theme};
 
-const TRASH_ICON_LIGHT: Asset = asset!("/assets/icons/trash-light.svg");
-const TRASH_ICON_DARK: Asset = asset!("/assets/icons/trash-dark.svg");
+const TRASH_ICON_LIGHT: Asset = asset!("/assets/icons/delete-light.svg");
+const TRASH_ICON_DARK: Asset = asset!("/assets/icons/delete-dark.svg");
 
 #[component]
-pub fn BlockCard(block: Block, on_click: EventHandler<()>) -> Element {
+pub fn BlockCard(block: Block, project_id: String, on_click: EventHandler<()>) -> Element {
     let is_dark = THEME() == Theme::Dark;
     let trash_icon = if is_dark { TRASH_ICON_DARK } else { TRASH_ICON_LIGHT };
     let block_id = block.block_id.clone();
+    let project_id = use_signal(move || project_id.clone());
 
     rsx! {
         div {
@@ -29,7 +30,7 @@ pub fn BlockCard(block: Block, on_click: EventHandler<()>) -> Element {
                         e.stop_propagation();
                         let id = block_id.clone();
                         spawn(async move {
-                            state_delete_block(&id).await;
+                            state_delete_block(&project_id(), &id).await;
                         });
                     }
                 }

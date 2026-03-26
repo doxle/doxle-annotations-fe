@@ -117,6 +117,32 @@ pub async fn get_typed<R: for<'de> Deserialize<'de>>(endpoint: &str) -> Result<R
     }
 }
 
+// Generic GET helper that returns raw text (for file downloads)
+pub async fn get_text(endpoint: &str) -> Result<String, String> {
+    let url = format!("{}{}", API_BASE_URL, endpoint);
+    let mut tried_refresh = false;
+
+    loop {
+        let resp = Request::get(&url)
+            .credentials(RequestCredentials::Include)
+            .send()
+            .await
+            .map_err(|e| format!("Network error: {}", e))?;
+
+        if resp.status() == 401 && !tried_refresh {
+            tried_refresh = true;
+            if refresh_session().await.is_ok() { continue; }
+            handle_unauthorized();
+            return Err("Unauthorized - please log in again".into());
+        }
+        if !resp.ok() {
+            let txt = resp.text().await.unwrap_or_else(|_| "Unknown error".into());
+            return Err(format!("Request failed ({}): {}", resp.status(), txt));
+        }
+        return resp.text().await.map_err(|e| format!("Failed to read response: {}", e));
+    }
+}
+
 // Generic POST helper
 pub async fn post<T: Serialize, R: for<'de> Deserialize<'de>>(
     endpoint: &str,

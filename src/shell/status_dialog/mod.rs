@@ -1,8 +1,8 @@
 mod live_timer;
+pub use live_timer::LiveTimer;
 
 use dioxus::prelude::*;
-use crate::shell::progress::{STATUS, StatusType};
-use live_timer::LiveTimer;
+use crate::shell::progress::{STATUS, StatusType, clear_status};
 
 const STATUS_DIALOG_CSS: &str = include_str!("status_dialog.css");
 
@@ -61,6 +61,7 @@ pub fn StatusDialog() -> Element {
                 {
                     let chars = status.message.len();
                     let duration = (chars as f64 * 0.02).max(0.15);
+                    let is_error = status.status_type == StatusType::Error;
                     rsx! {
                         div {
                             class: match status.status_type {
@@ -74,6 +75,13 @@ pub fn StatusDialog() -> Element {
                                 class: "typewriter",
                                 style: "--chars: {chars}; --duration: {duration}s",
                                 "{status.message}"
+                            }
+                            if is_error {
+                                span {
+                                    class: "status-dialog-close",
+                                    onclick: move |_| clear_status(),
+                                    "✕"
+                                }
                             }
                         }
                     }

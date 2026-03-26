@@ -53,7 +53,7 @@ use dioxus::prelude::*;
 use dioxus::logger::tracing::info;
 use crate::atoms::svg_canvas::{SvgCanvas, SvgCanvasV2, Geometry};
 use crate::atoms::svg_canvas::state::Tool;
-use crate::atoms::tasks::state::{TASKS, TASKS_LOADING, state_load_tasks};
+use crate::atoms::tasks::state::{TASKS, TASKS_LOADING, state_load_tasks, state_load_task_images};
 use crate::atoms::tasks::model::Task;
 use super::image_layer::ImageLayer;
 use super::annotations_layer::AnnotationsLayer;
@@ -62,8 +62,8 @@ use super::state::{state_load_annotations, state_update_annotation_label, state_
 use crate::shell::{AppNavbar, app_sidebar::{AppSidebar, SidebarTab}};
 use crate::shell::loading::LoadingPage;
 use super::keyboard_shortcuts::setup_keyboard_shortcuts;
-use crate::blocks::dashboard::state::{LABELS, LABELS_LOADING, state_load_labels};
-use crate::blocks::dashboard::state::CURRENT_BLOCK;
+use crate::blocks::block_list::state::{LABELS, LABELS_LOADING, state_load_labels};
+use crate::blocks::block_list::state::CURRENT_BLOCK;
 use super::context_menu::AnnotationContextMenu;
 use super::comment_dialog::CommentDialog;
 use super::models::CommentThread;
@@ -73,6 +73,7 @@ const CSS: &str = include_str!("canvas_page.css");
 
 #[component]
 pub fn AnnotationCanvasPage(
+    project_id: String,
     block_id: String,
     block_name: String,
     block_type: String,
@@ -81,6 +82,8 @@ pub fn AnnotationCanvasPage(
     image_id: String,
     image_name: String,
 ) -> Element {
+
+    let project_id = use_signal(move || project_id.clone());
 
     info!("Canvas Page:: mounted ::+ image_id={}", image_id);
     info!("task-name: {:?}, image_name: {:?}", task_name, image_name);
@@ -91,11 +94,28 @@ pub fn AnnotationCanvasPage(
     // Use cached tasks — only fetch if not loaded for this block
     let block_id_tasks = block_id.clone();
     use_effect(move || {
-        let current_bid = crate::blocks::dashboard::state::CURRENT_BLOCK().map(|b| b.block_id.clone()).unwrap_or_default();
+        let current_bid = crate::blocks::block_list::state::CURRENT_BLOCK().map(|b| b.block_id.clone()).unwrap_or_default();
         if current_bid != block_id_tasks {
             let bid = block_id_tasks.clone();
             spawn(async move {
-                state_load_tasks(&bid).await;
+                state_load_tasks(&project_id(), &bid).await;
+            });
+        }
+    });
+
+    // Fetch full images when task only has a thumbnail (list API returns 1 image)
+    let block_id_imgs = block_id.clone();
+    let task_id_imgs = task_id.clone();
+    use_effect(move || {
+        let needs_fetch = TASKS.read().iter()
+            .find(|t| t.task_id == task_id_imgs)
+            .map(|t| t.image_count > t.images.len() as u32)
+            .unwrap_or(false);
+        if needs_fetch {
+            let bid = block_id_imgs.clone();
+            let tid = task_id_imgs.clone();
+            spawn(async move {
+                state_load_task_images(&project_id(), &bid, &tid).await;
             });
         }
     });
@@ -104,7 +124,7 @@ pub fn AnnotationCanvasPage(
     let block_id_labels = block_id.clone();
     use_resource(move|| {
         let bid = block_id_labels.clone();
-        async move {state_load_labels(&bid).await}
+        async move {state_load_labels(&project_id(), &bid).await}
     });
 
     // Annotation-specific state
@@ -158,6 +178,7 @@ pub fn AnnotationCanvasPage(
 
     // Navigate to next/prev image on f/b key press
     let nav = use_navigator();
+    let nav_project_id = project_id().clone();
     let nav_block_id = block_id.clone();
     let nav_block_name = block_name.clone();
     let nav_block_type = block_type.clone();
@@ -174,6 +195,7 @@ pub fn AnnotationCanvasPage(
                     if new_idx >= 0 && (new_idx as usize) < task.images.len() {
                         let new_img = &task.images[new_idx as usize];
                         nav.replace(Route::AnnotationCanvasPage {
+                            project_id: project_id().clone(),
                             block_id: nav_block_id.clone(),
                             block_name: nav_block_name.clone(),
                             block_type: nav_block_type.clone(),
@@ -377,6 +399,7 @@ pub fn AnnotationCanvasPage(
                                             onclick: move |e| {
                                                 e.stop_propagation();
                                                 nav.replace(Route::AnnotationCanvasPage {
+                                                    project_id: project_id().clone(),
                                                     block_id: nav_bid.clone(),
                                                     block_name: nav_bname.clone(),
                                                     block_type: nav_btype.clone(),
@@ -431,9 +454,7 @@ pub fn AnnotationCanvasPage(
                             let ann_id_for_delete1 = ann_id_for_delete.clone();
                             let block_id_del = block_id_for_delete.clone();
                             // annotations.write().retain(|a| a.id != ann_id_for_delete);
-                            spawn(async move {
-                                state_delete_annotation(&block_id_del, &image_id_for_delete1, &ann_id_for_delete1, annotations).await;
-                            });
+                            state_delete_annotation(&block_id_del, &image_id_for_delete1, &ann_id_for_delete1, annotations);
                             context_menu.set(None);
                         },
 
@@ -444,9 +465,7 @@ pub fn AnnotationCanvasPage(
                             
                             selected_label_id.set(new_label_id.clone());
 
-                            spawn(async move{
-                                state_update_annotation_label(&block_id_upd, &image_id_for_update1, &ann_id_for_update1, &new_label_id, annotations).await;
-                            });
+                            state_update_annotation_label(&project_id(), &block_id_upd, &image_id_for_update1, &ann_id_for_update1, &new_label_id, annotations);
 
                             context_menu.set(None);
                         },
@@ -479,18 +498,11 @@ pub fn AnnotationCanvasPage(
                                 .map_or(false, |t| !t.comments.is_empty());
                             if has_comments {
                                 // Existing thread — just add comment
-                                spawn(async move {
-                                    state_add_comment(&iid, &tid, &text, comment_threads).await;
-                                });
+                                state_add_comment(&iid, &tid, &text, comment_threads);
                             } else {
                                 // First comment — create thread + comment on server
                                 let (wx, wy) = (world_x, world_y);
-                                spawn(async move {
-                                    let ok = state_create_thread(&iid, &tid, wx, wy, &text, comment_threads).await;
-                                    if !ok {
-                                        crate::shell::progress::show_error("Failed to save comment");
-                                    }
-                                });
+                                state_create_thread(&iid, &tid, wx, wy, &text, comment_threads);
                             }
                             // Close dialog immediately — server persists in the background
                             comment_dialog.set(None);
@@ -499,9 +511,7 @@ pub fn AnnotationCanvasPage(
                             if let Some((_, _, _, _, ref tid)) = comment_dialog() {
                                 let tid = tid.clone();
                                 let iid = image_id_for_resolve.clone();
-                                spawn(async move {
-                                    state_resolve_thread(&iid, &tid, comment_threads).await;
-                                });
+                                state_resolve_thread(&iid, &tid, comment_threads);
                             }
                         },
                         on_delete: move |_| {
@@ -509,9 +519,7 @@ pub fn AnnotationCanvasPage(
                                 let tid = tid.clone();
                                 let iid = image_id_for_del.clone();
                                 comment_dialog.set(None);
-                                spawn(async move {
-                                    state_delete_thread(&iid, &tid, comment_threads).await;
-                                });
+                                state_delete_thread(&iid, &tid, comment_threads);
                             }
                         },
                         on_close: move |_| {

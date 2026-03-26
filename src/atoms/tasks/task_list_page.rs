@@ -1,8 +1,8 @@
 use dioxus::prelude::*;
 use crate::Route;
-use crate::blocks::dashboard::state::state_set_current_block;
+use crate::blocks::block_list::state::state_set_current_block;
 use crate::atoms::tasks::state::{state_load_tasks,  state_delete_task, state_rename_task, TASKS_LOADING, TASKS_ERROR, TASKS};
-use crate::blocks::dashboard::state::{CURRENT_BLOCK, LABELS, state_load_labels};
+use crate::blocks::block_list::state::{CURRENT_BLOCK, LABELS, state_load_labels};
 use crate::atoms::tasks::api::{api_assign_task, api_set_reviewer};
 use crate::users::state::{USER, USERS};
 use crate::users::api::{User, UserRole, list_users};
@@ -17,7 +17,7 @@ fn extract_filename(url: &str) -> String {
     url.split('/').last().unwrap_or("image").to_string()
 }
 
-const TASKS_LIST_CSS: &str = include_str!("tasks_list_page.css");
+const TASK_LIST_CSS: &str = include_str!("task_list_page.css");
 const BLOCKS_ICON_LIGHT: Asset = asset!("/assets/icons/blocks-light.svg");
 const BLOCKS_ICON_DARK: Asset = asset!("/assets/icons/blocks-dark.svg");
 const ADD_ICON_LIGHT: Asset = asset!("/assets/icons/add-light.svg");
@@ -26,8 +26,9 @@ const ADD_ICON_DARK: Asset = asset!("/assets/icons/add-dark.svg");
 /// Top-level page for an Annotation Block: shows tasks for a given block,
 /// with a simple "create + list" flow similar to blocks.
 #[component]
-pub fn TasksListPage(block_id: String, block_name: String, block_type: String) -> Element {
+pub fn TasksListPage(project_id: String, block_id: String, block_name: String, block_type: String) -> Element {
 
+    let project_id = use_signal(move || project_id.clone());
     let block_id_for_hook = block_id.clone();
     let block_id_for_resource = block_id.clone();
     let block_id_for_navbar = block_id.clone();
@@ -53,8 +54,8 @@ pub fn TasksListPage(block_id: String, block_name: String, block_type: String) -
             *TASKS.write() = Vec::new(); // Clear tasks
             *LABELS.write() = Vec::new(); // Clear labels
             spawn(async move {
-                state_load_tasks(&bid).await;
-                // state_load_labels(&bid).await;
+                state_load_tasks(&project_id(), &bid).await;
+                // state_load_labels("", &bid).await;
             });
         }
     });
@@ -107,7 +108,7 @@ pub fn TasksListPage(block_id: String, block_name: String, block_type: String) -
     // Show loading 
     if TASKS_LOADING() {
         return rsx! {
-            style { {TASKS_LIST_CSS} }
+            style { {TASK_LIST_CSS} }
             AppNavbar {}
             div { class: "tasks-page",
                 div { "Loading tasks..." }
@@ -118,7 +119,7 @@ pub fn TasksListPage(block_id: String, block_name: String, block_type: String) -
     // Show error 
     if let Some(err) = TASKS_ERROR.read().as_ref() {
         return rsx! {
-            style { {TASKS_LIST_CSS} }
+            style { {TASK_LIST_CSS} }
             AppNavbar {}
             div { class: "tasks-page",
                 div { class:"task-label-name", "Error loading tasks: {err}" }
@@ -131,14 +132,17 @@ pub fn TasksListPage(block_id: String, block_name: String, block_type: String) -
     // If no tasks, show centered "+ NEW TASK" button (admin) or empty message (annotator)
     if TASKS.read().is_empty() {
         return rsx! {
-            style { {TASKS_LIST_CSS} }
+            style { {TASK_LIST_CSS} }
             AppNavbar {}
             div { class: "tasks-empty-page",
                 if is_admin {
                     button {
                         class: "tasks-create-button-centered",
-                        onclick: move |_| {
-                        nav.push(Route::CreateTaskPage { block_id: block_id_for_create_task.clone(), block_name: block_name_for_create_task.clone(), block_type: block_type_for_create_task.clone() });
+                        onclick: {
+                            
+                            move |_| {
+                                nav.push(Route::CreateTaskPage { project_id: project_id().clone(), block_id: block_id_for_create_task.clone(), block_name: block_name_for_create_task.clone(), block_type: block_type_for_create_task.clone() });
+                            }
                         },
                         img { src: add_icon, class: "tasks-create-icon" }
                         "New Task"
@@ -152,13 +156,16 @@ pub fn TasksListPage(block_id: String, block_name: String, block_type: String) -
     
     // If tasks exist, show list
     rsx! {
-        style { {TASKS_LIST_CSS} }
+        style { {TASK_LIST_CSS} }
         AppNavbar {
             if is_admin {
                 button {
                     class: "app-navbar-center-button",
-                    onclick: move |_| {
-                        nav.push(Route::CreateTaskPage { block_id: block_id_for_navbar.clone(), block_name: block_name.clone(), block_type: block_type_for_nav.clone() });
+                    onclick: {
+                        
+                        move |_| {
+                            nav.push(Route::CreateTaskPage { project_id: project_id().clone(), block_id: block_id_for_navbar.clone(), block_name: block_name.clone(), block_type: block_type_for_nav.clone() });
+                        }
                     },
                     img { src: add_icon, class: "app-navbar-center-button-icon" }
                     "New Task"
@@ -177,6 +184,7 @@ pub fn TasksListPage(block_id: String, block_name: String, block_type: String) -
                 ul { class: "tasks-list",
                     for task in &*TASKS.read() {
                         {
+                            
                             let task_id = task.task_id.clone();
                             let task_name = task.task_name.clone();
                             let task_name_for_nav = task.task_name.clone();
@@ -201,6 +209,7 @@ pub fn TasksListPage(block_id: String, block_name: String, block_type: String) -
                                             return;
                                         }
                                         nav.push(Route::AnnotationCanvasPage { 
+                                            project_id: project_id().clone(),
                                             block_id: block_id_for_nav.clone(),
                                             block_name: block_name.clone(),
                                             block_type: block_type_for_task_nav.clone(),
@@ -265,7 +274,7 @@ pub fn TasksListPage(block_id: String, block_name: String, block_type: String) -
                                                                     let bid = bid_delete.clone();
                                                                     deleting_task_id.set(Some(id.clone()));
                                                                     spawn(async move {
-                                                                        state_delete_task(&bid, &id).await;
+                                                                        state_delete_task(&project_id(), &bid, &id).await;
                                                                         deleting_task_id.set(None);
                                                                     });
                                                                     open_menu_id.set(None);
@@ -296,7 +305,7 @@ pub fn TasksListPage(block_id: String, block_name: String, block_type: String) -
                                                                 let bid = bid_assign.clone();
                                                                 let tid = tid_assign.clone();
                                                                 spawn(async move {
-                                                                    let _ = api_assign_task(&bid, &tid, &val).await;
+                                                                    let _ = api_assign_task(&project_id(), &bid, &tid, &val).await;
                                                                 });
                                                             },
                                                             option { value: "", "Unassigned" }
@@ -330,7 +339,7 @@ pub fn TasksListPage(block_id: String, block_name: String, block_type: String) -
                                                                 let bid = bid_review.clone();
                                                                 let tid = tid_review.clone();
                                                                 spawn(async move {
-                                                                    let _ = api_set_reviewer(&bid, &tid, &val).await;
+                                                                    let _ = api_set_reviewer(&project_id(), &bid, &tid, &val).await;
                                                                 });
                                                             },
                                                             option { value: "", "Unassigned" }
@@ -354,7 +363,7 @@ pub fn TasksListPage(block_id: String, block_name: String, block_type: String) -
                                         
                                         // Image rectangles
                                         div { class: "task-image-rects",
-                                            for i in 0..task.images.len() {
+                                            for i in 0..task.image_count as usize {
                                                 div { 
                                                     key: "{i}",
                                                     class: if (i + 1) % 10 == 0 { "task-image-rect-wrapper with-marker" } else { "task-image-rect-wrapper" },
@@ -369,12 +378,7 @@ pub fn TasksListPage(block_id: String, block_name: String, block_type: String) -
                                         div {
                                             class: "task-labels-row",
                                             for label in &*LABELS.read() {{
-                                                let label_count:u32 = task.images.iter()
-                                                    .filter_map(|img| img.labels_count.get(&label.label_name).copied()).sum();
-                                                let bbox_count:u32 = task.images.iter()
-                                                    .filter_map(|img| img.bbox_count.get(&label.label_name).copied()).sum();
-                                                let polygon_count:u32 = task.images.iter()
-                                                    .filter_map(|img| img.polygon_count.get(&label.label_name).copied()).sum();
+                                                let label_count = task.labels_count.get(&label.label_name).copied().unwrap_or(0);
                                                 rsx! {
                                                     div {
                                                         class: "task-label-row",
@@ -387,17 +391,15 @@ pub fn TasksListPage(block_id: String, block_name: String, block_type: String) -
                                         
                                         // Last updated and counts row
                                         {{
-                                            let total_bbox: u32 = task.images.iter()
-                                                .flat_map(|img| img.bbox_count.values()).sum();
-                                            let total_polygon: u32 = task.images.iter()
-                                                .flat_map(|img| img.polygon_count.values()).sum();
+                                            let total_bbox: u32 = task.bbox_count.values().sum();
+                                            let total_polygon: u32 = task.polygon_count.values().sum();
                                             rsx! {
                                                 div { class: "task-info-row",
                                                     div { class: "task-updated-info",
                                                         "Last updated by User on Dec.5.2025"
                                                     }
                                                     div { class: "task-counts",
-                                                        span { class: "task-count-item", "{task.images.len()} images" }
+                                                        span { class: "task-count-item", "{task.image_count} images" }
                                                         span { class: "task-count-divider", "/" }
                                                         span { class: "task-count-item", "{total_bbox + total_polygon} annotations" }
                                                         span { class: "task-count-divider", "/" }
@@ -428,7 +430,7 @@ pub fn TasksListPage(block_id: String, block_name: String, block_type: String) -
                             let tid = task_id.clone();
                             let bid = bid.clone();
                             spawn(async move {
-                                state_rename_task(&bid, &tid, new_name).await;
+                                state_rename_task(&project_id(), &bid, &tid, new_name).await;
                             });
                             editing_task.set(None);
                         },

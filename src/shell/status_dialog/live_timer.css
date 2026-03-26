@@ -1,7 +1,42 @@
-.live-timer {
-  font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', 'Consolas', monospace;
-  font-size: 11px;
-  font-weight: 400;
-  letter-spacing: 0.5px;
-  color: var(--dx-blue);
+.live-timer-loader {
+  width: fit-content;
+  background: transparent;
+  padding: 0 8px;
+  font-size: 18px;
+  font-family: monospace;
+  color: #000;
+  font-weight: bold;
+  border-radius: 8px;
+  position: relative;
+  line-height: 1.25;
+}
+
+.live-timer-value {
+  white-space: pre;
+  animation: live-timer-flicker .5s infinite;
+}
+
+.live-timer-loader::after {
+  content: "";
+  position: absolute;
+  inset: auto auto 100% 10px;
+  height: 5px;
+  width: 40%;
+  background: linear-gradient(90deg, red 26.67%, #0000 0 36.67%, #bdbdbd 0 63.34%, #0000 0 73.34%, var(--dx-blue) 0);
+  display: block;
+}
+
+@keyframes live-timer-flicker {
+  50% {
+    opacity: .85;
+  }
+}
+
+html.dark .live-timer-loader {
+  background: #000;
+  color: #fff;
+}
+
+html.dark .live-timer-loader::after {
+  display: block;
 }

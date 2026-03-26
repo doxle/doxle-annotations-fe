@@ -109,6 +109,17 @@
   border-color: var(--dx-blue);
 }
 
+.status-dialog-close {
+  margin-left: 12px;
+  cursor: pointer;
+  opacity: 0.5;
+  font-size: 12px;
+}
+
+.status-dialog-close:hover {
+  opacity: 1;
+}
+
 @keyframes status-dialog-slide-in {
   from {
     opacity: 0;

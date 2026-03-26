@@ -34,6 +34,7 @@ fn format_elapsed(secs: u32) -> String {
 
 #[derive(Props, Clone, PartialEq)]
 pub struct ImportBlockPageProps {
+    pub project_id: String,
     pub block_id: String,
     pub block_name: String,
     pub block_type: String,
@@ -57,6 +58,10 @@ pub fn ImportBlockPage(props: ImportBlockPageProps) -> Element {
     // Session info needed to call abort
     let mut upload_session: Signal<Rc<Cell<Option<UploadSession>>>> = use_signal(|| Rc::new(Cell::new(None)));
 
+    let project_id = use_signal({
+        let pid = props.project_id.clone();
+        move || pid.clone()
+    });
     let block_id = props.block_id.clone();
     let block_name = props.block_name.clone();
     let block_type = props.block_type.clone();
@@ -96,6 +101,7 @@ pub fn ImportBlockPage(props: ImportBlockPageProps) -> Element {
         let block_id = block_id.clone();
         let block_name = block_name.clone();
         let block_type = block_type.clone();
+        let project_id_for_api = project_id().clone();
         let nav = nav.clone();
 
         // Reset state
@@ -117,6 +123,7 @@ pub fn ImportBlockPage(props: ImportBlockPageProps) -> Element {
             total_annotations.set(0);
 
             match bulk_import_api::upload_import_zip(
+                &project_id_for_api,
                 &block_id,
                 file,
                 flag.clone(),
@@ -132,113 +139,103 @@ pub fn ImportBlockPage(props: ImportBlockPageProps) -> Element {
                     let s3_key = result.s3_key.clone();
                     let import_id = result.import_id.clone();
 
-                    // ── Step 1: Parse ──
-                    import_phase.set("Parsing zip...".to_string());
-                    let manifest = match bulk_import_api::parse_import(&block_id, &import_id, &s3_key).await {
-                        Ok(m) => m,
+                    import_phase.set("Starting import workflow...".to_string());
+                    phase_done.set(0);
+                    phase_total.set(1);
+
+                    let start_status = match bulk_import_api::start_import_job(
+                        &project_id_for_api,
+                        &block_id,
+                        &import_id,
+                        &s3_key,
+                        None,
+                    )
+                    .await
+                    {
+                        Ok(s) => s,
                         Err(e) => {
-                            crate::shell::progress::show_error_for(&format!("Parse failed: {}", e), 5);
+                            crate::shell::progress::show_error_persistent(&format!("Failed to start import: {}", e));
                             is_uploading.set(false);
                             return;
                         }
                     };
 
-                    let mut cumulative_labels = 0usize;
-                    let mut cumulative_tasks = 0usize;
-                    let mut cumulative_images = 0usize;
-                    let mut cumulative_annotations = 0usize;
+                    let import_job_id = start_status.import_job_id.clone();
+                    let mut done = false;
 
-                    // ── Step 2: Labels ──
-                    if manifest.total_labels > 0 {
-                        import_phase.set("Creating labels...".to_string());
-                        phase_done.set(0);
-                        phase_total.set(manifest.total_labels);
-                        let mut offset = 0usize;
-                        let limit = 50usize;
-                        while offset < manifest.total_labels {
-                            match bulk_import_api::process_batch(&block_id, &s3_key, "labels", offset, limit).await {
-                                Ok(r) => {
-                                    cumulative_labels += r.labels_created;
-                                    offset += r.processed;
-                                    phase_done.set(offset.min(manifest.total_labels));
-                                }
-                                Err(e) => {
-                                    crate::shell::progress::show_error_for(&format!("Labels failed: {}", e), 5);
-                                    is_uploading.set(false);
-                                    return;
-                                }
+                    for _ in 0..2400 {
+                        if flag.get() {
+                            crate::shell::progress::show_info("Stopped polling import status (job continues in background)");
+                            done = true;
+                            break;
+                        }
+                        gloo_timers::future::TimeoutFuture::new(1500).await;
+                        let status = match bulk_import_api::get_import_job_status(
+                            &project_id_for_api,
+                            &block_id,
+                            &import_job_id,
+                        )
+                        .await
+                        {
+                            Ok(s) => s,
+                            Err(e) => {
+                                crate::shell::progress::show_error_persistent(&format!("Import status failed: {}", e));
+                                done = true;
+                                break;
                             }
+                        };
+
+                        let (label, done_count, total_count) = match status.phase.as_str() {
+                            "parse" => ("Parsing zip", 0usize, 1usize),
+                            "labels" => ("Creating labels", status.labels_processed, status.labels_total.max(1)),
+                            "tasks" => ("Creating tasks", status.tasks_processed, status.tasks_total.max(1)),
+                            "images" => ("Importing images", status.images_processed, status.images_total.max(1)),
+                            "cleanup" => ("Cleaning up", 1usize, 1usize),
+                            "completed" => ("Completed", 1usize, 1usize),
+                            _ => ("Processing import", 0usize, 1usize),
+                        };
+
+                        import_phase.set(label.to_string());
+                        phase_done.set(done_count.min(total_count));
+                        phase_total.set(total_count);
+                        total_annotations.set(status.annotations_processed);
+
+                        if status.status == "completed" {
+                            crate::shell::progress::show_success_for(
+                                &format!(
+                                    "Import complete — {} images, {} annotations, {} labels",
+                                    status.images_created, status.annotations_created, status.labels_created
+                                ),
+                                5,
+                            );
+                            nav.push(Route::TasksListPage {
+                                project_id: project_id().clone(),
+                                block_id,
+                                block_name,
+                                block_type,
+                            });
+                            done = true;
+                            break;
+                        }
+
+                        if status.status == "failed" {
+                            let msg = status.error_message.unwrap_or_else(|| "Import failed".to_string());
+                            crate::shell::progress::show_error_persistent(&msg);
+                            done = true;
+                            break;
                         }
                     }
 
-                    // ── Step 3: Tasks ──
-                    if manifest.total_tasks > 0 {
-                        import_phase.set("Creating tasks...".to_string());
-                        phase_done.set(0);
-                        phase_total.set(manifest.total_tasks);
-                        let mut offset = 0usize;
-                        let limit = 50usize;
-                        while offset < manifest.total_tasks {
-                            match bulk_import_api::process_batch(&block_id, &s3_key, "tasks", offset, limit).await {
-                                Ok(r) => {
-                                    cumulative_tasks += r.tasks_created;
-                                    offset += r.processed;
-                                    phase_done.set(offset.min(manifest.total_tasks));
-                                }
-                                Err(e) => {
-                                    crate::shell::progress::show_error_for(&format!("Tasks failed: {}", e), 5);
-                                    is_uploading.set(false);
-                                    return;
-                                }
-                            }
-                        }
+                    if !done {
+                        crate::shell::progress::show_error_persistent("Import timed out while waiting for completion");
                     }
-
-                    // ── Step 4: Images + Annotations ──
-                    if manifest.total_images > 0 {
-                        import_phase.set("Uploading images...".to_string());
-                        phase_done.set(0);
-                        phase_total.set(manifest.total_images);
-                        let mut offset = 0usize;
-                        let limit = 5usize;
-                        while offset < manifest.total_images {
-                            match bulk_import_api::process_batch(&block_id, &s3_key, "images", offset, limit).await {
-                                Ok(r) => {
-                                    cumulative_images += r.images_created;
-                                    cumulative_annotations += r.annotations_created;
-                                    offset += r.processed;
-                                    phase_done.set(offset.min(manifest.total_images));
-                                    total_annotations.set(cumulative_annotations);
-                                }
-                                Err(e) => {
-                                    crate::shell::progress::show_error_for(&format!("Images failed: {}", e), 5);
-                                    is_uploading.set(false);
-                                    return;
-                                }
-                            }
-                        }
-                    }
-
-                    // ── Step 5: Cleanup ──
-                    let _ = bulk_import_api::cleanup_import(&block_id, &s3_key).await;
-
-                    crate::shell::progress::show_success_for(
-                        &format!("Import complete — {} images, {} annotations, {} labels",
-                            cumulative_images, cumulative_annotations, cumulative_labels),
-                        5,
-                    );
-                    nav.push(Route::TasksListPage {
-                        block_id,
-                        block_name,
-                        block_type,
-                    });
                 }
                 Err(e) if e == "cancelled" => {
                     crate::shell::progress::show_info("Upload cancelled");
                 }
                 Err(e) => {
                     dioxus::logger::tracing::error!("❌ Import upload failed: {}", e);
-                    crate::shell::progress::show_error(&format!("Import failed: {}", e));
+                    crate::shell::progress::show_error_persistent(&format!("Import failed: {}", e));
                 }
             }
             is_uploading.set(false);
@@ -397,7 +394,7 @@ pub fn ImportBlockPage(props: ImportBlockPageProps) -> Element {
                                 r#type: "button",
                                 class: "import-back-button",
                                 onclick: move |_| {
-                                    nav.push(Route::DashboardPage {});
+                                    nav.push(Route::BlocksPage { project_id: project_id().clone() });
                                 },
                                 "Back"
                             }

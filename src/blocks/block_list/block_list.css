@@ -381,6 +381,18 @@ html.dark .block-card:hover {
   min-height: 100vh;
 }
 
+.projects-heading-new-btn {
+  background: var(--text-primary);
+  color: var(--bg-primary);
+  border: none;
+  border-radius: 4px;
+  padding: 6px 12px;
+  font-family: 'HelveticaNeue', Helvetica, sans-serif;
+  font-size: 13px;
+  font-weight: 400;
+  cursor: pointer;
+}
+
 .blocks-create-button-centered {
   height: auto;
   padding: 6px 18px;
@@ -451,4 +463,46 @@ html.dark .blocks-create-button-centered:hover {
     left: 70%;
     width: 30%;
   }
+}
+
+/* Exporting state */
+.block-card.exporting {
+  pointer-events: none;
+  position: relative;
+  overflow: hidden;
+}
+
+.block-export-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.75);
+  z-index: 10;
+  gap: 12px;
+  border-radius: inherit;
+}
+
+.block-export-overlay .dots-bars-loader {
+  color: #fff;
+}
+
+.block-export-stats {
+  color: rgba(255, 255, 255, 0.7);
+  font-family: 'ModularHouseplant', monospace;
+  font-size: 12px;
+  font-weight: 400;
+  letter-spacing: 0.3px;
+  display: flex;
+  gap: 10px;
+}
+
+.block-export-label {
+  color: #fff;
+  font-family: 'ModularHouseplant', monospace;
+  font-size: 13px;
+  font-weight: 400;
+  letter-spacing: 0.5px;
 }

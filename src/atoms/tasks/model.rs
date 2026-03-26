@@ -35,4 +35,12 @@ pub struct Task {
 	pub assignee:String,
 	pub reviewer:String,
 	pub locked:bool,
+	#[serde(default)]
+	pub image_count:u32,
+	#[serde(default)]
+	pub labels_count:std::collections::HashMap<String, u32>,
+	#[serde(default)]
+	pub bbox_count:std::collections::HashMap<String, u32>,
+	#[serde(default)]
+	pub polygon_count:std::collections::HashMap<String, u32>,
 }

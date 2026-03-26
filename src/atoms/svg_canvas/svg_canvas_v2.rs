@@ -54,7 +54,7 @@ new_pan = cursor - (cursor - old_pan) * (new_zoom / old_zoom)
 
 use std::rc::Rc;
 use crate::blocks::annotations::state::state_create_annotation;
-use crate::blocks::dashboard::state::LABELS;
+use crate::blocks::block_list::state::LABELS;
 use std::collections::HashSet;
 use web_time::Instant;
 use std::time::Duration;
@@ -163,7 +163,7 @@ pub fn SvgCanvasV2(
 						annotations_save.read().iter().find(|a| a.id == aid).map(|a| a.geometry.clone())
 					};
 					if let Some(g) = geom {
-						state_update_annotation_geometry(&blk_id, &img_id, &aid, g, annotations_save).await;
+						state_update_annotation_geometry(&blk_id, &img_id, &aid, g, annotations_save);
 					} 
 					
 				}
@@ -173,10 +173,14 @@ pub fn SvgCanvasV2(
 	});
 
 	// Copy selected annotation to clipboard when Ctrl+C is pressed
+	let hovered_ann_id_for_copy: Signal<Option<String>> = use_signal(|| None);
 	use_effect(move || {
 		let tick = copy_requested();
 		if tick == 0 { return; }
-		let aid = selected_ann_id();
+		let aid = {
+			let sel = selected_ann_id();
+			if !sel.is_empty() { sel } else { hovered_ann_id_for_copy().unwrap_or_default() }
+		};
 		if aid.is_empty() { copy_requested.set(0); return; }
 		if let Some(ann) = annotations().iter().find(|a| a.id == aid) {
 			clipboard.set(Some((ann.geometry.clone(), ann.label_id.clone())));
@@ -483,18 +487,16 @@ pub fn SvgCanvasV2(
 			            let wy = (p.y - pan_y()) / zoom();
 			            let new_geom = offset_geometry_to(geom, wx, wy);
 			            let ann_id = uuid::Uuid::new_v4().to_string();
-			            selected_ann_id.set(ann_id.clone());
-			            let label_id = label_id.clone();
-			            let label_name = crate::blocks::dashboard::state::LABELS.read()
-			                .iter()
-			                .find(|l| l.label_id == label_id)
-			                .map(|l| l.label_name.clone())
-			                .unwrap_or_default();
-			            let img_id = image_id.clone();
+                    selected_ann_id.set(ann_id.clone());
+                    let label_id = label_id.clone();
+                    let label_name = crate::blocks::block_list::state::LABELS.read()
+                        .iter()
+                        .find(|l| l.label_id == label_id)
+                        .map(|l| l.label_name.clone())
+                        .unwrap_or_default();
+                        let img_id = image_id.clone();
 			            let block_id1 = block_id.clone();
-			            spawn(async move {
-			                state_create_annotation(&block_id1, &img_id, &ann_id, &label_id, &label_name, new_geom, annotations).await;
-			            });
+			            state_create_annotation(&block_id1, &img_id, &ann_id, &label_id, &label_name, new_geom, annotations);
 			        }
 			        paste_mode.set(false);
 			        return;
@@ -538,19 +540,17 @@ pub fn SvgCanvasV2(
 			                    start: Point { x: sx.min(wx), y: sy.min(wy) },
 			                    end: Point { x: sx.max(wx), y: sy.max(wy) },
 			                };
-			                let ann_id = uuid::Uuid::new_v4().to_string();
-			                selected_ann_id.set(ann_id.clone()); // Auto-select so nodes appear immediately
-			                let label_id = selected_label_id_for_mouse_move1;
-			                let label_name = crate::blocks::dashboard::state::LABELS.read()
-			                    .iter()
-			                    .find(|l| l.label_id == label_id)
-			                    .map(|l| l.label_name.clone())
-			                    .unwrap_or_default();
-			                let img_id = image_id.clone();
+                    let ann_id = uuid::Uuid::new_v4().to_string();
+                    selected_ann_id.set(ann_id.clone()); // Auto-select so nodes appear immediately
+                    let label_id = selected_label_id_for_mouse_move1;
+                    let label_name = crate::blocks::block_list::state::LABELS.read()
+                        .iter()
+                        .find(|l| l.label_id == label_id)
+                        .map(|l| l.label_name.clone())
+                        .unwrap_or_default();
+                        let img_id = image_id.clone();
 			                let block_id1 = block_id.clone();
-			                spawn(async move {
-			                    state_create_annotation(&block_id1, &img_id, &ann_id, &label_id, &label_name, geometry, annotations).await;
-			                });
+			                state_create_annotation(&block_id1, &img_id, &ann_id, &label_id, &label_name, geometry, annotations);
 			            }
 			            bbox_start.set(None);
 			        } else {
@@ -579,21 +579,19 @@ pub fn SvgCanvasV2(
 			            let dist = ((wx - fx).powi(2) + (wy - fy).powi(2)).sqrt();
 			            if dist < snap_threshold {
                 let points: Vec<Point> = pts.iter().copied().map(|(x,y)| Point { x, y }).collect();
-			                let geometry = Geometry::Polygon {points};
-			                let ann_id = uuid::Uuid::new_v4().to_string();
-			                selected_ann_id.set(ann_id.clone()); // Auto-select so nodes appear immediately
-			                let label_id = selected_label_id_for_mouse_move1;
-			                let label_name = crate::blocks::dashboard::state::LABELS.read()
-			                    .iter()
-			                    .find(|l| l.label_id == label_id)
-			                    .map(|l| l.label_name.clone())
-			                    .unwrap_or_default();
+                let geometry = Geometry::Polygon {points};
+                    let ann_id = uuid::Uuid::new_v4().to_string();
+                    selected_ann_id.set(ann_id.clone()); // Auto-select so nodes appear immediately
+                    let label_id = selected_label_id_for_mouse_move1;
+                    let label_name = crate::blocks::block_list::state::LABELS.read()
+                        .iter()
+                        .find(|l| l.label_id == label_id)
+                        .map(|l| l.label_name.clone())
+                        .unwrap_or_default();
 			                let img_id = image_id.clone();
 			            	
-			                let block_id1 = block_id.clone();
-			                spawn(async move{
-			                	state_create_annotation(&block_id1, &img_id, &ann_id, &label_id, &label_name, geometry, annotations).await;
-			                });
+                        let block_id1 = block_id.clone();
+			                state_create_annotation(&block_id1, &img_id, &ann_id, &label_id, &label_name, geometry, annotations);
 			                
 			                tracing::info!("Polygon save intiated{}", annotations.read().len());
 			                pts.clear();
@@ -756,6 +754,7 @@ let factor = (-dy * 0.009).exp().clamp(0.7,1.4); // zoom speed
 						skip_polygon_insert: skip_polygon_insert,
 						hidden_label_ids:hidden_label_ids.clone(),
 						hovered_label_id: hovered_label_id,
+						hovered_ann_id_out: hovered_ann_id_for_copy,
 						annotation_opacity: annotation_opacity,
 						selected_tool: selected_tool,
 					}
@@ -1267,6 +1266,7 @@ fn SavedAnnotation(
 	skip_polygon_insert: Signal<bool>,
 	hidden_label_ids:HashSet<String>,
 	hovered_label_id: Signal<Option<String>>,
+	hovered_ann_id_out: Signal<Option<String>>,
 	#[props(default = 0.2)] annotation_opacity: f64,
 	selected_tool: Tool,
 	)->Element{
@@ -1382,11 +1382,13 @@ fn SavedAnnotation(
 						move |_| {
 							hovered_label_id.set(Some(lid.clone()));
 							hovered_ann_id.set(Some(aid.clone()));
+							hovered_ann_id_out.set(Some(aid.clone()));
 						}
 					},
 					onmouseleave: move |_| {
 						hovered_label_id.set(None);
 						hovered_ann_id.set(None);
+						// Keep hovered_ann_id_out so copy retains last-hovered annotation
 					},
 
 				// ═══════════════════════════════════════════════════════════
@@ -1698,9 +1700,7 @@ fn DraggableNode(
                         	// annotations.write().retain(|a| a.id != aid);
                         	let img_id = image_id.clone();
                         	let block_id1 = block_id.clone();
-                        	spawn(async move{
-                        		state_delete_annotation(&block_id1, &img_id, &aid, annotations).await;
-                        	});
+                        	state_delete_annotation(&block_id1, &img_id, &aid, annotations);
                         }
 
                         return;

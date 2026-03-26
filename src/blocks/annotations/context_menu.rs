@@ -1,10 +1,10 @@
 use dioxus::prelude::*;
-use crate::blocks::dashboard::api::BlockLabel;
+use crate::blocks::block_list::api::BlockLabel;
 use crate::shell::{THEME, Theme};
 
 const CSS: &str = include_str!("context_menu.css");
-const TRASH_ICON_LIGHT: Asset = asset!("/assets/icons/trash-light.svg");
-const TRASH_ICON_DARK: Asset = asset!("/assets/icons/trash-dark.svg");
+const TRASH_ICON_LIGHT: Asset = asset!("/assets/icons/delete-light.svg");
+const TRASH_ICON_DARK: Asset = asset!("/assets/icons/delete-dark.svg");
 
 #[component]
 pub fn AnnotationContextMenu(
@@ -41,6 +41,8 @@ pub fn AnnotationContextMenu(
         format!("left: {x}px; top: {y}px; max-height: {max_h}px;")
     };
 
+    let mut search_query = use_signal(|| String::new());
+
 	rsx!{
 		style { {CSS} }
          // Backdrop - covers entire screen, catches outside clicks
@@ -54,24 +56,42 @@ pub fn AnnotationContextMenu(
             style: "{pos_style}",
             onclick: move |evt| evt.stop_propagation(),
 
+            // Search input
+            input {
+                class: "context-menu-search",
+                r#type: "text",
+                placeholder: "Search labels...",
+                autofocus: true,
+                value: "{search_query}",
+                oninput: move |evt| search_query.set(evt.value().clone()),
+            }
+
             // Scrollable label options
             div {
                 class: "context-menu-labels",
-                for label in labels {
-                    {
-                        let is_current = label.label_id == current_label_id;
-                        rsx! {
-                            div {
-                                class: if is_current { "context-menu-item current" } else { "context-menu-item" },
-                                onclick: {
-                                    let lid = label.label_id.clone();
-                                    move |_| on_change_label.call(lid.clone())
-                                },
-                                span {
-                                    class: "label-color-square",
-                                    style: "background: {label.label_color};",
+                {
+                    let q = search_query().to_lowercase();
+                    let filtered: Vec<_> = labels.iter()
+                        .filter(|l| q.is_empty() || l.label_name.to_lowercase().contains(&q))
+                        .collect();
+                    rsx! {
+                        for label in filtered {
+                            {
+                                let is_current = label.label_id == current_label_id;
+                                rsx! {
+                                    div {
+                                        class: if is_current { "context-menu-item current" } else { "context-menu-item" },
+                                        onclick: {
+                                            let lid = label.label_id.clone();
+                                            move |_| on_change_label.call(lid.clone())
+                                        },
+                                        span {
+                                            class: "label-color-square",
+                                            style: "background: {label.label_color};",
+                                        }
+                                        span { "{label.label_name}" }
+                                    }
                                 }
-                                span { "{label.label_name}" }
                             }
                         }
                     }

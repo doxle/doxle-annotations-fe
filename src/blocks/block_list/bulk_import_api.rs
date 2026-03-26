@@ -71,13 +71,12 @@ pub struct ProcessImportResult {
 }
 
 /// Call BE to process the uploaded zip (parse COCO, create tasks/images/annotations)
-pub async fn process_import(block_id: &str, import_id: &str, s3_key: &str) -> Result<ProcessImportResult, String> {
+pub async fn process_import(project_id: &str, block_id: &str, import_id: &str, s3_key: &str) -> Result<ProcessImportResult, String> {
     let body = serde_json::json!({
         "import_id": import_id,
         "s3_key": s3_key,
     });
-
-    let response = Request::post(&format!("{}/blocks/{}/import/process", API_BASE_URL, block_id))
+    let response = Request::post(&format!("{}/projects/{}/blocks/{}/import/process", API_BASE_URL, project_id, block_id))
         .credentials(web_sys::RequestCredentials::Include)
         .header("Content-Type", "application/json")
         .json(&body)
@@ -123,14 +122,118 @@ pub struct ProcessBatchResult {
     pub annotations_created: usize,
 }
 
+#[derive(Serialize)]
+struct StartImportJobRequest {
+    import_id: String,
+    s3_key: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    max_tasks: Option<usize>,
+}
+
+#[derive(Deserialize, Clone)]
+pub struct ImportJobStatusResult {
+    pub import_job_id: String,
+    pub status: String,
+    pub phase: String,
+    pub labels_total: usize,
+    pub labels_processed: usize,
+    pub tasks_total: usize,
+    pub tasks_processed: usize,
+    pub images_total: usize,
+    pub images_processed: usize,
+    pub annotations_total: usize,
+    pub annotations_processed: usize,
+    pub labels_created: usize,
+    pub tasks_created: usize,
+    pub images_created: usize,
+    pub annotations_created: usize,
+    pub error_message: Option<String>,
+}
+
+/// Start async import workflow (Step Functions-backed) for an uploaded zip.
+pub async fn start_import_job(
+    project_id: &str,
+    block_id: &str,
+    import_id: &str,
+    s3_key: &str,
+    max_tasks: Option<usize>,
+) -> Result<ImportJobStatusResult, String> {
+    let body = StartImportJobRequest {
+        import_id: import_id.to_string(),
+        s3_key: s3_key.to_string(),
+        max_tasks,
+    };
+    let response = Request::post(&format!(
+        "{}/projects/{}/blocks/{}/imports",
+        API_BASE_URL, project_id, block_id
+    ))
+    .credentials(web_sys::RequestCredentials::Include)
+    .header("Content-Type", "application/json")
+    .json(&body)
+    .map_err(|e| format!("Failed to serialize: {}", e))?
+    .send()
+    .await
+    .map_err(|e| format!("Failed to call start import job: {}", e))?;
+
+    if !response.ok() {
+        if response.status() == 401 {
+            crate::shell::client::handle_unauthorized();
+            return Err("Unauthorized - please log in again".to_string());
+        }
+        let error_text = response
+            .text()
+            .await
+            .unwrap_or_else(|_| "Unknown error".to_string());
+        return Err(format!("Start import job failed: {}", error_text));
+    }
+
+    response
+        .json::<ImportJobStatusResult>()
+        .await
+        .map_err(|e| format!("Failed to parse response: {}", e))
+}
+
+/// Poll async import job status.
+pub async fn get_import_job_status(
+    project_id: &str,
+    block_id: &str,
+    import_job_id: &str,
+) -> Result<ImportJobStatusResult, String> {
+    let response = Request::get(&format!(
+        "{}/projects/{}/blocks/{}/imports/{}",
+        API_BASE_URL, project_id, block_id, import_job_id
+    ))
+    .credentials(web_sys::RequestCredentials::Include)
+    .send()
+    .await
+    .map_err(|e| format!("Failed to poll import job: {}", e))?;
+
+    if !response.ok() {
+        if response.status() == 401 {
+            crate::shell::client::handle_unauthorized();
+            return Err("Unauthorized - please log in again".to_string());
+        }
+        let error_text = response
+            .text()
+            .await
+            .unwrap_or_else(|_| "Unknown error".to_string());
+        return Err(format!("Import status poll failed: {}", error_text));
+    }
+
+    response
+        .json::<ImportJobStatusResult>()
+        .await
+        .map_err(|e| format!("Failed to parse response: {}", e))
+}
+
 /// Step 1: Parse zip and create manifest
-pub async fn parse_import(block_id: &str, import_id: &str, s3_key: &str) -> Result<ParseImportResult, String> {
+pub async fn parse_import(project_id: &str, block_id: &str, import_id: &str, s3_key: &str) -> Result<ParseImportResult, String> {
     let body = serde_json::json!({
         "import_id": import_id,
         "s3_key": s3_key,
     });
 
-    let response = Request::post(&format!("{}/blocks/{}/import/parse", API_BASE_URL, block_id))
+    let response = Request::post(&format!("{}/projects/{}/blocks/{}/import/parse", API_BASE_URL, project_id, block_id))
         .credentials(web_sys::RequestCredentials::Include)
         .header("Content-Type", "application/json")
         .json(&body)
@@ -154,6 +257,7 @@ pub async fn parse_import(block_id: &str, import_id: &str, s3_key: &str) -> Resu
 
 /// Step 2: Process a batch of items for a given phase
 pub async fn process_batch(
+    project_id: &str,
     block_id: &str,
     s3_key: &str,
     phase: &str,
@@ -166,8 +270,7 @@ pub async fn process_batch(
         "offset": offset,
         "limit": limit,
     });
-
-    let response = Request::post(&format!("{}/blocks/{}/import/process-batch", API_BASE_URL, block_id))
+    let response = Request::post(&format!("{}/projects/{}/blocks/{}/import/process-batch", API_BASE_URL, project_id, block_id))
         .credentials(web_sys::RequestCredentials::Include)
         .header("Content-Type", "application/json")
         .json(&body)
@@ -190,12 +293,11 @@ pub async fn process_batch(
 }
 
 /// Step 3: Delete the zip from S3
-pub async fn cleanup_import(block_id: &str, s3_key: &str) -> Result<(), String> {
+pub async fn cleanup_import(project_id: &str, block_id: &str, s3_key: &str) -> Result<(), String> {
     let body = serde_json::json!({
         "s3_key": s3_key,
     });
-
-    let response = Request::post(&format!("{}/blocks/{}/import/cleanup", API_BASE_URL, block_id))
+    let response = Request::post(&format!("{}/projects/{}/blocks/{}/import/cleanup", API_BASE_URL, project_id, block_id))
         .credentials(web_sys::RequestCredentials::Include)
         .header("Content-Type", "application/json")
         .json(&body)
@@ -215,6 +317,7 @@ pub async fn cleanup_import(block_id: &str, s3_key: &str) -> Result<(), String> 
 /// Metadata needed to abort an in-progress upload
 #[derive(Clone, Default)]
 pub struct UploadSession {
+    pub project_id: String,
     pub block_id: String,
     pub s3_key: String,
     pub upload_id: String,
@@ -227,6 +330,7 @@ pub struct UploadSession {
 /// Checks `cancel_flag` between each chunk; returns Err("cancelled") if set.
 /// Writes session info to `session` so the caller can abort if needed.
 pub async fn upload_import_zip(
+    project_id: &str,
     block_id: &str,
     file: File,
     cancel_flag: Rc<Cell<bool>>,
@@ -242,7 +346,7 @@ pub async fn upload_import_zip(
         file_size,
     };
 
-    let response = Request::post(&format!("{}/blocks/{}/import/initiate", API_BASE_URL, block_id))
+    let response = Request::post(&format!("{}/projects/{}/blocks/{}/import/initiate", API_BASE_URL, project_id, block_id))
         .credentials(web_sys::RequestCredentials::Include)
         .header("Content-Type", "application/json")
         .json(&initiate_request)
@@ -267,6 +371,7 @@ pub async fn upload_import_zip(
 
     // Store session so caller can abort
     session.set(Some(UploadSession {
+        project_id: project_id.to_string(),
         block_id: block_id.to_string(),
         s3_key: initiate.s3_key.clone(),
         upload_id: initiate.upload_id.clone().unwrap_or_default(),
@@ -332,7 +437,7 @@ pub async fn upload_import_zip(
             parts: completed_parts,
         };
 
-        let resp = Request::post(&format!("{}/blocks/{}/import/complete", API_BASE_URL, block_id))
+        let resp = Request::post(&format!("{}/projects/{}/blocks/{}/import/complete", API_BASE_URL, project_id, block_id))
             .credentials(web_sys::RequestCredentials::Include)
             .header("Content-Type", "application/json")
             .json(&complete_request)
@@ -392,7 +497,7 @@ pub async fn abort_import_upload(sess: &UploadSession) -> Result<(), String> {
         upload_id: sess.upload_id.clone(),
     };
 
-    let resp = Request::post(&format!("{}/blocks/{}/import/abort", API_BASE_URL, sess.block_id))
+    let resp = Request::post(&format!("{}/projects/{}/blocks/{}/import/abort", API_BASE_URL, sess.project_id, sess.block_id))
         .credentials(web_sys::RequestCredentials::Include)
         .header("Content-Type", "application/json")
         .json(&body)

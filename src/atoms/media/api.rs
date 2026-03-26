@@ -214,6 +214,7 @@ pub async fn upload_image_for_block(block_id: &str, file: File) -> Result<String
 
 /// Upload a task-specific file to S3 and create the task image record
 pub async fn upload_image_for_task(
+    project_id: &str,
     block_id: &str,
     task_id: &str,
     file: File,
@@ -222,7 +223,7 @@ pub async fn upload_image_for_task(
     let (image_id, image_name, image_url) = upload_file_to_s3(block_id, file).await?;
 
     // Step 3: Create TASK image record
-    match crate::atoms::tasks::api::api_create_task_image(block_id, task_id, image_id.clone(), image_name, image_url.clone()).await {
+    match crate::atoms::tasks::api::api_create_task_image(project_id, block_id, task_id, image_id.clone(), image_name, image_url.clone()).await {
         Ok(image) => {
             dioxus::logger::tracing::info!("✅ Task Image record created: {}", image.image_id);
             // Also update TASKS so UI immediately sees the image

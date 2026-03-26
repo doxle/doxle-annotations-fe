@@ -4,7 +4,7 @@ use dioxus::logger::tracing::error;
 use crate::atoms::tasks::create_task_handler::{handle_create_task, PendingUpload};
 use crate::Route;
 
-const CREATE_TASKS_CSS: &str = include_str!("create_tasks_page.css");
+const CREATE_TASK_CSS: &str = include_str!("create_task_page.css");
 const TASKS_ICON_LIGHT: Asset = asset!("/assets/icons/tasks-light.svg");
 const TASKS_ICON_DARK: Asset = asset!("/assets/icons/tasks-dark.svg");
 const CLOSE_ICON_LIGHT: Asset = asset!("/assets/icons/close-light.svg");
@@ -31,6 +31,7 @@ fn format_size(bytes: f64) -> String {
 
 #[derive(Props, Clone, PartialEq)]
 pub struct CreateTaskPageProps {
+    pub project_id: String,
     pub block_id: String,
     pub block_name: String,
     pub block_type: String,
@@ -45,9 +46,11 @@ pub fn CreateTaskPage(props: CreateTaskPageProps) -> Element {
     let mut upload_total = use_signal(|| 0usize);
     let nav = use_navigator();
     
+    let project_id = props.project_id.clone();
     let block_id = props.block_id.clone();
     let block_name = props.block_name.clone();
     let block_type = props.block_type.clone();
+    let project_id_for_back = project_id.clone();
     let block_id_for_back = block_id.clone();
     let block_name_for_back = block_name.clone();
     let block_type_for_back = block_type.clone();
@@ -79,6 +82,7 @@ pub fn CreateTaskPage(props: CreateTaskPageProps) -> Element {
             return;
         }
 
+        let project_id_clone = project_id.clone();
         let block_id_clone = block_id.clone();
         let block_name_clone = block_name.clone();
         let block_type_clone = block_type.clone();
@@ -86,6 +90,7 @@ pub fn CreateTaskPage(props: CreateTaskPageProps) -> Element {
 
         spawn(async move {
             handle_create_task(
+                project_id_clone,
                 block_id_clone,
                 block_name_clone,
                 block_type_clone,
@@ -100,7 +105,7 @@ pub fn CreateTaskPage(props: CreateTaskPageProps) -> Element {
     };
 
     rsx! {
-        style { {CREATE_TASKS_CSS} }
+        style { {CREATE_TASK_CSS} }
         AppNavbar {}
         div {
             class: "create-tasks-page",
@@ -233,7 +238,7 @@ pub fn CreateTaskPage(props: CreateTaskPageProps) -> Element {
                             class: "tasks-back-button",
                             disabled: *is_submitting.read(),
                             onclick: move |_| {
-                                nav.push(Route::TasksListPage { block_id: block_id_for_back.clone(), block_name: block_name_for_back.clone(), block_type: block_type_for_back.clone() });
+                                nav.push(Route::TasksListPage { project_id: project_id_for_back.clone(), block_id: block_id_for_back.clone(), block_name: block_name_for_back.clone(), block_type: block_type_for_back.clone() });
                             },
                             "Back"
                         }

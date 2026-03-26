@@ -190,7 +190,7 @@ function startHomeSequence() {
                 i++;
                 setTimeout(type, 60);
             } else {
-                element.textContent = text;
+                element.innerHTML = text + '<span class="typewriter-cursor" style="visibility:hidden">_</span>';
                 if (callback) setTimeout(callback, 200);
             }
         }

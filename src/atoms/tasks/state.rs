@@ -9,11 +9,11 @@ pub static TASKS_LOADING:GlobalSignal<bool> = Signal::global(|| false);
 pub static TASKS_ERROR:GlobalSignal<Option<String>> = Signal::global(|| None);
 pub static CURRENT_TASK_ID:GlobalSignal<Option<String>> = Signal::global(|| None);
 
-pub async fn state_load_tasks(block_id:&str){
+pub async fn state_load_tasks(project_id: &str, block_id:&str){
  	*TASKS_LOADING.write() = true;
  	*TASKS_ERROR.write() = None;
 
-	match api::api_list_tasks(block_id).await {
+	match api::api_list_tasks(project_id, block_id).await {
  		Ok(tasks_list) => {
  			let count = tasks_list.len();
  			*TASKS.write() = tasks_list;
@@ -28,8 +28,8 @@ pub async fn state_load_tasks(block_id:&str){
  	  *TASKS_LOADING.write() = false;
  }
 
- pub async fn state_load_tasks_silent(block_id:&str){
-    match api::api_list_tasks(block_id).await {
+ pub async fn state_load_tasks_silent(project_id: &str, block_id:&str){
+    match api::api_list_tasks(project_id, block_id).await {
         Ok(tasks_list) => { 
             *TASKS.write() = tasks_list;
         }
@@ -39,8 +39,8 @@ pub async fn state_load_tasks(block_id:&str){
      }
  }
 
-pub async fn state_create_task(block_id:&str, name:String) -> Result<Task, String> {
- 	match api::api_create_task(block_id, name).await {
+pub async fn state_create_task(project_id: &str, block_id:&str, name:String) -> Result<Task, String> {
+ 	match api::api_create_task(project_id, block_id, name).await {
  		Ok(task) => {
  			TASKS.write().push(task.clone());
  			tracing::info!("✅ Task created: {}", task.task_name);
@@ -49,13 +49,31 @@ pub async fn state_create_task(block_id:&str, name:String) -> Result<Task, Strin
  		}
  		Err(e) => {
  			tracing::error!("❌ Failed to create task: {}", e);
- 			crate::shell::progress::show_error(&format!("Failed to create task: {}", e));
+			crate::shell::progress::show_error_persistent(&format!("Failed to create task: {}", e));
  			Err(e)
  		}
  	}
  }
 
-pub async fn state_update_task_state(block_id:&str, task_id:&str, state:super::model::TaskState) {
+/// Fetch full images for a task and update TASKS signal in-place
+pub async fn state_load_task_images(project_id: &str, block_id: &str, task_id: &str) {
+    match api::api_list_task_images(project_id, block_id, task_id).await {
+        Ok(images) => {
+            let count = images.len();
+            let mut tasks = TASKS.write();
+            if let Some(task) = tasks.iter_mut().find(|t| t.task_id == task_id) {
+                task.images = images;
+                task.image_count = count as u32;
+            }
+            tracing::info!("✅ Loaded {} images for task {}", count, task_id);
+        }
+        Err(e) => {
+            tracing::error!("❌ Failed to load images for task {}: {}", task_id, e);
+        }
+    }
+}
+
+pub async fn state_update_task_state(project_id: &str, block_id:&str, task_id:&str, state:super::model::TaskState) {
  	 // Find task index and backup old state only
  	 let (index, old_state) = {
  	 	let tasks = TASKS.read();
@@ -69,8 +87,9 @@ pub async fn state_update_task_state(block_id:&str, task_id:&str, state:super::m
  	 TASKS.write()[index].task_state = state.clone();
 
  	 //API call
- 	if let Err(e) = api::api_update_task(block_id, task_id, None, Some(state), None, None).await {
+ 	if let Err(e) = api::api_update_task(project_id, block_id, task_id, None, Some(state), None, None).await {
  	 	tracing::error!("❌ Failed to update task state: {}", e);
+ 	 	crate::shell::progress::show_error_persistent(&format!("Failed to update task state: {}", e));
         // Rollback
         TASKS.write()[index].task_state = old_state;
  	 }
@@ -86,11 +105,11 @@ pub fn state_get_current_task_id() -> Option<String> {
     CURRENT_TASK_ID.read().clone()
 }
 
-pub async fn state_upload_task_file(block_id:&str, task_id:&str, file:web_sys::File)-> Result<String, String>{
-    upload_image_for_task(block_id, task_id, file).await
+pub async fn state_upload_task_file(project_id: &str, block_id:&str, task_id:&str, file:web_sys::File)-> Result<String, String>{
+    upload_image_for_task(project_id, block_id, task_id, file).await
 }
 
-pub async fn state_delete_task(block_id: &str, task_id: &str) {
+pub async fn state_delete_task(project_id: &str, block_id: &str, task_id: &str) {
     use crate::shell::progress::{show_progress_danger, show_success, clear_status};
 
     // Get images with annotation counts from the task before deleting
@@ -129,7 +148,7 @@ pub async fn state_delete_task(block_id: &str, task_id: &str) {
         &format!("Deleting {}/{}", total, total),
         total, total, start.elapsed().as_secs(),
     );
-    match api::api_delete_task(block_id, task_id).await {
+    match api::api_delete_task(project_id, block_id, task_id).await {
         Ok(_) => {
             TASKS.write().retain(|t| t.task_id != task_id);
             tracing::info!("✅ Task deleted: {}", task_id);
@@ -138,12 +157,12 @@ pub async fn state_delete_task(block_id: &str, task_id: &str) {
         }
         Err(e) => {
             tracing::error!("❌ Failed to delete task: {}", e);
-            crate::shell::progress::show_error(&format!("Delete failed: {}", e));
+            crate::shell::progress::show_error_persistent(&format!("Delete failed: {}", e));
         }
     }
 }
 
-pub async fn state_rename_task(block_id: &str, task_id: &str, new_name: String) {
+pub async fn state_rename_task(project_id: &str, block_id: &str, task_id: &str, new_name: String) {
     // Find task index and backup old name
     let (index, old_name) = {
         let tasks = TASKS.read();
@@ -157,8 +176,9 @@ pub async fn state_rename_task(block_id: &str, task_id: &str, new_name: String) 
     TASKS.write()[index].task_name = new_name.clone();
 
     // API call
-    if let Err(e) = api::api_update_task(block_id, task_id, Some(new_name), None, None, None).await {
+    if let Err(e) = api::api_update_task(project_id, block_id, task_id, Some(new_name), None, None, None).await {
         tracing::error!("❌ Failed to rename task: {}", e);
+        crate::shell::progress::show_error_persistent(&format!("Failed to rename task: {}", e));
         // Rollback
         TASKS.write()[index].task_name = old_name;
     } else {
