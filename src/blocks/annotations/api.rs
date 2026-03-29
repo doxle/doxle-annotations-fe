@@ -47,8 +47,8 @@ pub async fn api_list_annotations(image_id: &str) -> Result<Vec<ApiAnnotation>, 
     client::get(&endpoint).await
 }
 
-pub async fn api_create_annotation(block_id:&str, image_id:&str, annotation_id:&str, label_id:&str, label_name:&str, geometry:Geometry) -> Result<String, String> {
-    let endpoint = format!("/images/{}/annotations?block_id={}", image_id, block_id);
+pub async fn api_create_annotation(project_id:&str, block_id:&str, image_id:&str, annotation_id:&str, label_id:&str, label_name:&str, geometry:Geometry) -> Result<String, String> {
+    let endpoint = format!("/images/{}/annotations?block_id={}&project_id={}", image_id, block_id, project_id);
     let payload = CreateAnnotationPayload {
         annotation_id:annotation_id.to_string(),
         label_id:label_id.to_string(), 
@@ -73,8 +73,8 @@ pub async fn api_update_annotation_label(block_id:&str, image_id:&str, annotatio
     client::patch_no_response(&endpoint, &payload).await
 }
 
-pub async fn api_delete_annotation(block_id:&str, image_id:&str, annotation_id:&str)->Result<(),String>{
-    let endpoint = format!("/images/{}/annotations/{}?block_id={}", image_id, annotation_id, block_id);
+pub async fn api_delete_annotation(project_id:&str, block_id:&str, image_id:&str, annotation_id:&str)->Result<(),String>{
+    let endpoint = format!("/images/{}/annotations/{}?block_id={}&project_id={}", image_id, annotation_id, block_id, project_id);
     client::delete(&endpoint).await
 }
 

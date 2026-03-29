@@ -1,0 +1,28 @@
+.loading-screen {
+    background: radial-gradient(circle, var(--dot-color, rgba(0,0,0,0.3)) 1.5px, transparent 1.5px);
+    background-size: 30px 30px;
+    background-color: var(--bg-primary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100vh;
+    width: 100%;
+}
+
+.loading-screen-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-primary);
+    font-family: 'ModularHouseplant', monospace;
+    font-size: 15px;
+    font-weight: bold;
+    gap: 20px;
+}
+
+.loading-lottie {
+    width: 100px;
+    height: 100px;
+    margin-bottom: -30px;
+}

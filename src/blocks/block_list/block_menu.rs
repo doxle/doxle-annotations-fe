@@ -25,6 +25,7 @@ pub fn BlockMenu(
     on_archive: EventHandler<()>,
     on_import: EventHandler<()>,
     on_export: EventHandler<()>,
+    on_reconcile: EventHandler<()>,
     on_delete: EventHandler<()>,
 ) -> Element {
     let is_dark = THEME() == Theme::Dark;
@@ -109,6 +110,19 @@ pub fn BlockMenu(
                                 alt: "Export"
                             }
                             "Export block"
+                        }
+                        div {
+                            class: "block-menu-item block-menu-item-edit",
+                            onclick: move |e| {
+                                e.stop_propagation();
+                                on_reconcile.call(());
+                            },
+                            img {
+                                src: edit_icon,
+                                class: "block-menu-icon",
+                                alt: "Reconcile"
+                            }
+                            "Reconcile counts"
                         }
                     }
                     div { class: "block-menu-divider" }

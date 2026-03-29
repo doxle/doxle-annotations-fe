@@ -73,6 +73,7 @@ pub fn AppNavbar(
         });
     });
 
+    let is_projects_page = matches!(&route, Route::ProjectsPage {});
     let has_project_context = matches!(
         &route,
         Route::CreateTaskPage { .. }
@@ -81,10 +82,11 @@ pub fn AppNavbar(
             | Route::BlocksPage { .. }
             | Route::CreateBlockPage { .. }
             | Route::ImportBlockPage { .. }
+            | Route::FileBlockPage { .. }
     );
     use_effect(move || {
         if has_project_context && PROJECTS.peek().is_empty() {
-            spawn(async move {
+            wasm_bindgen_futures::spawn_local(async move {
                 state_load_projects().await;
             });
         }
@@ -100,6 +102,7 @@ pub fn AppNavbar(
         Route::BlocksPage { project_id } => project_id.clone(),
         Route::CreateBlockPage { project_id } => project_id.clone(),
         Route::ImportBlockPage { project_id, .. } => project_id.clone(),
+        Route::FileBlockPage { project_id, .. } => project_id.clone(),
         _ => "default".to_string(),
     };
 
@@ -110,6 +113,9 @@ pub fn AppNavbar(
             (Some(block_id.clone()), Some(block_name.clone()), block_type.clone(), None, None, None, None, None, 0, 0)
         }
         Route::TasksListPage { project_id: _, block_id, block_name, block_type } => {
+            (Some(block_id.clone()), Some(block_name.clone()), block_type.clone(), None, None, None, None, None, 0, 0)
+        }
+        Route::FileBlockPage { project_id: _, block_id, block_name, block_type } => {
             (Some(block_id.clone()), Some(block_name.clone()), block_type.clone(), None, None, None, None, None, 0, 0)
         }
         Route::AnnotationCanvasPage { project_id: _, block_id, block_name, block_type, task_id, task_name, image_id, image_name } => {
@@ -173,7 +179,7 @@ pub fn AppNavbar(
                  class: "app-navbar-logo-container",
                  img {
                      key: "home-{is_dark}",
-                     src: if is_dark { LOGO_DARK } else { LOGO_LIGHT },
+                     src: LOGO_DARK,
                      class: "app-navbar-logo",
                      alt: "Home",
                      onclick: move |_| { logo_menu_open.set(!logo_menu_open()); }
@@ -183,81 +189,94 @@ pub fn AppNavbar(
                          class: "dog-menu-overlay",
                          onclick: move |_| { logo_menu_open.set(false); }
                      }
-                     div {
-                         class: "dog-menu-dropdown",
-                         onclick: move |e| e.stop_propagation(),
-                         img { class: "dog-menu-dog", src: LOGO_BLUE, alt: "Doxle" }
-                         div { class: "dog-menu-title", "Doxle" }
-                         div { class: "dog-menu-version", "V 1.1" }
-                         div { class: "dog-menu-email", "help@doxle.com" }
-                         div { class: "dog-menu-items",
-                             div {
-                                 class: "dog-menu-item",
-                                 onclick: move |_| {
-                                     nav.push(Route::ProjectsPage {});
-                                     logo_menu_open.set(false);
-                                 },
-                                 img { class: "dog-menu-item-icon", src: HOME_ICON }
-                                 "Home"
-                             }
-                             div {
-                                 class: "dog-menu-item",
-                                 onclick: move |_| {
-                                     let new_theme = if THEME() == Theme::Dark { Theme::Light } else { Theme::Dark };
-                                     *THEME.write() = new_theme;
-                                     logo_menu_open.set(false);
-                                 },
-                                 img { class: "dog-menu-item-icon", src: THEME_ICON }
-                                 "Theme"
-                             }
-                            div {
-                                class: if is_admin { "dog-menu-item" } else { "dog-menu-item disabled" },
-                                onclick: move |_| {
-                                    if is_admin {
-                                        show_settings.set(true);
-                                        logo_menu_open.set(false);
-                                    }
-                                },
-                                img { class: "dog-menu-item-icon", src: SETTINGS_ICON }
-                                "Settings"
-                            }
-                             div { class: "dog-menu-divider" }
-                             div {
-                                 class: "dog-menu-item",
-                                 onclick: move |_| {
-                                     logo_menu_open.set(false);
-                                 },
-                                 img { class: "dog-menu-item-icon", src: HELP_ICON }
-                                 "Help"
-                             }
-                             div {
-                                 class: "dog-menu-item",
-                                 onclick: move |_| {
-                                     logo_menu_open.set(false);
-                                 },
-                                 img { class: "dog-menu-item-icon", src: EMAIL_ICON }
-                                 "Email"
-                             }
-                             div {
-                                 class: "dog-menu-item",
-                                 onclick: move |_| {
-                                     spawn(async {
-                                         let _ = api::logout().await;
-                                     });
-                                     nav.push(Route::SignInPage {});
-                                     logo_menu_open.set(false);
-                                 },
-                                 img { class: "dog-menu-item-icon", src: SIGNOUT_ICON }
-                                 "Sign Out"
-                             }
-                         }
-                     }
+                     // DOG MENU ITEMS
+                     // div {
+                     //     class: "dog-menu-dropdown",
+                     //     onclick: move |e| e.stop_propagation(),
+                     //     img { class: "dog-menu-dog", src: LOGO_BLUE, alt: "Doxle" }
+                     //     div { class: "dog-menu-title", "Doxle" }
+                     //     div { class: "dog-menu-version", "V 1.1" }
+                     //     div { class: "dog-menu-email", "help@doxle.com" }
+                     //     div { class: "dog-menu-items",
+                     //         div {
+                     //             class: "dog-menu-item",
+                     //             onclick: move |_| {
+                     //                 nav.push(Route::ProjectsPage {});
+                     //                 logo_menu_open.set(false);
+                     //             },
+                     //             img { class: "dog-menu-item-icon", src: HOME_ICON }
+                     //             "Home"
+                     //         }
+                     //         div {
+                     //             class: "dog-menu-item",
+                     //             onclick: move |_| {
+                     //                 let new_theme = if THEME() == Theme::Dark { Theme::Light } else { Theme::Dark };
+                     //                 *THEME.write() = new_theme;
+                     //                 logo_menu_open.set(false);
+                     //             },
+                     //             img { class: "dog-menu-item-icon", src: THEME_ICON }
+                     //             "Theme"
+                     //         }
+                     //        div {
+                     //            class: if is_admin { "dog-menu-item" } else { "dog-menu-item disabled" },
+                     //            onclick: move |_| {
+                     //                if is_admin {
+                     //                    show_settings.set(true);
+                     //                    logo_menu_open.set(false);
+                     //                }
+                     //            },
+                     //            img { class: "dog-menu-item-icon", src: SETTINGS_ICON }
+                     //            "Settings"
+                     //        }
+                     //         div { class: "dog-menu-divider" }
+                     //         div {
+                     //             class: "dog-menu-item",
+                     //             onclick: move |_| {
+                     //                 logo_menu_open.set(false);
+                     //             },
+                     //             img { class: "dog-menu-item-icon", src: HELP_ICON }
+                     //             "Help"
+                     //         }
+                     //         div {
+                     //             class: "dog-menu-item",
+                     //             onclick: move |_| {
+                     //                 logo_menu_open.set(false);
+                     //             },
+                     //             img { class: "dog-menu-item-icon", src: EMAIL_ICON }
+                     //             "Email"
+                     //         }
+                     //         div {
+                     //             class: "dog-menu-item",
+                     //             onclick: move |_| {
+                     //                 spawn(async {
+                     //                     let _ = api::logout().await;
+                     //                 });
+                     //                 nav.push(Route::SignInPage {});
+                     //                 logo_menu_open.set(false);
+                     //             },
+                     //             img { class: "dog-menu-item-icon", src: SIGNOUT_ICON }
+                     //             "Sign Out"
+                     //         }
+                     //     }
+                     // }
                  }
              }
 
              div {
                 class: "app-navbar-left-section",
-                // Project breadcrumb
+                // Projects breadcrumb on projects list page
+                if is_projects_page {
+                    div {
+                        class: "app-breadcrumb-item clickable",
+                        onclick: move |_| {
+                            wasm_bindgen_futures::spawn_local(async move {
+                                state_load_projects().await;
+                            });
+                        },
+                        "Projects"
+                    }
+                }
+                // Project breadcrumb on sub-pages
                 if has_project_context {
                     div {
                         class: "app-breadcrumb-item clickable",

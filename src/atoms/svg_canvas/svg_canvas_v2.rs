@@ -76,6 +76,7 @@ const COMMENT_CURSOR_BLUE: Asset = asset!("/assets/icons/comment-blue.svg");
 
 #[component]
 pub fn SvgCanvasV2(
+	project_id:String,
 	block_id:String,
 	image_id:String,
 	image_url: String, 
@@ -134,6 +135,7 @@ pub fn SvgCanvasV2(
 	let dot_center = dot_world / 2.0;
 	let selected_label_id_for_mouse_move = selected_label_id.clone();
 	let selected_label_id_for_draw_area = selected_label_id.clone();
+	let project_id_for_mouse_up = project_id.clone();
 	
 
 	// Auto save feature for annotators
@@ -496,7 +498,7 @@ pub fn SvgCanvasV2(
                         .unwrap_or_default();
                         let img_id = image_id.clone();
 			            let block_id1 = block_id.clone();
-			            state_create_annotation(&block_id1, &img_id, &ann_id, &label_id, &label_name, new_geom, annotations);
+		            state_create_annotation(&project_id_for_mouse_up, &block_id1, &img_id, &ann_id, &label_id, &label_name, new_geom, annotations);
 			        }
 			        paste_mode.set(false);
 			        return;
@@ -550,7 +552,7 @@ pub fn SvgCanvasV2(
                         .unwrap_or_default();
                         let img_id = image_id.clone();
 			                let block_id1 = block_id.clone();
-			                state_create_annotation(&block_id1, &img_id, &ann_id, &label_id, &label_name, geometry, annotations);
+		                state_create_annotation(&project_id_for_mouse_up, &block_id1, &img_id, &ann_id, &label_id, &label_name, geometry, annotations);
 			            }
 			            bbox_start.set(None);
 			        } else {
@@ -591,7 +593,7 @@ pub fn SvgCanvasV2(
 			                let img_id = image_id.clone();
 			            	
                         let block_id1 = block_id.clone();
-			                state_create_annotation(&block_id1, &img_id, &ann_id, &label_id, &label_name, geometry, annotations);
+		                state_create_annotation(&project_id_for_mouse_up, &block_id1, &img_id, &ann_id, &label_id, &label_name, geometry, annotations);
 			                
 			                tracing::info!("Polygon save intiated{}", annotations.read().len());
 			                pts.clear();
@@ -741,6 +743,7 @@ let factor = (-dy * 0.009).exp().clamp(0.7,1.4); // zoom speed
 
 					// SAVED DRAWING
 					SavedAnnotation {
+						project_id: project_id.clone(),
 						block_id:block_id.clone(),
 						annotations:annotations,
 						on_annotation_context_menu:on_annotation_context_menu,
@@ -1253,6 +1256,7 @@ fn insert_point_on_polygon(points: &mut Vec<Point>, px: f64, py: f64) {
 
 #[component]
 fn SavedAnnotation(
+	project_id:String,
 	block_id:String,
 	annotations:Signal<Vec<Annotation>>,
 	on_annotation_context_menu:EventHandler<(String,String,f64,f64)>,
@@ -1589,6 +1593,7 @@ fn SavedAnnotation(
                 if is_selected || is_hovered {
                     for (i, pt) in points.iter().enumerate() {
                         DraggableNode {
+                            project_id: project_id.clone(),
                         	block_id: block_id.clone(),
                             ann_id: ann_id.clone(),
                             image_id: image_id.clone(),
@@ -1628,6 +1633,7 @@ fn SavedAnnotation(
 
 #[component]
 fn DraggableNode(
+	project_id:String,
 	block_id:String,
     ann_id: String,           // Which annotation this node belongs to
     image_id: String,         // For saving to backend
@@ -1699,8 +1705,9 @@ fn DraggableNode(
                         	// info!("should be coming here now : {}", aid);
                         	// annotations.write().retain(|a| a.id != aid);
                         	let img_id = image_id.clone();
+                       	let project_id1 = project_id.clone();
                         	let block_id1 = block_id.clone();
-                        	state_delete_annotation(&block_id1, &img_id, &aid, annotations);
+                       	state_delete_annotation(&project_id1, &block_id1, &img_id, &aid, annotations);
                         }
 
                         return;

@@ -5,37 +5,14 @@ use crate::shell::AppNavbar;
 use dioxus::prelude::*;
 
 const CREATE_BLOCK_CSS: &str = include_str!("create_block_page.css");
-const TYPEWRITER_JS: &str = include_str!("../../../js/create_block_typewriter.js");
-const CHECKMARK: Asset = asset!("/assets/icons/checkmark_light.svg");
 
 #[component]
 pub fn CreateBlockPage(project_id: String) -> Element {
     let mut block_name = use_signal(String::new);
+    let mut block_type = use_signal(|| BlockType::Annotation);
     let mut is_submitting = use_signal(|| false);
     let navigator = use_navigator();
     let project_id = use_signal(move || project_id.clone());
-    let has_text = block_name().trim().len() >= 3;
-
-    use_effect(move || {
-        document::eval(TYPEWRITER_JS);
-    });
-
-    use_effect(move || {
-        let js = r#"
-            document.addEventListener('blocksubmit', function handler(e) {
-                var hidden = document.getElementById('create-block-hidden');
-                if (hidden) {
-                    var nativeSet = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
-                    nativeSet.call(hidden, e.detail);
-                    hidden.dispatchEvent(new Event('input', { bubbles: true }));
-                    var form = document.getElementById('create-block-form');
-                    if (form) form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
-                }
-                document.removeEventListener('blocksubmit', handler);
-            });
-        "#;
-        document::eval(js);
-    });
 
     let on_submit = move |evt: Event<FormData>| {
         evt.prevent_default();
@@ -51,9 +28,10 @@ pub fn CreateBlockPage(project_id: String) -> Element {
             return;
         }
 
+        let bt = block_type().clone();
         is_submitting.set(true);
         spawn(async move {
-            match state_create_block(&project_id(), name.clone(), BlockType::Annotation, None).await {
+            match state_create_block(&project_id(), name.clone(), bt, None).await {
                 Ok(_) => {
                     crate::shell::progress::show_success(&format!("Block '{}' created", name));
                     navigator.push(Route::BlocksPage {
@@ -77,32 +55,94 @@ pub fn CreateBlockPage(project_id: String) -> Element {
         AppNavbar {}
         div {
             class: "create-blocks-page",
-            form {
-                id: "create-block-form",
-                class: "create-block-form",
-                onsubmit: on_submit,
-                autocomplete: "off",
-                div {
-                    id: "create-block-input",
-                    class: "create-block-input",
-                    contenteditable: "true",
-                    spellcheck: "false",
-                }
-                input {
-                    id: "create-block-hidden",
-                    r#type: "hidden",
-                    value: "{block_name}",
-                    oninput: move |e| block_name.set(e.value()),
-                }
-                if has_text {
-                    button {
-                        r#type: "submit",
-                        class: "create-block-submit",
-                        disabled: *is_submitting.read(),
-                        img { src: CHECKMARK }
+            div {
+                class: "blocks-form-container",
+                // h1 {
+                //     class: "create-blocks-title",
+                //     "New Block"
+                // }
+                form {
+                    class: "blocks-form",
+                    onsubmit: on_submit,
+                    autocomplete: "off",
+                    div {
+                        class: "blocks-form-group",
+                        h1 {
+                            class: "new-block-label",
+                            "# NEW BLOCK"
+                        }
+                        div {
+                            class: "input-with-icons",
+                            input {
+                                class: "blocks-name-input",
+                                r#type: "text",
+                                placeholder: "Enter block name",
+                                value: "{block_name}",
+                                oninput: move |e| block_name.set(e.value()),
+                                autofocus: true,
+                            }
+                            div {
+                                class: "input-divider",
+                            }
+                            div {
+                                class: "block-type-icons",
+                        button {
+                            r#type: "button",
+                            class: if block_type() == BlockType::Building { "block-icon-button block-icon-button-first active" } else { "block-icon-button block-icon-button-first" },
+                            onclick: move |_| block_type.set(BlockType::Building),
+                            img {
+                                class: "block-icon light-icon",
+                                src: asset!("/assets/icons/build-block-light.svg"),
+                            }
+                            img {
+                                class: "block-icon dark-icon",
+                                src: asset!("/assets/icons/build-block-dark.svg"),
+                            }
+                        }
+                        button {
+                            r#type: "button",
+                            class: if block_type() == BlockType::Annotation { "block-icon-button block-icon-button-middle active" } else { "block-icon-button block-icon-button-middle" },
+                            onclick: move |_| block_type.set(BlockType::Annotation),
+                            img {
+                                class: "block-icon light-icon",
+                                src: asset!("/assets/icons/annotation-block-light.svg"),
+                            }
+                            img {
+                                class: "block-icon dark-icon",
+                                src: asset!("/assets/icons/annotation-block-dark.svg"),
+                            }
+                        }
+                        button {
+                            r#type: "button",
+                            class: if block_type() == BlockType::File { "block-icon-button block-icon-button-last active" } else { "block-icon-button block-icon-button-last" },
+                            onclick: move |_| block_type.set(BlockType::File),
+                            img {
+                                class: "block-icon light-icon",
+                                src: asset!("/assets/icons/file-block-light.svg"),
+                            }
+                            img {
+                                class: "block-icon dark-icon",
+                                src: asset!("/assets/icons/file-block-dark.svg"),
+                            }
+                        }
+                            }
+                        }
                     }
-                } else {
-                    div { class: "create-block-submit-placeholder" }
+                    div {
+                        class: "form-actions",
+                        button {
+                            class: "blocks-back-button",
+                            r#type: "button",
+                            onclick: move |_| { navigator.push(Route::BlocksPage { project_id: project_id().clone() }); },
+                            "Back"
+                        }
+                        button {
+                            class: "blocks-create-button",
+                            r#type: "submit",
+                            disabled: *is_submitting.read() || block_name().trim().is_empty(),
+                            if *is_submitting.read() { "Creating..." } else { "Submit" }
+                        }
+                    }
                 }
             }
         }

@@ -1,6 +1,6 @@
 use dioxus::prelude::*;
 use crate::Route;
-use crate::shell::{progress, AppNavbar, ProtectedRoute, THEME, Theme};
+use crate::shell::{progress, AppNavbar, ProtectedRoute, LoadingScreen, THEME, Theme};
 use crate::users::state::USER;
 use super::api::api_delete_project;
 use super::project_menu::ProjectMenu;
@@ -9,16 +9,32 @@ use super::state::{PROJECTS, PROJECTS_LOADING, state_load_projects, state_rename
 const PROJECTS_CSS: &str = include_str!("project_list_page.css");
 const ADD_ICON_LIGHT: Asset = asset!("/assets/icons/add-light.svg");
 const ADD_ICON_DARK: Asset = asset!("/assets/icons/add-dark.svg");
+const LIST_ICON_LIGHT: Asset = asset!("/assets/icons/list-light.svg");
+const LIST_ICON_DARK: Asset = asset!("/assets/icons/list-dark.svg");
+const GRID_ICON_LIGHT: Asset = asset!("/assets/icons/grid-light.svg");
+const GRID_ICON_DARK: Asset = asset!("/assets/icons/grid-dark.svg");
+const SEARCH_ICON_LIGHT: Asset = asset!("/assets/icons/search-light.svg");
+const SEARCH_ICON_DARK: Asset = asset!("/assets/icons/search-dark.svg");
+const CLOSE_ICON_LIGHT: Asset = asset!("/assets/icons/close-light.svg");
+const CLOSE_ICON_DARK: Asset = asset!("/assets/icons/close-dark.svg");
 
 #[component]
 pub fn ProjectsPage() -> Element {
     let navigator = use_navigator();
     let is_admin = USER.read().as_ref().map(|u| u.is_admin()).unwrap_or(false);
     let is_dark = THEME() == Theme::Dark;
-    let add_icon = if is_dark { ADD_ICON_DARK } else { ADD_ICON_LIGHT };
+    let add_icon = ADD_ICON_DARK; // navbar is always dark
+    let add_icon_page = if is_dark { ADD_ICON_DARK } else { ADD_ICON_LIGHT };
+    let list_icon = if is_dark { LIST_ICON_DARK } else { LIST_ICON_LIGHT };
+    let grid_icon = if is_dark { GRID_ICON_DARK } else { GRID_ICON_LIGHT };
+    let search_icon = if is_dark { SEARCH_ICON_DARK } else { SEARCH_ICON_LIGHT };
+    let close_icon = if is_dark { CLOSE_ICON_DARK } else { CLOSE_ICON_LIGHT };
     let mut open_menu_id: Signal<Option<String>> = use_signal(|| None);
     let mut renaming_project: Signal<Option<(String, String)>> = use_signal(|| None); // (project_id, current_name)
     let mut rename_input = use_signal(String::new);
+    let mut view_mode: Signal<String> = use_signal(|| "grid".to_string()); // "grid" or "list"
+    let mut search_active: Signal<bool> = use_signal(|| false);
+    let mut search_query = use_signal(String::new);
 
     // Load projects on mount
     tracing::info!("📋 ProjectsPage render — PROJECTS count: {}, LOADING: {}", PROJECTS.read().len(), PROJECTS_LOADING());
@@ -31,61 +47,115 @@ pub fn ProjectsPage() -> Element {
         }
     });
 
-    if PROJECTS_LOADING() {
-        return rsx! {
-            ProtectedRoute {
-                AppNavbar {}
-                div { class: "projects-page",
-                    div { class: "projects-loading", "Loading projects..." }
-                }
-            }
-        };
-    }
-
     let projects = PROJECTS.read().clone();
     tracing::info!("📋 Projects to render: {}", projects.len());
+    
+    // Filter projects based on search query
+    let filtered_projects: Vec<_> = if search_query().is_empty() {
+        projects.clone()
+    } else {
+        let query = search_query().to_lowercase();
+        projects.iter()
+            .filter(|p| p.project_name.to_lowercase().contains(&query))
+            .cloned()
+            .collect()
+    };
 
     rsx! {
         ProtectedRoute {
-            AppNavbar {
-                if is_admin {
-                    button {
-                        class: "app-navbar-center-button",
-                        onclick: move |_| {
-                            navigator.push(Route::CreateProjectPage {});
-                        },
-                        img { src: add_icon, class: "app-navbar-center-button-icon" }
-                        "New Project"
-                    }
-                }
-            }
+            AppNavbar {}
+            if PROJECTS_LOADING() {
+                LoadingScreen { text: "Loading projects".to_string() }
+            } else {
             style { {PROJECTS_CSS} }
             div {
-                class: "projects-page",
+                class: "project-page",
                 onclick: move |_| {
                     if open_menu_id().is_some() {
                         open_menu_id.set(None);
                     }
                 },
-                div {
-                    class: "projects-heading-row",
-                    div { class: "projects-heading", "Projects" }
-                }
                 if projects.is_empty() {
-                    div { class: "projects-empty",
+                    div { class: "project-empty",
                         if is_admin {
                             button {
-                                class: "create-project-btn create-project-btn-primary",
+                                class: "projects-heading-new-btn",
                                 onclick: move |_| { navigator.push(Route::CreateProjectPage {}); },
-                                "Create your first project"
+                                "Create project"
                             }
                         } else {
                             "No projects available yet"
                         }
                     }
                 } else {
-                    ul { class: "projects-list",
-                        for project in projects.iter() {
+                    div {
+                        class: if view_mode() == "list" { "project-list-container list-mode" } else { "project-list-container" },
+                        div {
+                            class: if search_active() { "new-page-btn search-mode" } else { "new-page-btn" },
+                            if search_active() {
+                                button {
+                                    class: "search-icon-btn",
+                                    img { src: search_icon, class: "action-icon search-icon" }
+                                }
+                                input {
+                                    class: "search-input",
+                                    r#type: "text",
+                                    placeholder: "Search projects...",
+                                    value: "{search_query}",
+                                    oninput: move |e| search_query.set(e.value()),
+                                    onkeydown: move |e| {
+                                        if e.key() == Key::Escape {
+                                            search_active.set(false);
+                                            search_query.set(String::new());
+                                        }
+                                    },
+                                    onmounted: move |e| {
+                                        let _ = e.set_focus(true);
+                                    },
+                                }
+                                button {
+                                    class: "close-search-btn",
+                                    onclick: move |_| {
+                                        search_active.set(false);
+                                        search_query.set(String::new());
+                                    },
+                                    img { src: close_icon, class: "action-icon" }
+                                }
+                            } else {
+                                button {
+                                    class: "new-project-action",
+                                    onclick: move |_| {
+                                        navigator.push(Route::CreateProjectPage {});
+                                    },
+                                    img { src: add_icon_page, class: "action-icon" }
+                                    "New Project"
+                                }
+                                div { class: "action-divider" }
+                                button {
+                                    class: if view_mode() == "list" { "action-btn active" } else { "action-btn" },
+                                    onclick: move |_| view_mode.set("list".to_string()),
+                                    img { src: list_icon, class: "action-icon" }
+                                }
+                                div { class: "action-divider" }
+                                button {
+                                    class: if view_mode() == "grid" { "action-btn active" } else { "action-btn" },
+                                    onclick: move |_| view_mode.set("grid".to_string()),
+                                    img { src: grid_icon, class: "action-icon" }
+                                }
+                                div { class: "action-divider" }
+                                button {
+                                    class: "action-btn",
+                                    onclick: move |_| search_active.set(true),
+                                    img { src: search_icon, class: "action-icon search-icon" }
+                                }
+                            }
+                        }
+                        if filtered_projects.is_empty() && search_active() {
+                            div { class: "no-results", "No projects matched" }
+                        } else {
+                            ul {
+                                class: if view_mode() == "list" { "project-list project-list-view" } else { "project-list" },
+                                for project in filtered_projects.iter() {
                             {
                                 let pid = project.project_id.clone();
                                 let name = project.project_name.clone();
@@ -166,13 +236,17 @@ pub fn ProjectsPage() -> Element {
                                                 }
                                             }
                                         }
+                                        div { class: "project-card-meta", "#{project.block_count} BLOCKS" }
                                         div { class: "project-card-name", "{name}" }
                                     }
                                 }
                             }
                         }
                     }
+                        }
+                    }
                 }
+            }
             }
             if let Some((project_id, current_name)) = renaming_project() {
                 {

@@ -1,7 +1,7 @@
 #![allow(dead_code, unused_imports, unused_variables, unused_mut, deprecated)]
 
 use dioxus::prelude::*;
-use blocks::{BlocksPage, CreateBlockPage, ImportBlockPage};
+use blocks::{BlocksPage, CreateBlockPage, FileBlockPage, ImportBlockPage};
 use projects::{ProjectsPage, CreateProjectPage};
 use atoms::tasks::{TasksListPage, CreateTaskPage};
 use blocks::annotations::AnnotationCanvasPage;
@@ -72,6 +72,7 @@ const APP_SIDEBAR_CSS: &str = include_str!("shell/app_sidebar/app_sidebar.css");
 const APP_NAVBAR_CSS: &str = include_str!("shell/app_navbar/app_navbar.css");
 const DOTS_CSS: &str = include_str!("home/dots.css");
 const VIEWER3D_CSS: &str = include_str!("viewer3d/viewer_page.css");
+const FILE_BLOCK_PAGE_CSS: &str = include_str!("blocks/file_block/file_block_page.css");
 
 fn main() {
     // Initialize tracing and filter out noisy warnings
@@ -174,6 +175,7 @@ fn App() -> Element {
                 document::Style { {APP_NAVBAR_CSS} }
                 document::Style { {DOTS_CSS} }
                 document::Style { {VIEWER3D_CSS} }
+                document::Style { {FILE_BLOCK_PAGE_CSS} }
 
                 // Fonts from template with asset URLs
                 document::Style {
@@ -225,6 +227,8 @@ enum Route {
     CreateBlockPage{ project_id: String },
     #[route("/projects/:project_id/blocks/:block_id/:block_name/:block_type/import")]
     ImportBlockPage { project_id: String, block_id: String, block_name: String, block_type: String },
+    #[route("/projects/:project_id/blocks/:block_id/:block_name/:block_type/files")]
+    FileBlockPage { project_id: String, block_id: String, block_name: String, block_type: String },
     #[route("/projects/:project_id/blocks/:block_id/:block_name/:block_type/tasks/new")]
     CreateTaskPage { project_id: String, block_id: String, block_name: String, block_type: String },
     #[route("/projects/:project_id/blocks/:block_id/:block_name/:block_type/tasks")]

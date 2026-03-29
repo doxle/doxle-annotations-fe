@@ -5,31 +5,19 @@ use serde::{Deserialize, Serialize};
 pub struct Project {
     pub project_id: String,
     pub project_name: String,
-    #[serde(default)]
+    pub block_count: u32,
     pub project_company: Option<String>,
-    #[serde(default)]
     pub project_status: String,
-    #[serde(default)]
     pub project_address: Option<String>,
-    #[serde(default)]
     pub project_email: Option<String>,
-    #[serde(default)]
     pub project_owner: String,
-    #[serde(default)]
     pub project_members: Vec<String>,
-    #[serde(default)]
     pub project_start_date: Option<String>,
-    #[serde(default)]
     pub project_end_date: Option<String>,
-    #[serde(default)]
     pub project_description: Option<String>,
-    #[serde(default)]
     pub project_budget: Option<String>,
-    #[serde(default)]
     pub project_client_name: Option<String>,
-    #[serde(default)]
     pub project_created_at: String,
-    #[serde(default)]
     pub project_updated_at: String,
 }
 

@@ -22,10 +22,20 @@ pub fn LiveTimer() -> Element {
     });
 
     let elapsed_display = format_elapsed(elapsed_ms());
+    let secs = (elapsed_ms() / 1000) as u64;
+    let bar_class = if secs >= 75 {
+        "live-timer-loader bar-4"
+    } else if secs >= 50 {
+        "live-timer-loader bar-3"
+    } else if secs >= 25 {
+        "live-timer-loader bar-2"
+    } else {
+        "live-timer-loader bar-1"
+    };
 
     rsx! {
         style { {LIVE_TIMER_CSS} }
-        div { class: "live-timer-loader",
+        div { class: bar_class,
             span { class: "live-timer-value", "{elapsed_display}" }
         }
     }

@@ -32,7 +32,7 @@ pub async fn state_load_annotations(image_id:&str, mut annotations: Signal<Vec<A
 
 /// Create annotation with optimistic update
 /// API call uses spawn_local so it survives component unmount (e.g. breadcrumb navigation)
-pub fn state_create_annotation(block_id:&str, image_id:&str, ann_id:&str, label_id:&str, label_name:&str, geometry:Geometry, mut annotations:Signal<Vec<Annotation>>) {
+pub fn state_create_annotation(project_id:&str, block_id:&str, image_id:&str, ann_id:&str, label_id:&str, label_name:&str, geometry:Geometry, mut annotations:Signal<Vec<Annotation>>) {
 	 let ann_id = ann_id.to_string();
 
 	 // Optimistic UI update
@@ -46,12 +46,13 @@ pub fn state_create_annotation(block_id:&str, image_id:&str, ann_id:&str, label_
 	 tracing::info!("✅ Annotation added to UI (optimistic)");
 
 	  // Fire-and-forget API call — survives component unmount
+	  let project_id = project_id.to_string();
 	  let block_id = block_id.to_string();
 	  let image_id = image_id.to_string();
 	  let label_id = label_id.to_string();
 	  let label_name = label_name.to_string();
 	  wasm_bindgen_futures::spawn_local(async move {
-	      match api::api_create_annotation(&block_id, &image_id, &ann_id, &label_id, &label_name, geometry.clone()).await {
+	      match api::api_create_annotation(&project_id, &block_id, &image_id, &ann_id, &label_id, &label_name, geometry.clone()).await {
 	          Ok(server_ann_id) => {
 	               tracing::info!("✅ Annotation created on server: {}", server_ann_id);
 	          }
@@ -94,16 +95,17 @@ pub fn state_update_annotation_label(project_id:&str, block_id:&str, image_id:&s
 
 /// Delete annotation (optimistic)
 /// Uses spawn_local so it survives component unmount
-pub fn state_delete_annotation(block_id:&str, image_id:&str, annotation_id:&str, mut annotations:Signal<Vec<Annotation>>){
+pub fn state_delete_annotation(project_id:&str, block_id:&str, image_id:&str, annotation_id:&str, mut annotations:Signal<Vec<Annotation>>){
 	// Optimistic: remove from UI immediately
 	annotations.write().retain(|a| a.id != annotation_id);
 	show_success("Annotation deleted");
+	let project_id = project_id.to_string();
 
 	let block_id = block_id.to_string();
 	let image_id = image_id.to_string();
 	let annotation_id = annotation_id.to_string();
 	wasm_bindgen_futures::spawn_local(async move {
-		match api::api_delete_annotation(&block_id, &image_id, &annotation_id).await {
+		match api::api_delete_annotation(&project_id, &block_id, &image_id, &annotation_id).await {
 			Ok(_)=>{
 				tracing::info!("✅ Annotation deleted on server");
 			},

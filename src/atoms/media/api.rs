@@ -1,26 +1,26 @@
+use crate::atoms::media::{Image, MarkupRect};
+use crate::atoms::tasks::state::TASKS;
 use crate::shell::client;
 use gloo_net::http::Request;
 use serde::{Deserialize, Serialize};
 use wasm_bindgen::{JsCast, JsValue};
 use web_sys::{Blob, File};
-use crate::atoms::media::Image;
-use crate::atoms::tasks::state::TASKS;
 
-
-/// DELETE /images/{image_id}?block_id={block_id}
-pub async fn api_delete_image(block_id: &str, image_id: &str) -> Result<(), String> {
-    let endpoint = format!("/images/{}?block_id={}", image_id, block_id);
-    client::delete(&endpoint).await
-}
-
-const MULTIPART_THRESHOLD: usize = 5 * 1024 * 1024; // 5MB
 const CHUNK_SIZE: usize = 5 * 1024 * 1024; // 5MB per part
 
+#[derive(Copy, Clone)]
+enum UploadNamespace {
+    Annotation,
+    File,
+}
 
-#[derive(Debug, Serialize)]
-pub struct CreateImageRequest {
-    pub url: String,
-    pub order: Option<i32>,
+impl UploadNamespace {
+    fn as_str(&self) -> &'static str {
+        match self {
+            UploadNamespace::Annotation => "annotation",
+            UploadNamespace::File => "file",
+        }
+    }
 }
 
 #[derive(Serialize)]
@@ -29,12 +29,13 @@ struct InitiateUploadRequest {
     file_name: String,
     content_type: String,
     file_size: usize,
+    upload_namespace: String,
 }
 
 #[derive(Deserialize)]
 struct InitiateUploadResponse {
     image_id: String,
-    upload_id: Option<String>, 
+    upload_id: Option<String>,
     upload_urls: Vec<UploadPart>,
     is_multipart: bool,
     extension: String,
@@ -53,6 +54,7 @@ struct CompleteMultipartRequest {
     upload_id: String,
     extension: String,
     parts: Vec<CompletedPart>,
+    upload_namespace: String,
 }
 
 #[derive(Serialize, Clone)]
@@ -67,29 +69,140 @@ struct UploadCompleteResponse {
     url: String,
 }
 
-// POST /projects/{pid}/blocks/{id}/images - create image record
-pub async fn create_image(
-    project_id: &str,
-    block_id: &str,
+#[derive(Debug, Serialize)]
+struct CreateBlockMediaRequest {
+    image_id: String,
+    image_name: String,
     url: String,
-    order: Option<i32>,
-) -> Result<Image, String> {
-    let endpoint = format!("/projects/{}/blocks/{}/images", project_id, block_id);
-    let request = CreateImageRequest { url, order };
-    client::post::<CreateImageRequest, Image>(&endpoint, &request).await
+    media_type: String,
 }
 
-// GET /projects/{pid}/blocks/{id}/images - list block images
-pub async fn list_block_images( block_id: &str) -> Result<Vec<Image>, String> {
-    let endpoint = format!("/blocks/{}/images",  block_id);
+#[derive(Debug, Serialize)]
+struct UpdateImageMarkupRequest {
+    markup_rects: Vec<MarkupRect>,
+}
+
+/// GET /images/{image_id}?block_id={block_id}
+pub async fn api_get_image(block_id: &str, image_id: &str) -> Result<Image, String> {
+    let endpoint = format!("/images/{}?block_id={}", image_id, block_id);
+    client::get::<Image>(&endpoint).await
+}
+
+/// PATCH /images/{image_id}?block_id={block_id}
+pub async fn api_update_image_markup(
+    project_id: &str,
+    block_id: &str,
+    image_id: &str,
+    markup_rects: Vec<MarkupRect>,
+) -> Result<Image, String> {
+    let endpoint = format!(
+        "/projects/{}/blocks/{}/media/{}/markup",
+        project_id, block_id, image_id
+    );
+    let body = UpdateImageMarkupRequest { markup_rects };
+    client::patch::<UpdateImageMarkupRequest, Image>(&endpoint, &body).await
+}
+
+/// DELETE /images/{image_id}?block_id={block_id}&project_id={project_id}
+pub async fn api_delete_image(project_id: &str, block_id: &str, image_id: &str) -> Result<(), String> {
+    let endpoint = format!("/images/{}?block_id={}&project_id={}", image_id, block_id, project_id);
+    client::delete(&endpoint).await
+}
+
+/// GET /projects/{pid}/blocks/{block_id}/media
+pub async fn list_block_media(project_id: &str, block_id: &str) -> Result<Vec<Image>, String> {
+    let endpoint = format!("/projects/{}/blocks/{}/media", project_id, block_id);
     client::get::<Vec<Image>>(&endpoint).await
 }
 
-/// Common S3 upload logic (handles single and multipart)
-/// Returns (image_id, image_name, image_url)
+/// POST /projects/{pid}/blocks/{block_id}/media
+pub async fn create_block_media(
+    project_id: &str,
+    block_id: &str,
+    image_id: String,
+    image_name: String,
+    url: String,
+    media_type: String,
+) -> Result<Image, String> {
+    let endpoint = format!("/projects/{}/blocks/{}/media", project_id, block_id);
+    let body = CreateBlockMediaRequest {
+        image_id,
+        image_name,
+        url,
+        media_type,
+    };
+    client::post::<CreateBlockMediaRequest, Image>(&endpoint, &body).await
+}
+
+/// Upload a file for a File block (no task link).
+pub async fn upload_image_for_block(project_id: &str, block_id: &str, file: File) -> Result<String, String> {
+    let media_type = detect_media_type(&file);
+    let (image_id, image_name, image_url) =
+        upload_file_to_s3(block_id, file, UploadNamespace::File).await?;
+
+    match create_block_media(
+        project_id,
+        block_id,
+        image_id.clone(),
+        image_name,
+        image_url,
+        media_type,
+    )
+    .await
+    {
+        Ok(image) => Ok(image.image_id),
+        Err(e) => {
+            dioxus::logger::tracing::error!("❌ Failed to create block media record: {}", e);
+            Ok(image_id)
+        }
+    }
+}
+
+/// Upload a task-specific file to S3 and create the task image record.
+pub async fn upload_image_for_task(
+    project_id: &str,
+    block_id: &str,
+    task_id: &str,
+    file: File,
+) -> Result<String, String> {
+    let (image_id, image_name, image_url) =
+        upload_file_to_s3(block_id, file, UploadNamespace::Annotation).await?;
+
+    match crate::atoms::tasks::api::api_create_task_image(
+        project_id,
+        block_id,
+        task_id,
+        image_id.clone(),
+        image_name,
+        image_url,
+    )
+    .await
+    {
+        Ok(image) => {
+            let block_id = block_id.to_string();
+            let task_id = task_id.to_string();
+            let mut tasks = TASKS.write();
+            for task in tasks.iter_mut() {
+                if task.task_id == task_id && task.block_id == block_id {
+                    task.images.push(image.clone());
+                    break;
+                }
+            }
+            Ok(image.image_id)
+        }
+        Err(e) => {
+            dioxus::logger::tracing::error!("❌ Failed to create task image record: {}", e);
+            Ok(image_id)
+        }
+    }
+}
+
+/// Common S3 upload logic (handles single and multipart).
+/// Returns (image_id, image_name, image_url).
 async fn upload_file_to_s3(
     block_id: &str,
     file: File,
+    upload_namespace: UploadNamespace,
 ) -> Result<(String, String, String), String> {
     let file_name = file.name();
     let content_type = if file.type_().is_empty() {
@@ -99,7 +212,6 @@ async fn upload_file_to_s3(
     };
     let file_size = file.size() as usize;
 
-    // Step 1: Initiate upload
     let api_url = crate::shell::client::API_BASE_URL;
 
     let initiate_request = InitiateUploadRequest {
@@ -107,9 +219,10 @@ async fn upload_file_to_s3(
         file_name: file_name.clone(),
         content_type: content_type.clone(),
         file_size,
+        upload_namespace: upload_namespace.as_str().to_string(),
     };
 
-    let response = Request::post(&format!("{}/annotate/upload/initiate", api_url))
+    let response = Request::post(&format!("{}/media/upload/initiate", api_url))
         .credentials(web_sys::RequestCredentials::Include)
         .header("Content-Type", "application/json")
         .json(&initiate_request)
@@ -123,7 +236,6 @@ async fn upload_file_to_s3(
             crate::shell::client::handle_unauthorized();
             return Err("Unauthorized - please log in again".to_string());
         }
-
         let error_text = response.text().await.unwrap_or_else(|_| "Unknown error".to_string());
         return Err(format!("Failed to initiate upload: {}", error_text));
     }
@@ -133,37 +245,30 @@ async fn upload_file_to_s3(
         .await
         .map_err(|e| format!("Failed to parse initiate response: {}", e))?;
 
-    // Step 2: Upload file data (S3)
-    let image_url = if initiate_response.is_multipart {
-        // Multipart upload
-        let image_id = upload_multipart(
+    let complete_response = if initiate_response.is_multipart {
+        upload_multipart(
             file,
             &initiate_response.upload_urls,
             block_id,
             &initiate_response.image_id,
             initiate_response.upload_id.as_ref().unwrap(),
             &initiate_response.extension,
+            upload_namespace.as_str(),
         )
-        .await?;
-
-        format!(
-            "https://doxle-annotations.s3.amazonaws.com/annotations/blocks/{}/images/{}.{}",
-             block_id, image_id, initiate_response.extension
-        )
+        .await?
     } else {
-        // Single part upload
         upload_single_part(file, &initiate_response.upload_urls[0].upload_url).await?;
 
-        // Call complete endpoint to trigger image processing
         let complete_request = CompleteMultipartRequest {
             block_id: block_id.to_string(),
             image_id: initiate_response.image_id.clone(),
-            upload_id: String::new(), // Empty for single-part
+            upload_id: String::new(),
             extension: initiate_response.extension.clone(),
-            parts: vec![], // Empty for single-part
+            parts: vec![],
+            upload_namespace: upload_namespace.as_str().to_string(),
         };
 
-        let response = Request::post(&format!("{}/annotate/upload/complete", api_url))
+        let response = Request::post(&format!("{}/media/upload/complete", api_url))
             .credentials(web_sys::RequestCredentials::Include)
             .header("Content-Type", "application/json")
             .json(&complete_request)
@@ -181,80 +286,21 @@ async fn upload_file_to_s3(
             return Err(format!("Failed to complete upload: {}", error_text));
         }
 
-        let complete_response: UploadCompleteResponse = response
+        response
             .json()
             .await
-            .map_err(|e| format!("Failed to parse complete response: {}", e))?;
-
-        complete_response.url
+            .map_err(|e| format!("Failed to parse complete response: {}", e))?
     };
 
-    Ok((initiate_response.image_id, file_name, image_url))
+    Ok((complete_response.image_id, file_name, complete_response.url))
 }
 
-/// Upload a file for a Storage Block (no task link)
-pub async fn upload_image_for_block(block_id: &str, file: File) -> Result<String, String> {
-    // Reuse common S3 logic
-    let (image_id, _image_name, image_url) = upload_file_to_s3(block_id, file).await?;
-
-    // Step 3: Create generic image record in database
-    let project_id = "default"; 
-
-    match create_image(project_id, block_id, image_url.clone(), None).await {
-        Ok(image) => {
-            dioxus::logger::tracing::info!("✅ Image record created: {}", image.image_id);
-            Ok(image.image_id)
-        }
-        Err(e) => {
-            dioxus::logger::tracing::error!("❌ Failed to create image record: {}", e);
-            Ok(image_id)
-        }
-    }
-}
-
-/// Upload a task-specific file to S3 and create the task image record
-pub async fn upload_image_for_task(
-    project_id: &str,
-    block_id: &str,
-    task_id: &str,
-    file: File,
-) -> Result<String, String> {
-    // Reuse common S3 logic
-    let (image_id, image_name, image_url) = upload_file_to_s3(block_id, file).await?;
-
-    // Step 3: Create TASK image record
-    match crate::atoms::tasks::api::api_create_task_image(project_id, block_id, task_id, image_id.clone(), image_name, image_url.clone()).await {
-        Ok(image) => {
-            dioxus::logger::tracing::info!("✅ Task Image record created: {}", image.image_id);
-            // Also update TASKS so UI immediately sees the image
-            let block_id = block_id.to_string();
-            let task_id = task_id.to_string();
-            let mut tasks = TASKS.write();
-            for task in tasks.iter_mut(){
-                if task.task_id == task_id && task.block_id == block_id {
-                    task.images.push(image.clone());
-                    break; // stop after first match
-                }
-            } 
-
-
-            Ok(image.image_id)
-        }
-        Err(e) => {
-            dioxus::logger::tracing::error!("❌ Failed to create task image record: {}", e);
-            Ok(image_id)
-        }
-    }
-}
-
-/// Upload file in a single part (< 5MB)
+/// Upload file in a single part.
 async fn upload_single_part(file: File, upload_url: &str) -> Result<(), String> {
-    // Read file as ArrayBuffer
     let array_buffer = read_file_as_array_buffer(&file)
         .await
         .map_err(|e| format!("Failed to read file: {:?}", e))?;
 
-    // Upload to S3 presigned URL
     let response = Request::put(upload_url)
         .header("Content-Type", &file.type_())
         .body(&array_buffer)
@@ -270,7 +316,7 @@ async fn upload_single_part(file: File, upload_url: &str) -> Result<(), String> 
     Ok(())
 }
 
-/// Upload file in multiple parts (>= 5MB)
+/// Upload file in multiple parts.
 async fn upload_multipart(
     file: File,
     upload_urls: &[UploadPart],
@@ -278,26 +324,23 @@ async fn upload_multipart(
     image_id: &str,
     upload_id: &str,
     extension: &str,
-) -> Result<String, String> {
+    upload_namespace: &str,
+) -> Result<UploadCompleteResponse, String> {
     let file_size = file.size() as usize;
     let mut completed_parts = Vec::new();
 
-    // Upload each part
     for (idx, upload_part) in upload_urls.iter().enumerate() {
         let start = idx * CHUNK_SIZE;
         let end = ((idx + 1) * CHUNK_SIZE).min(file_size);
 
-        // Create blob slice for this part
         let blob_part = file
             .slice_with_f64_and_f64(start as f64, end as f64)
             .map_err(|e| format!("Failed to slice file: {:?}", e))?;
 
-        // Read as ArrayBuffer
         let array_buffer = read_blob_as_array_buffer(&blob_part)
             .await
             .map_err(|e| format!("Failed to read part {}: {:?}", upload_part.part_number, e))?;
 
-        // Upload part
         let response = Request::put(&upload_part.upload_url)
             .body(&array_buffer)
             .map_err(|e| format!("Failed to create part upload request: {}", e))?
@@ -313,7 +356,6 @@ async fn upload_multipart(
             ));
         }
 
-        // Get ETag from response headers
         let etag = response
             .headers()
             .get("etag")
@@ -327,7 +369,6 @@ async fn upload_multipart(
         });
     }
 
-    // Step 3: Complete multipart upload
     let api_url = crate::shell::client::API_BASE_URL;
 
     let complete_request = CompleteMultipartRequest {
@@ -336,9 +377,10 @@ async fn upload_multipart(
         upload_id: upload_id.to_string(),
         extension: extension.to_string(),
         parts: completed_parts,
+        upload_namespace: upload_namespace.to_string(),
     };
 
-    let response = Request::post(&format!("{}/annotate/upload/complete", api_url))
+    let response = Request::post(&format!("{}/media/upload/complete", api_url))
         .credentials(web_sys::RequestCredentials::Include)
         .header("Content-Type", "application/json")
         .json(&complete_request)
@@ -349,28 +391,34 @@ async fn upload_multipart(
 
     if !response.ok() {
         if response.status() == 401 {
-                crate::shell::client::handle_unauthorized();
-                return Err("Unauthorized - please log in again".to_string());
+            crate::shell::client::handle_unauthorized();
+            return Err("Unauthorized - please log in again".to_string());
         }
         let error_text = response
             .text()
             .await
             .unwrap_or_else(|_| "Unknown error".to_string());
-        return Err(format!(
-            "Failed to complete multipart upload: {}",
-            error_text
-        ));
+        return Err(format!("Failed to complete multipart upload: {}", error_text));
     }
 
-    let complete_response: UploadCompleteResponse = response
+    response
         .json()
         .await
-        .map_err(|e| format!("Failed to parse complete response: {}", e))?;
-
-    Ok(complete_response.image_id)
+        .map_err(|e| format!("Failed to parse complete response: {}", e))
 }
 
-/// Read File as ArrayBuffer using FileReader
+fn detect_media_type(file: &File) -> String {
+    let mime = file.type_();
+    if mime.starts_with("video/") {
+        "video".to_string()
+    } else if mime.starts_with("image/") {
+        "image".to_string()
+    } else {
+        "file".to_string()
+    }
+}
+
+/// Read File as ArrayBuffer using FileReader.
 async fn read_file_as_array_buffer(file: &File) -> Result<js_sys::ArrayBuffer, JsValue> {
     use wasm_bindgen_futures::JsFuture;
 
@@ -402,7 +450,7 @@ async fn read_file_as_array_buffer(file: &File) -> Result<js_sys::ArrayBuffer, J
     Ok(result.dyn_into::<js_sys::ArrayBuffer>()?)
 }
 
-/// Read Blob as ArrayBuffer using FileReader
+/// Read Blob as ArrayBuffer using FileReader.
 async fn read_blob_as_array_buffer(blob: &Blob) -> Result<js_sys::ArrayBuffer, JsValue> {
     use wasm_bindgen_futures::JsFuture;
 

@@ -10,7 +10,6 @@ use super::block_menu::BlockMenu;
 use super::edit_block_modal::EditBlockModal;
 
 const BLOCK_LIST_CSS: &str = include_str!("block_list.css");
-const DOTS_BARS_CSS: &str = include_str!("../../shell/dots_bars.css");
 const BLOCKS_ICON_LIGHT: Asset = asset!("/assets/icons/blocks-light.svg");
 const BLOCKS_ICON_DARK: Asset = asset!("/assets/icons/blocks-dark.svg");
 const TRASH_ICON_LIGHT: Asset = asset!("/assets/icons/delete-light.svg");
@@ -20,6 +19,20 @@ const ADD_ICON_LIGHT: Asset = asset!("/assets/icons/add-light.svg");
 const ADD_ICON_DARK: Asset = asset!("/assets/icons/add-dark.svg");
 const CARD_ICON_LIGHT: Asset = asset!("/assets/icons/card-light.svg");
 const CARD_ICON_DARK: Asset = asset!("/assets/icons/card-dark.svg");
+const ANNOTATION_BLOCK_LIGHT: Asset = asset!("/assets/icons/annotation-block-light.svg");
+const ANNOTATION_BLOCK_DARK: Asset = asset!("/assets/icons/annotation-block-dark.svg");
+const FILE_BLOCK_LIGHT: Asset = asset!("/assets/icons/file-block-light.svg");
+const FILE_BLOCK_DARK: Asset = asset!("/assets/icons/file-block-dark.svg");
+const BUILD_BLOCK_LIGHT: Asset = asset!("/assets/icons/build-block-light.svg");
+const BUILD_BLOCK_DARK: Asset = asset!("/assets/icons/build-block-dark.svg");
+const LIST_ICON_LIGHT: Asset = asset!("/assets/icons/list-light.svg");
+const LIST_ICON_DARK: Asset = asset!("/assets/icons/list-dark.svg");
+const GRID_ICON_LIGHT: Asset = asset!("/assets/icons/grid-light.svg");
+const GRID_ICON_DARK: Asset = asset!("/assets/icons/grid-dark.svg");
+const SEARCH_ICON_LIGHT: Asset = asset!("/assets/icons/search-light.svg");
+const SEARCH_ICON_DARK: Asset = asset!("/assets/icons/search-dark.svg");
+const CLOSE_ICON_LIGHT: Asset = asset!("/assets/icons/close-light.svg");
+const CLOSE_ICON_DARK: Asset = asset!("/assets/icons/close-dark.svg");
 
 
 fn format_date(rfc3339: &str) -> String {
@@ -63,12 +76,21 @@ pub fn BlocksPage(project_id: String)->Element{
 	let trash_icon = if is_dark { TRASH_ICON_DARK } else { TRASH_ICON_LIGHT };
 	let add_icon = if is_dark { ADD_ICON_DARK } else { ADD_ICON_LIGHT };
 	let card_icon = if is_dark { CARD_ICON_DARK } else { CARD_ICON_LIGHT };
+	let list_icon = if is_dark { LIST_ICON_DARK } else { LIST_ICON_LIGHT };
+	let grid_icon = if is_dark { GRID_ICON_DARK } else { GRID_ICON_LIGHT };
+	let search_icon = if is_dark { SEARCH_ICON_DARK } else { SEARCH_ICON_LIGHT };
+	let close_icon = if is_dark { CLOSE_ICON_DARK } else { CLOSE_ICON_LIGHT };
     let navigator = use_navigator();
     let mut open_menu_id: Signal<Option<String>> = use_signal(|| None);
+    let mut view_mode: Signal<String> = use_signal(|| "grid".to_string());
+    let mut search_active: Signal<bool> = use_signal(|| false);
+    let mut search_query = use_signal(String::new);
     let mut editing_block: Signal<Option<(String, String)>> = use_signal(|| None); // (block_id, current_name)
     let mut deleting_block_id: Signal<Option<String>> = use_signal(|| None);
     let mut exporting_block_id: Signal<Option<String>> = use_signal(|| None);
     let mut export_status: Signal<String> = use_signal(|| String::new());
+    let mut reconciling_block_id: Signal<Option<String>> = use_signal(|| None);
+    let mut reconcile_status: Signal<String> = use_signal(|| String::new());
 
     info!("Loading dashboard page: ");
 
@@ -119,9 +141,23 @@ pub fn BlocksPage(project_id: String)->Element{
         }
     }).cloned().collect();
     filtered_blocks.sort_by(|a, b| b.block_created_at.cmp(&a.block_created_at));
+    
+    // Filter by search query
+    let filtered_blocks: Vec<_> = if search_query().is_empty() {
+        filtered_blocks
+    } else {
+        let query = search_query().to_lowercase();
+        filtered_blocks.iter()
+            .filter(|b| b.block_name.to_lowercase().contains(&query))
+            .cloned()
+            .collect()
+    };
 
-    // If no blocks, show an explicit empty state instead of auto-redirecting
-    if filtered_blocks.is_empty() {
+    // Check if there are no blocks before filtering (for true empty state)
+    let has_blocks = !BLOCKS.read().is_empty();
+    
+    // If no blocks at all, show empty state
+    if !has_blocks {
         return rsx! {
             ProtectedRoute {
                 style { {BLOCK_LIST_CSS} }
@@ -129,7 +165,7 @@ pub fn BlocksPage(project_id: String)->Element{
                 div { class: "blocks-empty-page",
                     if user_role == UserRole::Admin {
                         button {
-                            class: "projects-heading-new-btn",
+                            class: "create-block-btn",
                             onclick: {
                                 let project_id = project_id.clone();
                                 move |_| {
@@ -150,20 +186,7 @@ pub fn BlocksPage(project_id: String)->Element{
     rsx!{
         ProtectedRoute {
         style { {BLOCK_LIST_CSS} }
-        style { {DOTS_BARS_CSS} }
-        AppNavbar {
-            button {
-                class: "app-navbar-center-button",
-                onclick: {
-                    let project_id = project_id.clone();
-                    move |_| {
-                        navigator.push(Route::CreateBlockPage { project_id: project_id().clone() });
-                    }
-                },
-                img { src: add_icon, class: "app-navbar-center-button-icon" }
-                "New block"
-            }
-        }
+        AppNavbar {}
         div{
             class:"blocks-page",
             // Close drop down menu when clicked outside 
@@ -173,25 +196,99 @@ pub fn BlocksPage(project_id: String)->Element{
                 }
             },
             div{
-                class:"blocks-list-container",
-                ul{
-                    class:"blocks-list",
-                    for block in filtered_blocks.iter() {
+                class: if view_mode() == "list" { "blocks-list-container list-mode" } else { "blocks-list-container" },
+                div {
+                    class: if search_active() { "new-page-btn search-mode" } else { "new-page-btn" },
+                    if search_active() {
+                        button {
+                            class: "search-icon-btn",
+                            img { src: search_icon, class: "action-icon search-icon" }
+                        }
+                        input {
+                            class: "search-input",
+                            r#type: "text",
+                            placeholder: "Search blocks...",
+                            value: "{search_query}",
+                            oninput: move |e| search_query.set(e.value()),
+                            onkeydown: move |e| {
+                                if e.key() == Key::Escape {
+                                    search_active.set(false);
+                                    search_query.set(String::new());
+                                }
+                            },
+                            onmounted: move |e| {
+                                let _ = e.set_focus(true);
+                            },
+                        }
+                        button {
+                            class: "close-search-btn",
+                            onclick: move |_| {
+                                search_active.set(false);
+                                search_query.set(String::new());
+                            },
+                            img { src: close_icon, class: "action-icon" }
+                        }
+                    } else {
+                        button {
+                            class: "new-project-action",
+                            onclick: move |_| {
+                                let pid = project_id().clone();
+                                navigator.push(Route::CreateBlockPage { project_id: pid });
+                            },
+                            img { src: add_icon, class: "action-icon" }
+                            "New Block"
+                        }
+                        div { class: "action-divider" }
+                        button {
+                            class: if view_mode() == "list" { "action-btn active" } else { "action-btn" },
+                            onclick: move |_| view_mode.set("list".to_string()),
+                            img { src: list_icon, class: "action-icon" }
+                        }
+                        div { class: "action-divider" }
+                        button {
+                            class: if view_mode() == "grid" { "action-btn active" } else { "action-btn" },
+                            onclick: move |_| view_mode.set("grid".to_string()),
+                            img { src: grid_icon, class: "action-icon" }
+                        }
+                        div { class: "action-divider" }
+                        button {
+                            class: "action-btn",
+                            onclick: move |_| search_active.set(true),
+                            img { src: search_icon, class: "action-icon search-icon" }
+                        }
+                    }
+                }
+                if filtered_blocks.is_empty() && search_active() {
+                    div { class: "no-results", "No blocks matched" }
+                } else {
+                    ul{
+                        class: if view_mode() == "list" { "blocks-list blocks-list-view" } else { "blocks-list" },
+                        for block in filtered_blocks.iter() {
                         {
                             let project_id_for_card = project_id().clone();
                             let project_id_for_import = project_id().clone();
                             let project_id_for_export = project_id().clone();
+                            let project_id_for_reconcile = project_id().clone();
                             let block_id = block.block_id.clone();
                             let block_id_for_delete = block.block_id.clone();
                             let block_name = block.block_name.clone();
                             let block_type = block.block_type.clone();
+                            let block_type_for_onclick = block.block_type.clone();
                             let image_count = block.image_count.clone();
                             let approved_image_count = block.approved_image_count.clone();
                             let annotation_count = block.annotation_count.clone();
 
                             let is_deleting = deleting_block_id() == Some(block.block_id.clone());
                             let is_exporting = exporting_block_id() == Some(block.block_id.clone());
-                            let card_class = if is_deleting { "block-card deleting" } else if is_exporting { "block-card exporting" } else { "block-card" };
+                            let is_reconciling = reconciling_block_id() == Some(block.block_id.clone());
+                            let card_class = if is_deleting { "block-card deleting" } else if is_exporting || is_reconciling { "block-card exporting" } else { "block-card" };
+                            
+                            // Select icon based on block type and theme
+                            let block_type_icon = match block.block_type {
+                                BlockType::Annotation => if is_dark { ANNOTATION_BLOCK_DARK } else { ANNOTATION_BLOCK_LIGHT },
+                                BlockType::File => if is_dark { FILE_BLOCK_DARK } else { FILE_BLOCK_LIGHT },
+                                BlockType::Building => if is_dark { BUILD_BLOCK_DARK } else { BUILD_BLOCK_LIGHT },
+                            };
                             rsx!{
                                 li {
                                     key:"{block_id}",
@@ -204,7 +301,21 @@ pub fn BlocksPage(project_id: String)->Element{
                                             return;
                                         }
                                         let id = block_id.clone();
-                                        navigator.push(Route::TasksListPage { project_id: project_id_for_card.clone(), block_id: id, block_name: block_name.clone(), block_type: block_type.as_str().to_string() });
+                                        if block_type_for_onclick == BlockType::File {
+                                            navigator.push(Route::FileBlockPage {
+                                                project_id: project_id_for_card.clone(),
+                                                block_id: id,
+                                                block_name: block_name.clone(),
+                                                block_type: block_type_for_onclick.as_str().to_string(),
+                                            });
+                                        } else {
+                                            navigator.push(Route::TasksListPage {
+                                                project_id: project_id_for_card.clone(),
+                                                block_id: id,
+                                                block_name: block_name.clone(),
+                                                block_type: block_type_for_onclick.as_str().to_string(),
+                                            });
+                                        }
                                     },
                                     
                                     // Export overlay
@@ -220,6 +331,29 @@ pub fn BlocksPage(project_id: String)->Element{
                                             }
                                         }
                                     }
+                                    if is_reconciling {
+                                        div {
+                                            class: "block-export-overlay",
+                                            LiveTimer {}
+                                            span { class: "block-export-label", "{reconcile_status}" }
+                                            div {
+                                                class: "block-export-stats",
+                                                span { "{image_count} images" }
+                                                span { "{annotation_count} annotations" }
+                                            }
+                                        }
+                                    }
+                                    
+                                    // Block type icon at top
+                                    div {
+                                        class: "block-type-icon-container",
+                                        img {
+                                            src: block_type_icon,
+                                            class: "block-type-icon-top",
+                                            alt: "{block_type.label()}"
+                                        }
+                                    }
+                                    
                                     // Row 1: Block name + three dots
                                     div {
                                         class: "block-row-1",
@@ -399,6 +533,122 @@ pub fn BlocksPage(project_id: String)->Element{
                                                             });
                                                         }
                                                     },
+                                                    on_reconcile: {
+                                                        let bid_reconcile = block.block_id.clone();
+                                                        let pid_reconcile = project_id_for_reconcile.clone();
+                                                        move |_| {
+                                                            open_menu_id.set(None);
+                                                            let bid = bid_reconcile.clone();
+                                                            let pid = pid_reconcile.clone();
+                                                            reconciling_block_id.set(Some(bid.clone()));
+                                                            reconcile_status.set("Starting reconcile...".into());
+                                                            spawn(async move {
+                                                                let start_payload = serde_json::json!({});
+                                                                let start_resp = crate::shell::client::post::<serde_json::Value, serde_json::Value>(
+                                                                    &format!("/projects/{}/blocks/{}/reconcile-counts", pid, bid),
+                                                                    &start_payload,
+                                                                ).await;
+
+                                                                let reconcile_job_id = match start_resp {
+                                                                    Ok(resp) => {
+                                                                        match resp.get("reconcile_job_id").and_then(|v| v.as_str()) {
+                                                                            Some(id) if !id.is_empty() => id.to_string(),
+                                                                            _ => {
+                                                                                reconcile_status.set("Error: failed to start reconcile".into());
+                                                                                tracing::error!("Reconcile start missing reconcile_job_id: {:?}", resp);
+                                                                                gloo_timers::future::TimeoutFuture::new(2000).await;
+                                                                                reconciling_block_id.set(None);
+                                                                                reconcile_status.set(String::new());
+                                                                                return;
+                                                                            }
+                                                                        }
+                                                                    }
+                                                                    Err(e) => {
+                                                                        reconcile_status.set(format!("Error: {}", e));
+                                                                        tracing::error!("Reconcile start failed: {}", e);
+                                                                        gloo_timers::future::TimeoutFuture::new(2000).await;
+                                                                        reconciling_block_id.set(None);
+                                                                        reconcile_status.set(String::new());
+                                                                        return;
+                                                                    }
+                                                                };
+
+                                                                let mut completed = false;
+                                                                let mut succeeded = false;
+                                                                for _ in 0..720 {
+                                                                    gloo_timers::future::TimeoutFuture::new(1500).await;
+
+                                                                    let status_endpoint = format!(
+                                                                        "/projects/{}/blocks/{}/reconcile-counts/{}",
+                                                                        pid, bid, reconcile_job_id
+                                                                    );
+
+                                                                    match crate::shell::client::get::<serde_json::Value>(&status_endpoint).await {
+                                                                        Ok(status_resp) => {
+                                                                            let status = status_resp.get("status").and_then(|v| v.as_str()).unwrap_or("queued");
+                                                                            let phase = status_resp.get("phase").and_then(|v| v.as_str()).unwrap_or("pending");
+                                                                            let images_total = status_resp.get("images_total").and_then(|v| v.as_u64()).unwrap_or(0);
+                                                                            let images_processed = status_resp.get("images_processed").and_then(|v| v.as_u64()).unwrap_or(0);
+                                                                            let anns_total = status_resp.get("annotations_total").and_then(|v| v.as_u64()).unwrap_or(0);
+                                                                            let anns_processed = status_resp.get("annotations_processed").and_then(|v| v.as_u64()).unwrap_or(0);
+                                                                            let block_total = status_resp.get("block_annotation_count").and_then(|v| v.as_u64()).unwrap_or(0);
+
+                                                                            if status == "completed" {
+                                                                                reconcile_status.set(format!("Done! total {}", block_total));
+                                                                                completed = true;
+                                                                                succeeded = true;
+                                                                                break;
+                                                                            }
+
+                                                                            if status == "failed" {
+                                                                                let msg = status_resp
+                                                                                    .get("error_message")
+                                                                                    .and_then(|v| v.as_str())
+                                                                                    .unwrap_or("Reconcile failed");
+                                                                                reconcile_status.set(format!("Error: {}", msg));
+                                                                                tracing::error!("Reconcile job failed: {:?}", status_resp);
+                                                                                completed = true;
+                                                                                break;
+                                                                            }
+
+                                                                            let phase_text = match phase {
+                                                                                "reconciling" => "Reconciling",
+                                                                                "pending" => "Queued",
+                                                                                _ => "Processing reconcile",
+                                                                            };
+                                                                            reconcile_status.set(format!(
+                                                                                "{}... img {}/{} • ann {}/{}",
+                                                                                phase_text,
+                                                                                images_processed,
+                                                                                images_total,
+                                                                                anns_processed,
+                                                                                anns_total
+                                                                            ));
+                                                                        }
+                                                                        Err(e) => {
+                                                                            reconcile_status.set(format!("Error: {}", e));
+                                                                            tracing::error!("Reconcile status poll failed: {}", e);
+                                                                            completed = true;
+                                                                            break;
+                                                                        }
+                                                                    }
+                                                                }
+
+                                                                if !completed {
+                                                                    reconcile_status.set("Error: reconcile timed out".into());
+                                                                    tracing::error!("Reconcile polling timed out for block {}", bid);
+                                                                }
+
+                                                                if succeeded {
+                                                                    state_load_blocks(&pid).await;
+                                                                }
+
+                                                                gloo_timers::future::TimeoutFuture::new(2500).await;
+                                                                reconciling_block_id.set(None);
+                                                                reconcile_status.set(String::new());
+                                                            });
+                                                        }
+                                                    },
                                                     on_delete: move |_| {
                                                         let id = bid_delete.clone();
                                                         deleting_block_id.set(Some(id.clone()));
@@ -416,61 +666,28 @@ pub fn BlocksPage(project_id: String)->Element{
                                     }
                                     
                                     // Row 2: Image count
-                                    div {
-                                        class: "block-row-2",
-                                        span { class: "block-image-count", "{approved_image_count}/{image_count}" }
-                                    }
-                                    
-                                    // Row 3: Divider
-                                    div { class: "block-divider" }
-                                    
-                                    // Row 5: Labels with counts (vertical, numbered) - admin only
-                                    if user_role == UserRole::Admin {
-                                    {
-                                        let total_annotations: u32 = block.labels.iter().map(|l| l.label_count).sum();
-                                        rsx! {
-                                            div {
-                                                class: "block-row-5",
-                                                for (idx, label) in block.labels.iter().enumerate(){
-                                                    {{
-                                                        let max_count = block.labels.iter().map(|l| l.label_count).max().unwrap_or(1).max(1);
-                                                        let bar_pct = (label.label_count as f64 / max_count as f64 * 100.0) as u32;
-                                                        rsx! {
-                                                            div {
-                                                                class:"block-label",
-                                                                style:"--label-color: {label.label_color}; --bar-width: {bar_pct}%;",
-                                                                span { class: "block-label-num", "#{idx + 1}.{label.label_name}" }
-                                                                div { class: "block-label-bar-bg",
-                                                                    div { class: "block-label-bar-fill" }
-                                                                }
-                                                                span { class: "block-label-count", "{label.label_count}" }
-                                                            }
-                                                        }
-                                                    }}
-                                                }
-                                                // Total row
-                                                div {
-                                                    class: "block-label block-label-total",
-                                                    span { class: "block-label-num", "#total" }
-                                                    span { class: "block-label-line-total" }
-                                                    span { class: "block-label-count", "{total_annotations}" }
-                                                }
-                                            }
+                                    if !(view_mode() == "list" && block_type != BlockType::Annotation) {
+                                        div {
+                                            class: "block-row-2",
+                                            span { class: "block-image-count", "{approved_image_count}/{image_count}" }
                                         }
                                     }
-                                    }
+                                    
                                     
                                     // Row 6: Dates (bottom right)
-                                    div {
-                                        class: "block-row-6",
-                                        div { class: "block-dates",
-                                            div { class: "block-date", "Created: {format_date(&block.block_created_at)}" }
-                                            div { class: "block-date", "Updated: {format_relative_time(&block.block_updated_at)}" }
+                                    if view_mode() != "list" {
+                                        div {
+                                            class: "block-row-6",
+                                            div { class: "block-dates",
+                                                div { class: "block-date", "Created: {format_date(&block.block_created_at)}" }
+                                                div { class: "block-date", "Updated: {format_relative_time(&block.block_updated_at)}" }
+                                            }
                                         }
                                     }
                                 }
                             }
                         }
+                    }
                     }
                 }
                 

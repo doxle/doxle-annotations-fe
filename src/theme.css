@@ -32,12 +32,11 @@ html.dark, html.dark body {
     --button-secondary-bg: #000;
     --button-secondary-text: #fff;
     --shimmer-color: rgba(255, 255, 255, 0.75);
-    --dot-color: rgb(230, 230, 230);
+    --dot-color: rgb(196, 196, 196);
     --grid-color: rgb(200, 200, 200);
     --grid-minor-color: rgba(230, 230, 230, 1.0);
     --grid-major-color: rgba(120, 124, 255, 0.2);
-    /*--navbar-bg: rgb(51, 55, 61);*/
-    --navbar-bg: #ffffff;
+    --navbar-bg: rgb(51, 55, 61);
     --navbar-text: rgba(255, 255, 255, 0.9);
     --navbar-text-secondary: rgba(255, 255, 255, 0.6);
     --sidebar-bg: #ffffff;
@@ -45,6 +44,7 @@ html.dark, html.dark body {
     --sidebar-text: #000000;
     --sidebar-row-hover: rgb(230, 230, 230);
     --sidebar-version-text: #000000;
+    --input-bg:rgb(250, 250, 252);
 
     /* UI element colors */
     --primary-button-bg: #000000;
@@ -52,7 +52,8 @@ html.dark, html.dark body {
     --primary-button-hover: #333333;
 
     /* Hover and focus colors */
-    --hover-blue: rgb(99, 138, 255);
+    --hover-blue: rgb(0,156,255);
+
     --hover-color:rgb(245,245,245);
     --focus-blue: #4f5bf8;
     --outline-blue: rgba(51, 66, 255, 0.4);
@@ -83,7 +84,7 @@ html.dark, html.dark body {
     --project-title-color: #000000;
     --project-card-bg: #ffffff;
     --project-card-image-bg: rgb(230, 230, 230);
-    --project-card-hover-color:rgb(241,247,255);
+    --card-hover-color:rgb(241,247,255);
     --project-card-divider: #e5e5e5;
     --project-button-bg: rgb(46, 133, 219);
     --project-button-text: #ffffff;
@@ -184,13 +185,13 @@ html.dark, html.dark body {
 /* Manual dark theme override via .dark class only */
 html.dark {
     /* Dark theme colors */
-    --bg-primary: #000;
+    --bg-primary: rgb(6,6,6);
     --bg-secondary: rgb(15, 15, 18);
     --bg-card: rgb(3,3,5);
     --bg-card-hover: rgb(15,15,18);
     --text-primary: rgb(230,230,230);
-    --text-secondary: rgba(255, 255, 255, 0.6);
-    --text-tertiary: rgb(180,180,180);
+    --text-secondary: rgb(180, 180, 180);
+    --text-tertiary: rgb(60,60,60t);
     --border-subtle:rgb(33,33,33);
     --border-color: rgb(45,45,45);
     --border-color-hover: rgb(60, 60, 60);
@@ -205,7 +206,7 @@ html.dark {
     --grid-color: rgb(69, 69, 69);
     --grid-minor-color: rgba(30, 30, 30, 0.8);
     --grid-major-color: rgba(30, 30, 30, 0.6);
-    --navbar-bg: rgb(0, 0, 0);
+    --navbar-bg: rgb(15, 15, 18);
     --navbar-border:rgb(0,0,0);
     --navbar-text: rgba(255, 255, 255, 0.9);
     --navbar-text-secondary: rgba(255, 255, 255, 0.6);
@@ -214,6 +215,7 @@ html.dark {
     --sidebar-text: #ffffff;
     --sidebar-row-hover: rgb(50, 50, 50);
     --sidebar-version-text: #ffffff;
+    --input-bg:rgb(18, 18, 18);
 
     /* UI element colors (dark mode) */
     --primary-button-bg: rgb(221,228, 242);
@@ -221,7 +223,7 @@ html.dark {
     --primary-button-hover: rgba(79, 91, 248, 0.9);
 
     /* Hover and focus colors (dark mode) */
-    --hover-blue: rgb(99, 138, 255);
+    --hover-blue: rgb(0,156,255);
     --hover-color:rgb(33,33,33);
     --focus-blue: #4f5bf8;
     --outline-blue: rgba(51, 66, 255, 0.4);
@@ -250,7 +252,7 @@ html.dark {
     /* Project page colors (dark mode) */
     --project-title-color: #ffffff;
     --project-card-bg: #252525;
-    --project-card-hover-color:rgb(25,39,54);
+    --card-hover-color:rgb(25,39,54);
     --project-card-image-bg: rgb(60, 60, 60);
     --project-card-divider: #404040;
     --project-button-bg: rgb(46, 133, 219);

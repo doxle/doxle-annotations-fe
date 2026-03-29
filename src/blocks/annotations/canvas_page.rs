@@ -103,21 +103,32 @@ pub fn AnnotationCanvasPage(
         }
     });
 
-    // Fetch full images when task only has a thumbnail (list API returns 1 image)
+    // Fetch the current image record immediately (single GetItem — fast).
+    // This gives us the real URL so the canvas can render before the full task image list loads.
+    let mut current_image_url: Signal<Option<String>> = use_signal(|| None);
+    let block_id_single = block_id.clone();
+    let image_id_single = image_id.clone();
+    use_effect(move || {
+        // Reset when image changes
+        current_image_url.set(None);
+        let bid = block_id_single.clone();
+        let iid = image_id_single.clone();
+        spawn(async move {
+            if let Ok(img) = crate::atoms::media::api::api_get_image(&bid, &iid).await {
+                current_image_url.set(Some(crate::shell::client::to_cloudfront_url(&img.url)));
+            }
+        });
+    });
+
+    // Fetch full images for this task async (populates strip + navigation).
     let block_id_imgs = block_id.clone();
     let task_id_imgs = task_id.clone();
     use_effect(move || {
-        let needs_fetch = TASKS.read().iter()
-            .find(|t| t.task_id == task_id_imgs)
-            .map(|t| t.image_count > t.images.len() as u32)
-            .unwrap_or(false);
-        if needs_fetch {
-            let bid = block_id_imgs.clone();
-            let tid = task_id_imgs.clone();
-            spawn(async move {
-                state_load_task_images(&project_id(), &bid, &tid).await;
-            });
-        }
+        let bid = block_id_imgs.clone();
+        let tid = task_id_imgs.clone();
+        spawn(async move {
+            state_load_task_images(&project_id(), &bid, &tid).await;
+        });
     });
 
     // LOAD BLOCK LABELS
@@ -255,17 +266,21 @@ pub fn AnnotationCanvasPage(
         }
     }
 
-    // Get task to find image URL
+    // Get task from signal (may not have images yet if still loading)
     let task: Option<Task> = TASKS.read()
         .iter()
         .find(|t| t.block_id == block_id && t.task_id == task_id)
         .cloned();
 
-    let image_url = task.as_ref().and_then(|t| {
-        t.images.iter()
-            .find(|img| img.image_id == image_id)
-            .map(|img| crate::shell::client::to_cloudfront_url(&img.url))
-    });
+    // Build image URL: prefer task images (has full data), then single-image fetch,
+    // then None (shows loading spinner).
+    let image_url = task.as_ref()
+        .and_then(|t| {
+            t.images.iter()
+                .find(|img| img.image_id == image_id)
+                .map(|img| crate::shell::client::to_cloudfront_url(&img.url))
+        })
+        .or_else(|| current_image_url());
     tracing::info!("image_url: {:?}", image_url);
 
     info!("Canvas render: LABELS count = {}", LABELS().len());
@@ -282,10 +297,8 @@ pub fn AnnotationCanvasPage(
         }
         div { class: "annotation-canvas-page",
             div { class: "canvas-area",
-                if TASKS_LOADING() {
+                if TASKS_LOADING() && image_url.is_none() {
                     LoadingPage {}
-                } else if task.is_none() {
-                    div { class: "no-image-text", "Task not found" }
                 } else if let Some(url) = image_url {
                     // SvgCanvas {
                     //     active_drawing:active_drawing,
@@ -308,6 +321,7 @@ pub fn AnnotationCanvasPage(
                     //     }
                     // }
                     SvgCanvasV2 { 
+                        project_id: project_id().clone(),
                         block_id:block_id.clone(),
                         image_id: image_id.clone(),
                         image_url: url , 
@@ -453,8 +467,9 @@ pub fn AnnotationCanvasPage(
                             let image_id_for_delete1 = image_id_for_delete.clone();
                             let ann_id_for_delete1 = ann_id_for_delete.clone();
                             let block_id_del = block_id_for_delete.clone();
+                            let project_id_del = project_id();
                             // annotations.write().retain(|a| a.id != ann_id_for_delete);
-                            state_delete_annotation(&block_id_del, &image_id_for_delete1, &ann_id_for_delete1, annotations);
+                            state_delete_annotation(&project_id_del, &block_id_del, &image_id_for_delete1, &ann_id_for_delete1, annotations);
                             context_menu.set(None);
                         },
 

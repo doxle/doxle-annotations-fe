@@ -2,7 +2,9 @@
 
 /* Dark theme specific overrides */
 html.dark .create-tasks-page {
-  background: var(--bg-primary);
+  background-color: var(--bg-primary);
+  background-image: radial-gradient(circle, var(--dot-color, rgba(0,0,0,0.3)) 1.5px, transparent 1.5px);
+  background-size: 30px 30px;
 }
 
 .selected-files-list::-webkit-scrollbar {
@@ -21,7 +23,9 @@ html.dark input:focus {
 
 /* Center all content on the page */
 .create-tasks-page {
-  background: var(--bg-primary);
+  background-color: var(--bg-primary);
+  background-image: radial-gradient(circle, var(--dot-color, rgba(0,0,0,0.3)) 1.5px, transparent 1.5px);
+  background-size: 30px 30px;
   display: flex;
   flex-direction: row;
   align-items: center;

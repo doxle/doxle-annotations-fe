@@ -115,8 +115,8 @@
   padding: 0;
   margin: 0;
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 350px));
-  justify-content: center;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 400px));
+  justify-content: start;
   gap: 16px;
 }
 
@@ -145,6 +145,19 @@
   
 }
 
+/* Block type icon at top */
+.block-type-icon-container {
+  display: flex;
+  justify-content: flex-start;
+  margin-bottom: 12px;
+}
+
+.block-type-icon-top {
+  width: 32px;
+  height: 32px;
+  opacity: 0.7;
+}
+
 /* Row 1: Block name + type + actions */
 .block-row-1 {
   display: flex;
@@ -159,9 +172,9 @@
 }
 
 .block-name {
-  font-size: 45px;
-  font-family: 'HelveticaNeue-Medium', 'HelveticaNeue', sans-serif;
-  font-weight: 500;
+  font-size: 33px;
+  font-family: 'HelveticaNeue-Light', 'HelveticaNeue', sans-serif;
+  font-weight: 300;
   color: var(--text-primary);
   line-height: 1;
 }
@@ -373,7 +386,9 @@ html.dark .block-card:hover {
 
 /* Empty blocks page - centered button only */
 .blocks-empty-page {
-  background: var(--bg-primary);
+  background-color: var(--bg-primary);
+  background-image: radial-gradient(circle, var(--dot-color, rgba(0,0,0,0.3)) 1.5px, transparent 1.5px);
+  background-size: 30px 30px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -381,25 +396,30 @@ html.dark .block-card:hover {
   min-height: 100vh;
 }
 
-.projects-heading-new-btn {
+.create-block-btn {
   background: var(--text-primary);
   color: var(--bg-primary);
   border: none;
   border-radius: 4px;
-  padding: 6px 12px;
+  padding: 12px 24px;
   font-family: 'HelveticaNeue', Helvetica, sans-serif;
-  font-size: 13px;
+  font-size: 16px;
   font-weight: 400;
   cursor: pointer;
 }
 
+.create-block-btn:hover {
+   background:var(--hover-blue);
+   color: white;
+}
+
 .blocks-create-button-centered {
   height: auto;
-  padding: 6px 18px;
+  padding: 12px 36px;
   border-radius: 4px;
-  font-family: 'HelveticaNeue', Helvetica, Arial, sans-serif;
-  font-size: 14px;
-  font-weight: 300;
+  font-family: 'Switzer', sans-serif;
+  font-size: 28px;
+  font-weight: 500;
   cursor: pointer;
   transition: all 0.2s;
   background-color: transparent;
@@ -448,10 +468,180 @@ html.dark .blocks-create-button-centered:hover {
   animation: block-deleting-progress 1.2s ease-in-out infinite alternate;
 }
 
+@media (min-width: 1200px) {
+  .blocks-list {
+    grid-template-columns: repeat(auto-fit, minmax(280px, 500px));
+  }
+}
+
 @media (min-width: 1440px) {
   .blocks-list-container {
-    max-width: 60vw;
+    max-width: 75vw;
   }
+}
+
+/* New Block button container */
+.new-page-btn {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    background: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    border-radius: 40px;
+    padding: 0;
+    margin: 0 0 32px 0;
+    width: fit-content;
+    overflow: hidden;
+}
+
+.new-project-action {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: transparent;
+    color: var(--text-primary);
+    border: none;
+    padding: 14px 28px;
+    font-family: 'HelveticaNeue-Medium', 'HelveticaNeue', sans-serif;
+    font-size: 18px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.new-project-action:hover {
+    opacity: 0.8;
+}
+
+.action-divider {
+    width: 1px;
+    align-self: stretch;
+    background: var(--border-color);
+}
+
+.action-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: none;
+    padding: 0 20px;
+    cursor: pointer;
+    transition: all 0.2s;
+    align-self: stretch;
+}
+
+.action-btn:hover {
+    background-color: var(--card-hover-color);
+}
+
+.action-btn.active {
+    background-color: var(--card-hover-color);
+}
+
+.action-icon {
+    width: 16px;
+    height: 16px;
+}
+
+.search-icon {
+    width: 17px;
+    height: 17px;
+}
+
+/* Search mode styling */
+.new-page-btn.search-mode {
+    gap: 12px;
+    padding: 0 14px;
+}
+
+.search-icon-btn {
+    background: transparent;
+    border: none;
+    padding: 0;
+    cursor: default;
+    display: flex;
+    align-items: center;
+}
+
+.search-input {
+    flex: 1;
+    border: none;
+    background: transparent;
+    outline: none;
+    font-family: 'HelveticaNeue-Light', 'HelveticaNeue', sans-serif;
+    font-size: 18px;
+    font-weight: 300;
+    color: var(--text-primary);
+    padding: 14px 0;
+    border-bottom: 1px solid var(--border-color);
+    min-width: 300px;
+}
+
+.search-input::placeholder {
+    color: var(--text-secondary);
+}
+
+.close-search-btn {
+    background: transparent;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    transition: opacity 0.2s;
+}
+
+.close-search-btn:hover {
+    opacity: 0.7;
+}
+
+/* No results message */
+.no-results {
+    text-align: center;
+    color: var(--text-secondary);
+    font-family: 'ModularHouseplant', monospace;
+    font-size: 16px;
+    font-weight: 300;
+    padding: 60px 20px;
+}
+
+/* List mode */
+.list-mode .new-page-btn {
+    align-self: center;
+}
+
+/* List view styling */
+.blocks-list.blocks-list-view {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    align-items: center;
+}
+
+.blocks-list.blocks-list-view .block-card {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 24px;
+    gap: 16px;
+    max-width: 800px;
+}
+
+.blocks-list.blocks-list-view .block-type-icon-container {
+    margin-bottom: 0;
+    align-items: center;
+}
+.blocks-list.blocks-list-view .block-type-icon-top {
+    width: 24px;
+    height: 24px;
+    position: relative;
+    top: 2px;
+}
+
+.blocks-list.blocks-list-view .block-row-1 {
+    align-items: center;
+    margin: 0;
 }
 
 @keyframes block-deleting-progress {

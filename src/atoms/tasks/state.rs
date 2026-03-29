@@ -133,7 +133,7 @@ pub async fn state_delete_task(project_id: &str, block_id: &str, task_id: &str) 
             &format!("Deleting img {}/{} ({} annotations)", i + 1, total, ann_count),
             i, total, start.elapsed().as_secs(),
         );
-        if let Err(e) = crate::atoms::media::api::api_delete_image(&bid, &image_id).await {
+        if let Err(e) = crate::atoms::media::api::api_delete_image(project_id, &bid, &image_id).await {
             tracing::error!("❌ Failed to delete image {}: {}", image_id, e);
         }
         let done = i + 1;
