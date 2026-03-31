@@ -1,46 +1,22 @@
 .project-menu-container {
-    position: absolute;
-    left: -22px;
-    top: 50%;
-    transform: translateY(-50%);
-    z-index: 3;
-}
-.project-menu-container::before {
-    content: "";
-    position: absolute;
-    top: -8px;
-    right: -24px;
-    width: 24px;
-    height: 32px;
+    position: relative;
 }
 
 .project-menu-trigger {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 16px;
-    height: 16px;
-    color: var(--text-tertiary);
-    opacity: 0;
-    transition: opacity 0.15s ease;
+    font-size: 20px;
+    color: var(--text-secondary);
     cursor: pointer;
-    user-select: none;
+    padding: 4px 8px;
+    opacity: 0;
+    transition: opacity 0.2s;
 }
 
 .project-card:hover .project-menu-trigger {
     opacity: 1;
 }
-.project-menu-container:hover .project-menu-trigger {
-    opacity: 1;
-}
-.project-menu-trigger-open {
-    opacity: 1;
-}
 
-.project-menu-trigger-icon {
-    width: 14px;
-    height: 14px;
-    display: block;
+.project-menu-trigger:hover {
+    color: var(--text-primary);
 }
 
 .project-menu-overlay {
@@ -51,16 +27,17 @@
 
 .project-menu-dropdown {
     position: absolute;
-    left: 20px;
-    top: -8px;
+    top: 100%;
+    right: 0;
     width: 230px;
-    background: var(--bg-secondary);
+    background: var(--bg-primary);
     border: 1px solid var(--border-color);
     border-radius: 8px;
     padding: 6px 10px;
     box-shadow: 0 12px 24px rgba(0, 0, 0, 0.28);
-    font-family: 'HelveticaNeue', Helvetica, sans-serif;
-    z-index: 10;
+    font-family: 'HelveticaNeue-Light', 'HelveticaNeue', Helvetica, sans-serif;
+    font-weight: 300;
+    z-index: 100;
 }
 
 .project-menu-search {
@@ -70,7 +47,7 @@
     font-size: 14px;
     color: var(--text-tertiary);
     text-transform: none;
-    background: var(--border-color);
+    background: var(--card-hover-color);
     border: 1px solid var(--comment-blue);
     border-radius: 4px;
     margin: 0 auto 6px auto;
@@ -105,15 +82,15 @@
 }
 
 .project-menu-item:hover {
-    background: var(--comment-button-bg);
+    background: var(--card-hover-color);
 }
 
 .project-menu-search:hover {
-    background: var(--comment-button-bg);
+    background: var(--card-hover-color);
 }
 
 .project-menu-title:hover {
-    background: var(--comment-button-bg);
+    background: var(--card-hover-color);
 }
 
 .project-menu-divider {

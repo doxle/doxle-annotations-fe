@@ -38,3 +38,4 @@ gloo-timers = { version = "0.3", features = ["futures"] }
 base64 = "0.22.1"
 futures = "0.3.31"
 uuid = { version = "1.19.0", features = ["v4", "js"] }
+urlencoding = "2.1"

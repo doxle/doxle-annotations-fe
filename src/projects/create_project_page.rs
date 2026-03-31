@@ -1,11 +1,9 @@
 use dioxus::prelude::*;
 use crate::Route;
-use crate::shell::{AppNavbar, ProtectedRoute};
+use crate::core::{AppNavbar, ProtectedRoute};
 use super::state::state_create_project;
 
 const CSS: &str = include_str!("create_project_page.css");
-const TYPEWRITER_JS: &str = include_str!("../../js/create_project_typewriter.js");
-const CHECKMARK: Asset = asset!("/assets/icons/checkmark_light.svg");
 
 #[component]
 pub fn CreateProjectPage() -> Element {
@@ -13,29 +11,6 @@ pub fn CreateProjectPage() -> Element {
     let mut submitting = use_signal(|| false);
     let nav = use_navigator();
     let has_text = name().trim().len() >= 3;
-
-    use_effect(move || {
-        document::eval(TYPEWRITER_JS);
-    });
-
-    // Listen for submit from JS
-    use_effect(move || {
-        let js = r#"
-            document.addEventListener('projectsubmit', function handler(e) {
-                var hidden = document.getElementById('create-project-hidden');
-                if (hidden) {
-                    var nativeSet = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
-                    nativeSet.call(hidden, e.detail);
-                    hidden.dispatchEvent(new Event('input', { bubbles: true }));
-                    // Submit the form
-                    var form = document.getElementById('create-project-form');
-                    if (form) form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
-                }
-                document.removeEventListener('projectsubmit', handler);
-            });
-        "#;
-        document::eval(js);
-    });
 
     let on_submit = move |e: Event<FormData>| {
         e.prevent_default();
@@ -47,7 +22,7 @@ pub fn CreateProjectPage() -> Element {
             match state_create_project(val, None, None).await {
                 Ok(_) => { nav.push(Route::ProjectsPage {}); }
                 Err(e) => {
-                    crate::shell::progress::show_error_persistent(&format!("Failed: {}", e));
+                    crate::core::progress::show_error_persistent(&format!("Failed: {}", e));
                     submitting.set(false);
                 }
             }
@@ -59,26 +34,32 @@ pub fn CreateProjectPage() -> Element {
         ProtectedRoute {
             AppNavbar {}
             div { class: "create-project-page",
-                form { id: "create-project-form", class: "create-project-form", onsubmit: on_submit, autocomplete: "off",
-                    div {
-                        id: "create-project-input",
-                        class: "create-project-input",
-                        contenteditable: "true",
-                        spellcheck: "false",
-                    }
-                    // Hidden input syncs contenteditable text to Dioxus state
-                    input {
-                        id: "create-project-hidden",
-                        r#type: "hidden",
-                        value: "{name}",
-                        oninput: move |e| name.set(e.value()),
-                    }
-                    if has_text {
-                        button { r#type: "submit", class: "create-project-submit", disabled: *submitting.read(),
-                            img { src: CHECKMARK }
+                form { class: "create-project-form", onsubmit: on_submit, autocomplete: "off",
+                    div { class: "project-form-group",
+                        h1 { class: "new-project-label", "# NEW PROJECT" }
+                        div { class: "project-input-container",
+                            input {
+                                class: "project-name-input",
+                                r#type: "text",
+                                placeholder: "Enter project name",
+                                value: "{name}",
+                                oninput: move |e| name.set(e.value()),
+                                autofocus: true,
+                            }
                         }
-                    } else {
-                        div { class: "create-project-submit-placeholder" }
+                    }
+                    if !name().is_empty() {
+                        div { class: "project-form-actions",
+                            button {
+                                class: "project-back-button",
+                                r#type: "button",
+                                onclick: move |_| { nav.push(Route::ProjectsPage {}); },
+                                "Back"
+                            }
+                            button { r#type: "submit", class: "create-project-submit", disabled: *submitting.read() || name().trim().is_empty(),
+                                if *submitting.read() { "Creating..." } else { "Submit" }
+                            }
+                        }
                     }
                 }
             }

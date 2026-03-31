@@ -1,6 +1,6 @@
 use dioxus::prelude::*;
-use crate::blocks::block_list::api::BlockLabel;
-use crate::shell::{THEME, Theme};
+use crate::blocks::api::BlockLabel;
+use crate::core::{THEME, Theme};
 
 const CSS: &str = include_str!("context_menu.css");
 const TRASH_ICON_LIGHT: Asset = asset!("/assets/icons/delete-light.svg");

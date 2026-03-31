@@ -1,9 +1,9 @@
 use super::api;
 use super::models::{Annotation, CommentThread, Comment, ThreadMetadata};
-use crate::atoms::svg_canvas::Geometry;
+use crate::core::svg_canvas::Geometry;
 use dioxus::prelude::*;
-use crate::blocks::block_list::state::state_refresh_block_labels;
-use crate::shell::progress::{show_success, show_error_persistent};
+use crate::blocks::state::state_refresh_block_labels;
+use crate::core::progress::{show_success, show_error_persistent};
 
 
 /// Load annotations for an image

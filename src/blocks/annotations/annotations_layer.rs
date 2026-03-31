@@ -18,7 +18,7 @@ AnnotationCanvasPage (blocks/annotations/canvas_page.rs)
 
 use dioxus::prelude::*;
 use super::models::Annotation;
-use crate::atoms::svg_canvas::{Geometry, Point};
+use crate::core::svg_canvas::{Geometry, Point};
 use dioxus::logger::tracing;
 
 #[component]

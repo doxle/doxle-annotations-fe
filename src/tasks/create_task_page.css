@@ -1,0 +1,332 @@
+/* Using system fonts - removed Google Font imports for faster loading */
+
+/* Dark theme specific overrides */
+html.dark .create-tasks-page {
+  background-color: var(--bg-primary);
+  background-image: radial-gradient(circle, var(--dot-color, rgba(0,0,0,0.3)) 1.5px, transparent 1.5px);
+  background-size: 30px 30px;
+}
+
+.selected-files-list::-webkit-scrollbar {
+  display: none;
+}
+
+html.dark input {
+  background-color: var(--bg-primary);
+  border-color: var(--border-color);
+  color: var(--text-primary);
+}
+
+html.dark input:focus {
+  border-color: var(--text-primary);
+}
+
+
+/* Center all content on the page */
+.create-tasks-page {
+  background-color: var(--bg-primary);
+  background-image: radial-gradient(circle, var(--dot-color, rgba(0,0,0,0.3)) 1.5px, transparent 1.5px);
+  background-size: 30px 30px;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+}
+
+/* Container for title and form - centered */
+.tasks-form-container {
+  width: 600px;
+  max-width: 90vw;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  padding: 0 20px;
+}
+
+/* Title - matches create project/block */
+.create-tasks-title {
+  font-family: 'Modular Houseplant';
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-primary);
+  margin: 0 0 4px 0;
+  text-align: left;
+}
+
+/* Form - stretched within container */
+.tasks-form {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Form group - contains label and input */
+.tasks-form-group {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 10px;
+}
+
+/* Label styling - left aligned within center section */
+label {
+  display: block;
+  margin-bottom: 4px;
+  font-weight: 300;
+  text-align: left;
+  color:var(--text-secondary);
+}
+
+/* Input styling - matches create project/block */
+.tasks-name-input {
+  font-family: 'HelveticaNeue-Light', 'HelveticaNeue', Helvetica, sans-serif;
+  font-size: 21px;
+  font-weight: 500;
+  line-height: 1;
+  height: 62px;
+  width: 100%;
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  background-color: var(--bg-primary);
+  padding: 0 12px;
+  padding-bottom: 4px;
+  outline: none;
+  color: var(--text-primary);
+}
+
+.tasks-name-input:focus {
+  border-color: var(--border-color-hover);
+}
+
+.tasks-name-input::placeholder {
+  font-family: 'HelveticaNeue-Light', 'HelveticaNeue', Helvetica, sans-serif;
+  font-size: 21px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  text-transform: lowercase;
+}
+
+/* Required text uses Source Serif Pro */
+.required-text {
+  font-family: 'Modular Houseplant', monospace;
+  font-weight: 300;
+}
+
+input:focus {
+  border-color: var(--text-primary);
+}
+
+/* Form actions - right aligned */
+.form-actions {
+  width: 100%;
+  display: flex;
+  flex-direction: row;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+/* Buttons - uses theme colors */
+.tasks-create-button {
+  height: 33px;
+  padding: 0 16px;
+  background-color: var(--primary-button-bg);
+  color: var(--primary-button-text);
+  border: none;
+  border-radius: 4px;
+  font-family: 'HelveticaNeue', Helvetica, Arial, sans-serif;
+  font-weight: 300;
+  cursor: pointer;
+  transition: opacity 0.2s;
+  width: auto;
+}
+
+.tasks-create-button:hover {
+  background-color: var(--dx-blue);
+  color: white;
+}
+
+/* Secondary Button (Back) */
+.tasks-back-button {
+  height: 33px;
+  padding: 0 16px;
+  background: transparent;
+  border: 1px solid var(--border-color);
+  color: var(--text-secondary);
+  border-radius: 4px;
+  font-family: 'HelveticaNeue', Helvetica, Arial, sans-serif;
+  font-weight: 300;
+  cursor: pointer;
+  transition: opacity 0.2s;
+  width: auto;
+}
+
+.tasks-back-button:hover {
+  /*opacity: 0.8;*/
+  border: 1px solid var(--text-tertiary);
+}
+
+/* File Upload Styles */
+.tasks-file-upload-container {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 5px;
+}
+
+.hidden-file-input {
+  display: none !important;
+}
+
+.choose-image-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 132px;
+  width: 100%;
+  padding: 0 16px;
+  border: 1px solid var(--border-color);
+  background-color: var(--bg-primary);
+  color: var(--text-tertiary);
+  border-radius: 12px;
+  font-family: 'HelveticaNeue-Light', 'HelveticaNeue', Helvetica, sans-serif;
+  font-size: 21px;
+  font-weight: 100;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-transform: lowercase;
+}
+
+.choose-image-btn:hover {
+  border-color: var(--border-color-hover);
+  color: var(--text-primary);
+}
+
+html.dark .tasks-upload-button {
+  border-color: var(--border-color);
+  color: var(--text-tertiary);
+}
+
+html.dark .tasks-upload-button:hover {
+  border-color: var(--text-primary);
+  color: var(--text-primary);
+}
+
+/* Selected Files List */
+.selected-files-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 5px;
+  width: 100%;
+  max-height: 150px;
+  overflow-y: auto;
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.selected-file-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 10px;
+  background-color: var(--bg-card);
+  border: none;
+  border-radius: 0px;
+  font-size: 12px;
+  color: var(--text-primary);
+  transition: background-color 0.15s;
+}
+
+.selected-file-item:hover {
+  background-color: var(--bg-card-hover);
+}
+
+.file-name {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 85%;
+}
+
+.remove-file-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+}
+
+.remove-file-icon {
+  width: 14px;
+  height: 14px;
+  opacity: 0.6;
+  transition: opacity 0.2s;
+}
+
+.remove-file-btn:hover .remove-file-icon {
+  opacity: 1;
+}
+
+/* Upload Progress Bar */
+.upload-progress-container {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 16px;
+  width: 100%;
+}
+
+.upload-progress-bar {
+  width: 100%;
+  height: 6px;
+  background-color: var(--bg-card);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.upload-progress-fill {
+  height: 100%;
+  background-color: var(--dx-blue);
+  border-radius: 3px;
+  transition: width 0.3s ease-out;
+  position: relative;
+}
+
+.upload-progress-fill::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.3),
+    transparent
+  );
+  animation: progress-shimmer 1.5s infinite;
+}
+
+@keyframes progress-shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+.upload-progress-text {
+  font-family: 'Modular Houseplant', monospace;
+  font-size: 12px;
+  color: var(--text-secondary);
+  text-align: center;
+}

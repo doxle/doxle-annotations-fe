@@ -1,6 +1,6 @@
 use dioxus::prelude::*;
 use crate::Route;
-use crate::shell::{progress, AppNavbar, ProtectedRoute, LoadingScreen, THEME, Theme};
+use crate::core::{progress, AppNavbar, ProtectedRoute, LoadingScreen, THEME, Theme};
 use crate::users::state::USER;
 use super::api::api_delete_project;
 use super::project_menu::ProjectMenu;
@@ -18,6 +18,28 @@ const SEARCH_ICON_DARK: Asset = asset!("/assets/icons/search-dark.svg");
 const CLOSE_ICON_LIGHT: Asset = asset!("/assets/icons/close-light.svg");
 const CLOSE_ICON_DARK: Asset = asset!("/assets/icons/close-dark.svg");
 
+fn format_date(rfc3339: &str) -> String {
+    if rfc3339.is_empty() { return "—".to_string(); }
+    let date = js_sys::Date::new(&wasm_bindgen::JsValue::from_str(rfc3339));
+    let months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+    let month = months[date.get_month() as usize];
+    format!("{} {}, {}", month, date.get_date(), date.get_full_year())
+}
+
+fn format_relative_time(rfc3339: &str) -> String {
+    if rfc3339.is_empty() { return "—".to_string(); }
+    let date = js_sys::Date::new(&wasm_bindgen::JsValue::from_str(rfc3339));
+    let now = js_sys::Date::new_0();
+    let diff_secs = ((now.get_time() - date.get_time()) / 1000.0) as u64;
+    match diff_secs {
+        0..=59 => "just now".to_string(),
+        60..=3599 => format!("{} min ago", diff_secs / 60),
+        3600..=86399 => format!("{} hours ago", diff_secs / 3600),
+        86400..=2591999 => format!("{} days ago", diff_secs / 86400),
+        _ => format_date(rfc3339),
+    }
+}
+
 #[component]
 pub fn ProjectsPage() -> Element {
     let navigator = use_navigator();
@@ -32,7 +54,7 @@ pub fn ProjectsPage() -> Element {
     let mut open_menu_id: Signal<Option<String>> = use_signal(|| None);
     let mut renaming_project: Signal<Option<(String, String)>> = use_signal(|| None); // (project_id, current_name)
     let mut rename_input = use_signal(String::new);
-    let mut view_mode: Signal<String> = use_signal(|| "grid".to_string()); // "grid" or "list"
+    let mut view_mode: Signal<String> = use_signal(|| "list".to_string()); // "grid" or "list"
     let mut search_active: Signal<bool> = use_signal(|| false);
     let mut search_query = use_signal(String::new);
 
@@ -76,12 +98,12 @@ pub fn ProjectsPage() -> Element {
                     }
                 },
                 if projects.is_empty() {
-                    div { class: "project-empty",
+                    div { class: "project-empty-page",
                         if is_admin {
                             button {
-                                class: "projects-heading-new-btn",
+                                class: "create-project-btn",
                                 onclick: move |_| { navigator.push(Route::CreateProjectPage {}); },
-                                "Create project"
+                                "Create Project"
                             }
                         } else {
                             "No projects available yet"
@@ -170,74 +192,84 @@ pub fn ProjectsPage() -> Element {
                                             }
                                             navigator.push(Route::BlocksPage { project_id: pid.clone() });
                                         },
-                                        {
-                                            let pid_toggle = project.project_id.clone();
-                                            let pid_new_tab = project.project_id.clone();
-                                            let pid_copy = project.project_id.clone();
-                                            let pid_rename = project.project_id.clone();
-                                            let pname_rename = project.project_name.clone();
-                                            let pid_delete = project.project_id.clone();
-                                            rsx! {
-                                                ProjectMenu {
-                                                    project_id: pid_toggle.clone(),
-                                                    is_open: open_menu_id() == Some(pid_toggle.clone()),
-                                                    on_toggle: move |_| {
-                                                        let p = pid_toggle.clone();
-                                                        if open_menu_id() == Some(p.clone()) {
-                                                            open_menu_id.set(None);
-                                                        } else {
-                                                            open_menu_id.set(Some(p));
-                                                        }
-                                                    },
-                                                    on_rename: move |_| {
-                                                        renaming_project.set(Some((pid_rename.clone(), pname_rename.clone())));
-                                                        rename_input.set(pname_rename.clone());
-                                                        open_menu_id.set(None);
-                                                    },
-                                                    on_open_new_tab: move |_| {
-                                                        if let Some(window) = web_sys::window() {
-                                                            let path = format!("/projects/{}/blocks", pid_new_tab);
-                                                            let target = match window.location().origin() {
-                                                                Ok(origin) => format!("{}{}", origin, path),
-                                                                Err(_) => path,
-                                                            };
-                                                            let _ = window.open_with_url_and_target(&target, "_blank");
-                                                        }
-                                                        open_menu_id.set(None);
-                                                    },
-                                                    on_copy_link: move |_| {
-                                                        if let Some(window) = web_sys::window() {
-                                                            let path = format!("/projects/{}/blocks", pid_copy);
-                                                            let full_url = match window.location().origin() {
-                                                                Ok(origin) => format!("{}{}", origin, path),
-                                                                Err(_) => path,
-                                                            };
-                                                            let escaped = full_url.replace('\\', "\\\\").replace('\"', "\\\"");
-                                                            document::eval(&format!("navigator.clipboard && navigator.clipboard.writeText(\"{}\");", escaped));
-                                                            progress::show_info("Project link copied");
-                                                        }
-                                                        open_menu_id.set(None);
-                                                    },
-                                                    on_delete: move |_| {
-                                                        let id = pid_delete.clone();
-                                                        spawn(async move {
-                                                            match api_delete_project(&id).await {
-                                                                Ok(_) => {
-                                                                    PROJECTS.write().retain(|p| p.project_id != id);
-                                                                    progress::show_success("Project deleted");
+                                        div { class: "project-card-meta", "#{project.block_count} BLOCKS" }
+                                        div { class: "project-card-name", "{name}" }
+                                        div {
+                                            class: "project-card-actions",
+                                            {
+                                                let pid_toggle = project.project_id.clone();
+                                                let pid_new_tab = project.project_id.clone();
+                                                let pid_copy = project.project_id.clone();
+                                                let pid_rename = project.project_id.clone();
+                                                let pname_rename = project.project_name.clone();
+                                                let pid_delete = project.project_id.clone();
+                                                rsx! {
+                                                    ProjectMenu {
+                                                            project_id: pid_toggle.clone(),
+                                                            is_open: open_menu_id() == Some(pid_toggle.clone()),
+                                                            on_toggle: move |_| {
+                                                                let p = pid_toggle.clone();
+                                                                if open_menu_id() == Some(p.clone()) {
+                                                                    open_menu_id.set(None);
+                                                                } else {
+                                                                    open_menu_id.set(Some(p));
                                                                 }
-                                                                Err(e) => {
-                                                                    progress::show_error_persistent(&format!("Failed to delete project: {}", e));
+                                                            },
+                                                            on_rename: move |_| {
+                                                                renaming_project.set(Some((pid_rename.clone(), pname_rename.clone())));
+                                                                rename_input.set(pname_rename.clone());
+                                                                open_menu_id.set(None);
+                                                            },
+                                                            on_open_new_tab: move |_| {
+                                                                if let Some(window) = web_sys::window() {
+                                                                    let path = format!("/projects/{}/blocks", pid_new_tab);
+                                                                    let target = match window.location().origin() {
+                                                                        Ok(origin) => format!("{}{}", origin, path),
+                                                                        Err(_) => path,
+                                                                    };
+                                                                    let _ = window.open_with_url_and_target(&target, "_blank");
                                                                 }
-                                                            }
-                                                        });
-                                                        open_menu_id.set(None);
-                                                    },
+                                                                open_menu_id.set(None);
+                                                            },
+                                                            on_copy_link: move |_| {
+                                                                if let Some(window) = web_sys::window() {
+                                                                    let path = format!("/projects/{}/blocks", pid_copy);
+                                                                    let full_url = match window.location().origin() {
+                                                                        Ok(origin) => format!("{}{}", origin, path),
+                                                                        Err(_) => path,
+                                                                    };
+                                                                    let escaped = full_url.replace('\\', "\\\\").replace('\"', "\\\"");
+                                                                    document::eval(&format!("navigator.clipboard && navigator.clipboard.writeText(\"{}\");", escaped));
+                                                                    progress::show_info("Project link copied");
+                                                                }
+                                                                open_menu_id.set(None);
+                                                            },
+                                                            on_delete: move |_| {
+                                                                let id = pid_delete.clone();
+                                                                spawn(async move {
+                                                                    match api_delete_project(&id).await {
+                                                                        Ok(_) => {
+                                                                            PROJECTS.write().retain(|p| p.project_id != id);
+                                                                            progress::show_success("Project deleted");
+                                                                        }
+                                                                        Err(e) => {
+                                                                            progress::show_error_persistent(&format!("Failed to delete project: {}", e));
+                                                                        }
+                                                                    }
+                                                                });
+                                                                open_menu_id.set(None);
+                                                            },
+                                                    }
                                                 }
                                             }
                                         }
-                                        div { class: "project-card-meta", "#{project.block_count} BLOCKS" }
-                                        div { class: "project-card-name", "{name}" }
+                                        div {
+                                            class: "project-card-dates",
+                                            div { class: "project-dates",
+                                                div { class: "project-date", "{format_date(&project.project_created_at)}" }
+                                                div { class: "project-date", "{format_relative_time(&project.project_updated_at)}" }
+                                            }
+                                        }
                                     }
                                 }
                             }

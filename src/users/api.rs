@@ -45,13 +45,13 @@ pub struct CreateUserRequest {
 
 // GET /users
 pub async fn list_users() -> Result<Vec<User>, String> {
-    crate::shell::client::get::<Vec<User>>("/users").await
+    crate::core::client::get::<Vec<User>>("/users").await
 }
 
 // GET /users/me
 pub async fn get_current_user() -> Result<User, String> {
     tracing::info!("👤 Getting user profile");
-    crate::shell::client::get::<User>("/users/me").await
+    crate::core::client::get::<User>("/users/me").await
 }
 
 // POST /users
@@ -70,5 +70,5 @@ pub async fn create_user_profile(
         user_role,
     };
 
-    crate::shell::client::post::<CreateUserRequest, User>("/users", &request_body).await
+    crate::core::client::post::<CreateUserRequest, User>("/users", &request_body).await
 }

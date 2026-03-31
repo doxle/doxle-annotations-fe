@@ -49,7 +49,7 @@
     color: var(--text-primary);
     border: none;
     padding: 14px 28px;
-    font-family: 'HelveticaNeue-Medium', 'HelveticaNeue', sans-serif;
+    font-family: 'HelveticaNeue', Helvetica, sans-serif;
     font-size: 18px;
     font-weight: 500;
     cursor: pointer;
@@ -167,10 +167,10 @@
 
 .project-heading-new-btn {
     background: var(--project-card-hover-color);
-    color: var(--project-button-text);
+    color: var(--text-primary);
     border: none;
     border-radius: 4px;
-    padding: 6px 12px;
+    padding: 10px 16px;
     font-family: 'HelveticaNeue', Helvetica, sans-serif;
     font-size: 13px;
     font-weight: 400;
@@ -211,10 +211,60 @@
 .project-list-view .project-card {
     flex-direction: row;
     align-items: center;
-    justify-content: space-between;
-    padding: 12px 24px;
+    padding: 12px 24px 40px 24px;
     gap: 16px;
     max-width: 800px;
+    min-width: 180px;
+    min-height: 80px;
+}
+
+.project-list-view .project-card-name {
+    padding: 0 !important;
+    font-size: 21px;
+    flex: 1;
+    margin: 0 !important;
+    line-height: 1;
+}
+
+.project-list-view .project-card-meta {
+    padding: 0 !important;
+    flex-shrink: 0;
+    margin: 0 !important;
+    line-height: 1;
+    position: relative;
+    top: 4px;
+}
+
+.project-list-view .project-card-actions {
+    margin-left: auto;
+    position: static;
+    top: auto;
+    right: auto;
+}
+
+.project-list-view .project-card-dates {
+    position: absolute;
+    bottom: 8px;
+    left: 0;
+    right: 0;
+    width: 100%;
+    padding: 0 24px;
+    justify-content: center;
+    margin: 0;
+}
+
+.project-list-view .project-dates {
+    flex-direction: row;
+    gap: 12px;
+    align-items: center;
+}
+
+.project-list-view .project-card-name,
+.project-list-view .project-card-meta,
+.project-list-view .project-card-actions,
+.project-list-view .project-menu-trigger {
+    display: flex;
+    align-items: center;
 }
 
 .project-card {
@@ -235,6 +285,14 @@
     border-color: var(--border-color-hover);
 }
 
+.project-card-actions {
+    display: flex;
+    align-items: center;
+    position: absolute;
+    top: 24px;
+    right: 24px;
+}
+
 .project-card-name {
     font-family: 'HelveticaNeue-Light', 'HelveticaNeue', sans-serif;
     font-size: 27px;
@@ -248,17 +306,60 @@
     font-family: 'ModularHouseplant', monospace;
     font-size: 12px;
     color: var(--text-primary);
-    margin-bottom: 8px;
     padding: 0 12px;
 }
 
-.project-empty {
+.project-card-dates {
     display: flex;
+    justify-content: flex-end;
+    margin-top: auto;
+}
+
+.project-dates {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    align-items: flex-end;
+}
+
+.project-date {
+    font-size: 11px;
+    color: var(--text-tertiary);
+    font-weight: 500;
+    letter-spacing: -0.4px;
+}
+
+/* Empty projects page - centered button only */
+.project-empty-page {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: var(--bg-primary);
+    background-image: radial-gradient(circle, var(--dot-color, rgba(0,0,0,0.3)) 1.5px, transparent 1.5px);
+    background-size: 30px 30px;
+    display: flex;
+    flex-direction: column;
     align-items: center;
     justify-content: center;
-    min-height: 60vh;
-    color: var(--text-secondary);
-    font-size: 14px;
+}
+
+.create-project-btn {
+    background: var(--text-primary);
+    color: var(--bg-primary);
+    border: none;
+    border-radius: 8px;
+    padding: 18px 30px;
+    font-family: 'HelveticaNeue-Light', 'HelveticaNeue', Helvetica, sans-serif;
+    font-size: 18px;
+    font-weight: 100;
+    cursor: pointer;
+}
+
+.create-project-btn:hover {
+    background: var(--hover-blue);
+    color: white;
 }
 
 .project-loading {
@@ -335,15 +436,6 @@
     gap: 8px;
     margin-top: 16px;
     justify-content: flex-end;
-}
-
-.create-project-btn {
-    padding: 8px 16px;
-    border-radius: 6px;
-    border: none;
-    cursor: pointer;
-    font-size: 13px;
-    font-family: inherit;
 }
 
 .create-project-btn-primary {

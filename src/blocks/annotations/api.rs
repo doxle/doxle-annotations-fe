@@ -1,7 +1,7 @@
 
 use serde::{Serialize, Deserialize};
-use crate::shell::client;
-use crate::atoms::svg_canvas::{Geometry};
+use crate::core::client;
+use crate::core::svg_canvas::{Geometry};
 
 
 // ============================================

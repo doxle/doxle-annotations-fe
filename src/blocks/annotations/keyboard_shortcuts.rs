@@ -4,9 +4,9 @@ use std::rc::Rc;
 use dioxus::prelude::*;
 use dioxus::dioxus_core::use_drop;
 use wasm_bindgen::{closure::Closure, JsCast};
-use crate::atoms::svg_canvas::state::Tool;
-use crate::blocks::block_list::state::LABELS;
-use crate::shell::app_sidebar::SidebarTab;
+use crate::core::svg_canvas::state::Tool;
+use crate::blocks::state::LABELS;
+use crate::core::app_sidebar::SidebarTab;
 
 
 pub fn setup_keyboard_shortcuts(

@@ -1,0 +1,471 @@
+@import url('https://fonts.googleapis.com/css2?family=Source+Code+Pro:wght@200;300;400;500;600;700&display=swap');
+
+/* Apply Source Code Pro font to all text */
+* {
+  font-family: 'Source Code Pro', monospace;
+  font-weight: 300;
+}
+
+/* Center all content on the page */
+.tasks-page {
+  background:
+    radial-gradient(circle, var(--dot-color, rgba(0,0,0,0.3)) 1.5px, transparent 1.5px);
+  background-size: 30px 30px;
+  background-color: var(--bg-primary);
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  justify-content: center;
+  height: calc(100vh - 40px);
+  overflow-y: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  padding-top: 40px;
+  padding-bottom: 40px;
+}
+
+.tasks-page::-webkit-scrollbar {
+  display: none;
+}
+
+/* Container for header and list - centered */
+.tasks-list-container {
+  width: 70%;
+  max-width: 75vw;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  padding: 0 20px;
+}
+
+/* Header with title and add button */
+.tasks-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  margin-bottom: 30px;
+}
+
+/* Title row with icon */
+.tasks-title-row {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  color:var(--text-primary);
+}
+
+/* TASKS title - 40px, light, left aligned */
+.tasks-title {
+  font-size: 40px;
+  font-weight: 300;
+  text-align: left;
+  margin: 0;
+}
+
+/* Tasks icon next to title */
+.tasks-title-icon {
+  width: 40px;
+  height: 40px;
+}
+
+/* Add task button */
+.tasks-add-button {
+  height: 33px;
+  padding: 0 16px;
+  background-color: var(--primary-button-bg);
+  color: var(--primary-button-text);
+  border: none;
+  border-radius: 4px;
+  font-family: 'Source Code Pro', monospace;
+  font-weight: 300;
+  cursor: pointer;
+  transition: opacity 0.2s;
+  white-space: nowrap;
+}
+
+.tasks-add-button:hover {
+  opacity: 0.8;
+}
+
+/* Empty state page - centered button only */
+.tasks-empty-page {
+  background-color: var(--bg-primary);
+  background-image: radial-gradient(circle, var(--dot-color, rgba(0,0,0,0.3)) 1.5px, transparent 1.5px);
+  background-size: 30px 30px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+}
+
+.create-task-btn {
+  padding: 18px 30px;
+  border-radius: 8px;
+  font-family: 'HelveticaNeue-Light', 'HelveticaNeue', Helvetica, sans-serif;
+  font-size: 18px;
+  font-weight: 100;
+  cursor: pointer;
+  background: var(--text-primary);
+  color: var(--bg-primary);
+  border: none;
+  align-items: center;
+  gap:8px;
+  display: flex;
+}
+
+
+
+.tasks-create-icon {
+  width: 16px;
+  height: 16px;
+}
+
+.create-task-btn:hover {
+  background: var(--hover-blue);
+  color: white;
+}
+.create-task-btn:hover .tasks-create-icon {
+  filter: brightness(0) invert(1);
+}
+
+.tasks-empty-message {
+  font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  font-size: 14px;
+  font-weight: 300;
+  color: var(--text-secondary);
+}
+
+/* Tasks list */
+.tasks-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* Task list item */
+.tasks-list-item {
+  padding: 16px 20px;
+  background-color: var(--bg-card);
+  border: 0.8px solid var(--border-subtle);
+  border-radius: 4px;
+  font-size: 16px;
+  font-weight: 400;
+  color: var(--text-primary);
+  transition: all 0.2s;
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  position: relative;
+}
+
+.tasks-list-item:hover {
+  background-color: var(--bg-card);
+  border-color: var(--border-color-hover);
+}
+
+/* Dark theme overrides */
+html.dark .tasks-list-item {
+  background-color: var(--bg-card);
+  color: var(--text-primary);
+  border: 0.8px solid var(--border-subtle);
+}
+
+html.dark .tasks-list-item:hover {
+  background-color: var(--bg-card);
+  border-color: var(--border-color-hover);
+}
+
+/* Task Card */
+.task-card {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  gap: 12px;
+}
+
+/* Row 1: Task name + three dots */
+.task-row-1 {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+}
+
+/* Task name group */
+.task-name-group {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Task name - 18px as requested */
+.task-name {
+  font-size: 18px;
+  font-weight: 400;
+  color: var(--text-primary);
+}
+
+.task-block-name {
+  font-size: 10px;
+  font-weight: 300;
+  color: var(--text-secondary);
+}
+
+/* Task actions (three dots menu) */
+.task-actions {
+  display: flex;
+  align-items: center;
+}
+
+/* Meta row for assignee/reviewer */
+.task-meta-row {
+  display: flex;
+  flex-direction: row;
+  gap: 20px;
+  margin-top: 8px;
+}
+
+/* Dropdown group */
+.task-dropdown-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.task-dropdown-label {
+  font-size: 12px;
+  color: var(--text-tertiary);
+  font-weight: 300;
+}
+
+.task-dropdown {
+  height: 28px;
+  min-width: 120px;
+  padding: 0 8px;
+  border: 1px solid var(--border-color);
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  border-radius: 4px;
+  font-family: 'Source Code Pro', monospace;
+  font-size: 12px;
+  font-weight: 300;
+  cursor: pointer;
+  outline: none;
+}
+
+.task-dropdown:focus {
+  border-color: var(--dx-blue);
+}
+
+.task-dropdown:hover {
+  border-color: var(--text-secondary);
+}
+
+/* Task state badge */
+.task-state {
+  position: absolute;
+  top: 16px;
+  right: 20px;
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+/* Divider */
+.task-divider {
+  width: 100%;
+  height: 0.6px;
+  background-color: rgb(200, 200, 200);
+  margin: 8px 0;
+}
+
+html.dark .task-divider {
+  background-color: rgb(60, 60, 60);
+}
+
+/* Image rectangles */
+.task-image-rects {
+  display: flex;
+  flex-direction: row;
+  gap: 2px;
+  margin: 4px 0;
+}
+
+.task-image-rect-wrapper {
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+}
+
+.task-image-rect {
+  width: 10px;
+  height: 53px;
+  background-color: var(--text-primary);
+  border-radius: 2px;
+}
+
+.task-image-marker {
+  position: absolute;
+  top: -9px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 5px;
+  height: 5px;
+  background-color: var(--dx-blue);
+  border-radius: 50%;
+}
+
+/* Info row (last updated + counts) */
+.task-info-row {
+  display: flex;
+  flex-direction: row;
+  justify-content: flex-start;
+  align-items: center;
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-top: 4px;
+  opacity: 0.6;
+}
+
+.task-updated-info {
+  font-weight: 300;
+  flex: 1;
+  min-width: 0;
+}
+.task-info-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+  justify-content: flex-end;
+  flex-shrink: 0;
+}
+
+.task-counts {
+  display: flex;
+  gap: 6px;
+  font-weight: 300;
+  white-space: nowrap;
+}
+
+.task-count-item {
+  color: var(--text-secondary);
+}
+
+.task-count-divider {
+  color: var(--text-tertiary);
+}
+
+.task-actions {
+  position: absolute;
+  top: 16px;
+  right: 20px;
+  margin-left: 0;
+  flex-shrink: 0;
+}
+
+/* Deleting state */
+.tasks-list-item.deleting {
+  opacity: 0.5;
+  pointer-events: none;
+  position: relative;
+  overflow: hidden;
+}
+
+.tasks-list-item.deleting::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  height: 3px;
+  width: 30%;
+  background: linear-gradient(90deg, var(--dx-blue), var(--dx-blue));
+  animation: deleting-progress 1s ease-in-out infinite;
+}
+
+@media (min-width: 1440px) {
+  .tasks-list-container {
+    max-width: 60vw;
+  }
+}
+
+@keyframes deleting-progress {
+  0% {
+    left: 0;
+    width: 30%;
+  }
+  50% {
+    left: 35%;
+    width: 30%;
+  }
+  100% {
+    left: 70%;
+    width: 30%;
+  }
+}
+
+/* Delete progress bar */
+.task-delete-progress {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 100%;
+  margin: 4px 0;
+}
+
+.task-delete-progress-bar {
+  width: 100%;
+  height: 4px;
+  background-color: var(--bg-card);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.task-delete-progress-fill {
+  height: 100%;
+  background-color: #EF4444;
+  border-radius: 2px;
+  transition: width 0.3s ease-out;
+}
+
+.task-delete-progress-text {
+  font-size: 11px;
+  color: var(--text-secondary);
+  font-weight: 300;
+}
+
+/* Task label rows - table grid layout */
+.task-labels-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: 2px 8px;
+  width: 100%;
+}
+
+.task-label-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 12px;
+  font-weight: 300;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  padding: 2px 6px;
+  border-radius: 2px;
+  background-color: var(--bg-primary);
+}
+
+.task-label-name {
+  color: var(--text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.task-label-count {
+  color: var(--text-primary);
+  margin-left: 4px;
+}

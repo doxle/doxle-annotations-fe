@@ -1,39 +1,33 @@
 #![allow(dead_code, unused_imports, unused_variables, unused_mut, deprecated)]
 
 use dioxus::prelude::*;
-use blocks::{BlocksPage, CreateBlockPage, FileBlockPage, ImportBlockPage};
+use blocks::{BlocksPage, CreateBlockPage, FileBlockPage, ImportBlockPage, BuildingBlockPage};
 use projects::{ProjectsPage, CreateProjectPage};
-use atoms::tasks::{TasksListPage, CreateTaskPage};
+use tasks::{TasksListPage, CreateTaskPage};
 use blocks::annotations::AnnotationCanvasPage;
-use home::upload::UploadPage;
-use home::{HomePage, Home3Page, SignInPage, Navbar, OurStoryPage, SayHelloPage, SignupPage, VisionPage, GeometricGridPage, DotsPage, ConstellationPage, SquareGridPage};
+use site::upload::UploadPage;
+use site::{HomePage, Home3Page, SignInPage, Navbar, OurStoryPage, SayHelloPage, SignupPage, VisionPage, GeometricGridPage, DotsPage, ConstellationPage, SquareGridPage};
 use matrix::MatrixPage;
 use stacking_bricks::StackingBricksPage;
 use letter_cycle::LetterCyclePage;
 use users::state::{USER, load_user};
-use viewer3d::ViewerPage;
-use shell::status_dialog::LiveTimer;
+use blocks::building::viewer_3d::ViewerPage;
+use core::status_dialog::LiveTimer;
 
 mod blocks;
-mod atoms;
+mod core;
+mod media;
 mod projects;
-// mod old2; // Disabled (legacy)
-mod home;
+mod site;
+mod tasks;
+mod users;
 mod matrix;
 mod stacking_bricks;
 mod letter_cycle;
-mod api;
-// mod old;  // Temporarily disabled
-// mod projects;
-// mod shared;
-mod shell;
-mod users;
-mod viewer3d;
-// mod core;
-// mod state;
+mod auth;
 
-use shell::theme::{apply_theme_class, load_theme_preference, save_theme_preference, THEME};
-use shell::global_keyboard::setup_global_keyboard_shortcuts;
+use core::theme::{apply_theme_class, load_theme_preference, save_theme_preference, THEME};
+use core::global_keyboard::setup_global_keyboard_shortcuts;
 
 // Font assets
 const HELVETICA_REGULAR: Asset = asset!("/assets/fonts/HelveticaNeue.woff2");
@@ -60,19 +54,20 @@ const MAIN_CSS_CONTENT: &str = r#"
     }
 "#;
 
-const FONTS_CSS_TEMPLATE: &str = include_str!("font.css");
-const THEME_CSS: &str = include_str!("theme.css");
-const HOME_CSS: &str = include_str!("home/home.css");
-const HOME3_CSS: &str = include_str!("home/home3.css");
-const SIGN_IN_CSS: &str = include_str!("home/sign_in.css");
-const SIGNUP_CSS: &str = include_str!("home/signup.css");
-const OURSTORY_CSS: &str = include_str!("home/ourstory.css");
-const VISION_CSS: &str = include_str!("home/vision.css");
-const APP_SIDEBAR_CSS: &str = include_str!("shell/app_sidebar/app_sidebar.css");
-const APP_NAVBAR_CSS: &str = include_str!("shell/app_navbar/app_navbar.css");
-const DOTS_CSS: &str = include_str!("home/dots.css");
-const VIEWER3D_CSS: &str = include_str!("viewer3d/viewer_page.css");
-const FILE_BLOCK_PAGE_CSS: &str = include_str!("blocks/file_block/file_block_page.css");
+const FONTS_CSS_TEMPLATE: &str = include_str!("core/app/font.css");
+const THEME_CSS: &str = include_str!("core/app/theme.css");
+const HOME_CSS: &str = include_str!("site/home.css");
+const HOME3_CSS: &str = include_str!("site/home3.css");
+const SIGN_IN_CSS: &str = include_str!("site/sign_in.css");
+const SIGNUP_CSS: &str = include_str!("site/signup.css");
+const OURSTORY_CSS: &str = include_str!("site/ourstory.css");
+const VISION_CSS: &str = include_str!("site/vision.css");
+const APP_SIDEBAR_CSS: &str = include_str!("core/app_sidebar/app_sidebar.css");
+const APP_NAVBAR_CSS: &str = include_str!("core/app_navbar/app_navbar.css");
+const DOTS_CSS: &str = include_str!("site/dots.css");
+const VIEWER3D_CSS: &str = include_str!("blocks/building/viewer_3d/viewer_page.css");
+const FILE_BLOCK_PAGE_CSS: &str = include_str!("blocks/files/file_block_page.css");
+const BUILDING_BLOCK_PAGE_CSS: &str = include_str!("blocks/building/building_block_page.css");
 
 fn main() {
     // Initialize tracing and filter out noisy warnings
@@ -176,6 +171,7 @@ fn App() -> Element {
                 document::Style { {DOTS_CSS} }
                 document::Style { {VIEWER3D_CSS} }
                 document::Style { {FILE_BLOCK_PAGE_CSS} }
+                document::Style { {BUILDING_BLOCK_PAGE_CSS} }
 
                 // Fonts from template with asset URLs
                 document::Style {
@@ -229,6 +225,8 @@ enum Route {
     ImportBlockPage { project_id: String, block_id: String, block_name: String, block_type: String },
     #[route("/projects/:project_id/blocks/:block_id/:block_name/:block_type/files")]
     FileBlockPage { project_id: String, block_id: String, block_name: String, block_type: String },
+    #[route("/projects/:project_id/blocks/:block_id/:block_name/:block_type/building")]
+    BuildingBlockPage { project_id: String, block_id: String, block_name: String, block_type: String },
     #[route("/projects/:project_id/blocks/:block_id/:block_name/:block_type/tasks/new")]
     CreateTaskPage { project_id: String, block_id: String, block_name: String, block_type: String },
     #[route("/projects/:project_id/blocks/:block_id/:block_name/:block_type/tasks")]

@@ -51,19 +51,19 @@ When SvgCanvas modifies signals that canvas_page reads:
 use std::collections::{HashSet, HashMap};
 use dioxus::prelude::*;
 use dioxus::logger::tracing::info;
-use crate::atoms::svg_canvas::{SvgCanvas, SvgCanvasV2, Geometry};
-use crate::atoms::svg_canvas::state::Tool;
-use crate::atoms::tasks::state::{TASKS, TASKS_LOADING, state_load_tasks, state_load_task_images};
-use crate::atoms::tasks::model::Task;
+use crate::core::svg_canvas::{SvgCanvas, SvgCanvasV2, Geometry};
+use crate::core::svg_canvas::state::Tool;
+use crate::tasks::state::{TASKS, TASKS_LOADING, state_load_tasks, state_load_task_images};
+use crate::tasks::model::Task;
 use super::image_layer::ImageLayer;
 use super::annotations_layer::AnnotationsLayer;
 use super::models::Annotation;
 use super::state::{state_load_annotations, state_update_annotation_label, state_delete_annotation, state_load_threads, state_create_thread, state_add_comment, state_delete_thread, state_resolve_thread};
-use crate::shell::{AppNavbar, app_sidebar::{AppSidebar, SidebarTab}};
-use crate::shell::loading::LoadingPage;
+use crate::core::{AppNavbar, app_sidebar::{AppSidebar, SidebarTab}};
+use crate::core::loading::LoadingPage;
 use super::keyboard_shortcuts::setup_keyboard_shortcuts;
-use crate::blocks::block_list::state::{LABELS, LABELS_LOADING, state_load_labels};
-use crate::blocks::block_list::state::CURRENT_BLOCK;
+use crate::blocks::state::{LABELS, LABELS_LOADING, state_load_labels};
+use crate::blocks::state::CURRENT_BLOCK;
 use super::context_menu::AnnotationContextMenu;
 use super::comment_dialog::CommentDialog;
 use super::models::CommentThread;
@@ -94,7 +94,7 @@ pub fn AnnotationCanvasPage(
     // Use cached tasks — only fetch if not loaded for this block
     let block_id_tasks = block_id.clone();
     use_effect(move || {
-        let current_bid = crate::blocks::block_list::state::CURRENT_BLOCK().map(|b| b.block_id.clone()).unwrap_or_default();
+        let current_bid = crate::blocks::state::CURRENT_BLOCK().map(|b| b.block_id.clone()).unwrap_or_default();
         if current_bid != block_id_tasks {
             let bid = block_id_tasks.clone();
             spawn(async move {
@@ -114,8 +114,8 @@ pub fn AnnotationCanvasPage(
         let bid = block_id_single.clone();
         let iid = image_id_single.clone();
         spawn(async move {
-            if let Ok(img) = crate::atoms::media::api::api_get_image(&bid, &iid).await {
-                current_image_url.set(Some(crate::shell::client::to_cloudfront_url(&img.url)));
+            if let Ok(img) = crate::media::api::api_get_image(&bid, &iid).await {
+                current_image_url.set(Some(crate::core::client::to_cloudfront_url(&img.url)));
             }
         });
     });
@@ -272,13 +272,48 @@ pub fn AnnotationCanvasPage(
         .find(|t| t.block_id == block_id && t.task_id == task_id)
         .cloned();
 
+    // Recover invalid route image_id (e.g. \"no-image\") once task images load.
+    let recover_block_id = block_id.clone();
+    let recover_block_name = block_name.clone();
+    let recover_block_type = block_type.clone();
+    let recover_task_id = task_id.clone();
+    let recover_task_name = task_name.clone();
+    let recover_image_id = image_id.clone();
+    use_effect(move || {
+        let tasks = TASKS.read();
+        let task = tasks.iter().find(|t| t.block_id == recover_block_id && t.task_id == recover_task_id);
+        if let Some(task) = task {
+            if task.images.is_empty() {
+                return;
+            }
+
+            let has_current_image = task.images.iter().any(|img| img.image_id == recover_image_id);
+            if has_current_image {
+                return;
+            }
+
+            if let Some(first_image) = task.images.first() {
+                nav.replace(Route::AnnotationCanvasPage {
+                    project_id: project_id().clone(),
+                    block_id: recover_block_id.clone(),
+                    block_name: recover_block_name.clone(),
+                    block_type: recover_block_type.clone(),
+                    task_id: recover_task_id.clone(),
+                    task_name: recover_task_name.clone(),
+                    image_id: first_image.image_id.clone(),
+                    image_name: first_image.image_name.clone(),
+                });
+            }
+        }
+    });
+
     // Build image URL: prefer task images (has full data), then single-image fetch,
     // then None (shows loading spinner).
     let image_url = task.as_ref()
         .and_then(|t| {
             t.images.iter()
                 .find(|img| img.image_id == image_id)
-                .map(|img| crate::shell::client::to_cloudfront_url(&img.url))
+                .map(|img| crate::core::client::to_cloudfront_url(&img.url))
         })
         .or_else(|| current_image_url());
     tracing::info!("image_url: {:?}", image_url);

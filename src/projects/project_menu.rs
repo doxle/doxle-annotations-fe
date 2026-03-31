@@ -1,11 +1,9 @@
 use dioxus::prelude::*;
-use crate::shell::{THEME, Theme};
+use crate::core::{THEME, Theme};
 
 const PROJECT_MENU_CSS: &str = include_str!("project_menu.css");
-const DRAG_ICON_LIGHT: Asset = asset!("/assets/icons/drag-light.svg");
-const DRAG_ICON_DARK: Asset = asset!("/assets/icons/drag-dark.svg");
-const DELETE_ICON_LIGHT: Asset = asset!("/assets/icons/delete-light.svg");
-const DELETE_ICON_DARK: Asset = asset!("/assets/icons/delete-dark.svg");
+const DELETE_ICON_LIGHT: Asset = asset!("/assets/icons/delete-light-project-menu.svg");
+const DELETE_ICON_DARK: Asset = asset!("/assets/icons/delete-dark-project-menu.svg");
 const COPY_ICON_LIGHT: Asset = asset!("/assets/icons/copy-light.svg");
 const COPY_ICON_DARK: Asset = asset!("/assets/icons/copy-dark.svg");
 const OPEN_ICON_LIGHT: Asset = asset!("/assets/icons/open-light.svg");
@@ -24,7 +22,6 @@ pub fn ProjectMenu(
     on_delete: EventHandler<()>,
 ) -> Element {
     let is_dark = THEME() == Theme::Dark;
-    let drag_icon = if is_dark { DRAG_ICON_DARK } else { DRAG_ICON_LIGHT };
     let rename_icon = if is_dark { RENAME_ICON_DARK } else { RENAME_ICON_LIGHT };
     let copy_icon = if is_dark { COPY_ICON_DARK } else { COPY_ICON_LIGHT };
     let open_icon = if is_dark { OPEN_ICON_DARK } else { OPEN_ICON_LIGHT };
@@ -47,16 +44,12 @@ pub fn ProjectMenu(
             class: "project-menu-container",
             "data-project-id": "{project_id}",
             span {
-                class: if is_open { "project-menu-trigger project-menu-trigger-open" } else { "project-menu-trigger" },
+                class: "project-menu-trigger",
                 onclick: move |e| {
                     e.stop_propagation();
                     on_toggle.call(());
                 },
-                img {
-                    src: drag_icon,
-                    class: "project-menu-trigger-icon",
-                    alt: "Project menu"
-                }
+                "⋮"
             }
             if is_open {
                 div {
