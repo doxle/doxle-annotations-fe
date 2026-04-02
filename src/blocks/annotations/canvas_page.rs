@@ -208,12 +208,12 @@ pub fn AnnotationCanvasPage(
                         nav.replace(Route::AnnotationCanvasPage {
                             project_id: project_id().clone(),
                             block_id: nav_block_id.clone(),
-                            block_name: nav_block_name.clone(),
+                            block_name: crate::core::route_utils::encode_route_segment(&nav_block_name),
                             block_type: nav_block_type.clone(),
                             task_id: nav_task_id.clone(),
-                            task_name: nav_task_name.clone(),
+                            task_name: crate::core::route_utils::encode_route_segment(&nav_task_name),
                             image_id: new_img.image_id.clone(),
-                            image_name: format!("{}.png", new_img.image_id),
+                            image_name: crate::core::route_utils::encode_route_segment(&format!("{}.png", new_img.image_id)),
                         });
                     }
                 }
@@ -296,12 +296,12 @@ pub fn AnnotationCanvasPage(
                 nav.replace(Route::AnnotationCanvasPage {
                     project_id: project_id().clone(),
                     block_id: recover_block_id.clone(),
-                    block_name: recover_block_name.clone(),
+                    block_name: crate::core::route_utils::encode_route_segment(&recover_block_name),
                     block_type: recover_block_type.clone(),
                     task_id: recover_task_id.clone(),
-                    task_name: recover_task_name.clone(),
+                    task_name: crate::core::route_utils::encode_route_segment(&recover_task_name),
                     image_id: first_image.image_id.clone(),
-                    image_name: first_image.image_name.clone(),
+                    image_name: crate::core::route_utils::encode_route_segment(&first_image.image_name),
                 });
             }
         }
@@ -450,12 +450,12 @@ pub fn AnnotationCanvasPage(
                                                 nav.replace(Route::AnnotationCanvasPage {
                                                     project_id: project_id().clone(),
                                                     block_id: nav_bid.clone(),
-                                                    block_name: nav_bname.clone(),
+                                                    block_name: crate::core::route_utils::encode_route_segment(&nav_bname),
                                                     block_type: nav_btype.clone(),
                                                     task_id: nav_tid.clone(),
-                                                    task_name: nav_tname.clone(),
+                                                    task_name: crate::core::route_utils::encode_route_segment(&nav_tname),
                                                     image_id: img_id.clone(),
-                                                    image_name: format!("{}.png", img_id),
+                                                    image_name: crate::core::route_utils::encode_route_segment(&format!("{}.png", img_id)),
                                                 });
                                             },
                                             "{i + 1}"

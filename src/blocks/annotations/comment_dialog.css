@@ -65,7 +65,7 @@
     cursor: pointer;
     padding: 3px;
     border-radius: 4px;
-    color: var(--text-tertiary);
+    color: var(--text-primary);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -73,6 +73,7 @@
 }
 
 .comment-action-btn:hover {
+    background: var(--bg-card-hover);
     color: var(--text-primary);
 }
 
@@ -184,9 +185,9 @@
     width: 24px;
     height: 24px;
     border-radius: 50%;
-    background: var(--text-primary);
-    color: var(--bg-primary);
-    border: none;
+    background: var(--bg-card);
+    color: var(--text-primary);
+    border: 1px solid var(--border-color);
     cursor: pointer;
     display: flex;
     align-items: center;
@@ -197,6 +198,9 @@
 
 .comment-submit-btn:hover {
     opacity: 1;
+    background: #009cff;
+    border-color: #009cff;
+    color: #fff;
 }
 
 .comment-submit-btn.active {

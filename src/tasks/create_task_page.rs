@@ -239,7 +239,12 @@ pub fn CreateTaskPage(props: CreateTaskPageProps) -> Element {
                                 class: "tasks-back-button",
                                 disabled: *is_submitting.read(),
                                 onclick: move |_| {
-                                    nav.push(Route::TasksListPage { project_id: project_id_for_back.clone(), block_id: block_id_for_back.clone(), block_name: block_name_for_back.clone(), block_type: block_type_for_back.clone() });
+                                    nav.push(Route::TasksListPage {
+                                        project_id: project_id_for_back.clone(),
+                                        block_id: block_id_for_back.clone(),
+                                        block_name: crate::core::route_utils::encode_route_segment(&block_name_for_back),
+                                        block_type: block_type_for_back.clone(),
+                                    });
                                 },
                                 "Back"
                             }

@@ -1,0 +1,204 @@
+.file-item-page {
+    min-height: calc(100vh - 40px);
+    padding: 20px;
+    background-color: var(--bg-primary);
+    background-image: radial-gradient(circle, var(--dot-color, rgba(0,0,0,0.3)) 1.5px, transparent 1.5px);
+    background-size: 30px 30px;
+}
+
+.file-item-head {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    width: min(1200px, 95vw);
+    margin-left: auto;
+    margin-right: auto;
+    margin-bottom: 12px;
+}
+
+.file-item-title {
+    font-family: 'HelveticaNeue', Helvetica, Arial, sans-serif;
+    font-size: 18px;
+    font-weight: 400;
+    color: var(--text-primary);
+}
+
+.file-item-subtitle {
+    font-family: 'HelveticaNeue', Helvetica, Arial, sans-serif;
+    font-size: 12px;
+    color: var(--text-secondary);
+}
+
+.file-item-zoom-controls {
+    display: inline-flex;
+    gap: 6px;
+    margin-top: 6px;
+}
+
+.file-item-zoom-btn {
+    height: 24px;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    background: var(--bg-card);
+    color: var(--text-primary);
+    font-size: 11px;
+    font-family: 'HelveticaNeue', Helvetica, Arial, sans-serif;
+    cursor: pointer;
+    padding: 0 8px;
+}
+
+.file-item-stage {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-top: 8px;
+}
+
+.file-item-canvas {
+    position: relative;
+    width: min(1200px, 95vw);
+    max-height: calc(100vh - 180px);
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    overflow: hidden;
+    background: var(--bg-card);
+    cursor: crosshair;
+    touch-action: none;
+}
+
+.file-item-zoom-layer {
+    position: relative;
+    transform-origin: 0 0;
+    will-change: transform;
+}
+
+.file-item-image,
+.file-item-video,
+.file-item-pdf {
+    width: 100%;
+    max-height: calc(100vh - 180px);
+    object-fit: contain;
+    display: block;
+    background: #000;
+}
+
+.file-item-pdf {
+    border: 0;
+}
+
+.file-item-generic {
+    min-height: 420px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+}
+
+.file-item-generic a {
+    color: var(--text-primary);
+    text-decoration: underline;
+}
+
+.file-item-comment-rect {
+    position: absolute;
+    width: 22px;
+    height: 22px;
+    transform: translate(-50%, -50%);
+    border: 1px solid #009cff;
+    border-radius: 2px;
+    background: rgba(0, 156, 255, 0.08);
+    color: #009cff;
+    font-size: 10px;
+    font-family: 'HelveticaNeue', Helvetica, Arial, sans-serif;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    padding: 0;
+    z-index: 4;
+}
+
+.file-item-comment-rect.resolved {
+    border-color: #009cff;
+    color: #009cff;
+}
+
+.file-item-comment-rect::after {
+    content: attr(data-index);
+    position: absolute;
+    top: -7px;
+    right: -7px;
+    width: 12px;
+    height: 12px;
+    border-radius: 999px;
+    background: #009cff;
+    color: #fff;
+    font-size: 4px;
+    font-family: 'HelveticaNeue', Helvetica, Arial, sans-serif;
+    font-weight: 600;
+    line-height: 6px;
+    text-align: center;
+    padding: 0;
+    pointer-events: auto;
+}
+
+.file-item-comment-arrow {
+    position: absolute;
+    width: 18px;
+    height: 20px;
+    transform: translate(-50%, -100%);
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+    z-index: 4;
+}
+.file-item-comment-arrow-shaft {
+    content: "";
+    position: absolute;
+    left: 50%;
+    top: 2px;
+    transform: translateX(-50%);
+    width: 2px;
+    height: 10px;
+    background: #009cff;
+    border-radius: 1px;
+}
+
+.file-item-comment-arrow-head {
+    position: absolute;
+    left: 50%;
+    top: 10px;
+    transform: translateX(-50%);
+    width: 0;
+    height: 0;
+    border-left: 4px solid transparent;
+    border-right: 4px solid transparent;
+    border-top: 6px solid #009cff;
+}
+
+.file-item-comment-arrow-badge {
+    position: absolute;
+    top: -3px;
+    right: -2px;
+    width: 6px;
+    height: 6px;
+    border-radius: 999px;
+    background: #009cff;
+    color: #fff;
+    font-size: 4px;
+    font-family: 'HelveticaNeue', Helvetica, Arial, sans-serif;
+    font-weight: 600;
+    line-height: 6px;
+    text-align: center;
+    padding: 0;
+    pointer-events: auto;
+}
+
+.file-item-error {
+    font-size: 12px;
+    color: #d9534f;
+    padding: 8px 0;
+}

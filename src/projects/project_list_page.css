@@ -405,7 +405,7 @@
     background: var(--bg-primary);
     border: 1px solid var(--border-color);
     border-radius: 12px;
-    padding: 24px;
+    padding: 32px;
     width: 360px;
     box-shadow: 0 8px 32px var(--shadow);
 }
@@ -415,12 +415,13 @@
     padding: 10px 12px;
     border: 1px solid var(--border-color);
     border-radius: 6px;
-    background: var(--bg-secondary);
+    background: var(--card-hover-color);
     color: var(--text-primary);
     font-size: 14px;
     outline: none;
     box-sizing: border-box;
     font-family: inherit;
+    min-height: 46px;
 }
 
 .create-project-input:focus {
@@ -436,6 +437,13 @@
     gap: 8px;
     margin-top: 16px;
     justify-content: flex-end;
+}
+
+.create-project-actions .create-project-btn {
+    padding: 0 18px;
+    height: 36px;
+    border-radius: 6px;
+    font-size: 14px;
 }
 
 .create-project-btn-primary {

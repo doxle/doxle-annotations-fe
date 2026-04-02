@@ -105,7 +105,12 @@ pub async fn handle_create_task(
                 }
             }
 
-            nav.push(Route::TasksListPage { project_id: project_id.clone(), block_id, block_name, block_type });
+            nav.push(Route::TasksListPage {
+                project_id: project_id.clone(),
+                block_id,
+                block_name: crate::core::route_utils::encode_route_segment(&block_name),
+                block_type,
+            });
         },
         Err(e) => {
             error!("❌ Failed to create task: {}", e);

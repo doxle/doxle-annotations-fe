@@ -1,7 +1,7 @@
 #![allow(dead_code, unused_imports, unused_variables, unused_mut, deprecated)]
 
 use dioxus::prelude::*;
-use blocks::{BlocksPage, CreateBlockPage, FileBlockPage, ImportBlockPage, BuildingBlockPage};
+use blocks::{BlocksPage, CreateBlockPage, FileBlockPage, FileItemPage, ImportBlockPage, BuildingBlockPage};
 use projects::{ProjectsPage, CreateProjectPage};
 use tasks::{TasksListPage, CreateTaskPage};
 use blocks::annotations::AnnotationCanvasPage;
@@ -225,6 +225,8 @@ enum Route {
     ImportBlockPage { project_id: String, block_id: String, block_name: String, block_type: String },
     #[route("/projects/:project_id/blocks/:block_id/:block_name/:block_type/files")]
     FileBlockPage { project_id: String, block_id: String, block_name: String, block_type: String },
+    #[route("/projects/:project_id/blocks/:block_id/:block_name/:block_type/files/:image_id/:image_name")]
+    FileItemPage { project_id: String, block_id: String, block_name: String, block_type: String, image_id: String, image_name: String },
     #[route("/projects/:project_id/blocks/:block_id/:block_name/:block_type/building")]
     BuildingBlockPage { project_id: String, block_id: String, block_name: String, block_type: String },
     #[route("/projects/:project_id/blocks/:block_id/:block_name/:block_type/tasks/new")]

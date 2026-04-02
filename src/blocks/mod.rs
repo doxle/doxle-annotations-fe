@@ -14,5 +14,5 @@ pub mod building;
 pub use block_list::BlocksPage;
 pub use create_block_page::CreateBlockPage;
 pub use import_block_page::ImportBlockPage;
-pub use files::FileBlockPage;
+pub use files::{FileBlockPage, FileItemPage};
 pub use building::BuildingBlockPage;

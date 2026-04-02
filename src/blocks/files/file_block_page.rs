@@ -1,13 +1,17 @@
-use crate::media::api::{api_update_image_markup, list_block_media, upload_image_for_block};
-use crate::media::{Image, MarkupRect};
+use crate::blocks::annotations::api::api_list_threads;
+use crate::media::api::{list_block_media, upload_image_for_block};
+use crate::media::Image;
 use crate::core::client::to_cloudfront_url;
 use crate::core::{AppNavbar, LoadingScreen, Theme, THEME};
+use crate::Route;
 use dioxus::prelude::*;
 use futures::stream::{self, StreamExt};
+use std::collections::HashMap;
 
 const FILE_BLOCK_PAGE_CSS: &str = include_str!("file_block_page.css");
 const DOG_LIGHT_ICON: Asset = asset!("/assets/icons/dog-light.svg");
 const DOG_DARK_ICON: Asset = asset!("/assets/icons/dog-dark.svg");
+const COMMENT_BLUE_ICON: Asset = asset!("/assets/icons/comment-blue.svg");
 
 #[derive(Clone, PartialEq)]
 struct UploadItem {
@@ -15,17 +19,6 @@ struct UploadItem {
     status: String,
 }
 
-fn clamp01(v: f64) -> f64 {
-    v.clamp(0.0, 1.0)
-}
-
-fn rect_from_points(x1: f64, y1: f64, x2: f64, y2: f64) -> MarkupRect {
-    let x = x1.min(x2);
-    let y = y1.min(y2);
-    let width = (x2 - x1).abs();
-    let height = (y2 - y1).abs();
-    MarkupRect { x, y, width, height }
-}
 
 fn is_video(media: &Image) -> bool {
     media.media_type == "video"
@@ -44,22 +37,22 @@ fn pdf_thumbnail_src(url: &str) -> String {
     format!("{url}#page=1&toolbar=0&navpanes=0&scrollbar=0&view=FitH")
 }
 
-#[cfg(target_arch = "wasm32")]
-fn element_dimensions(element_id: &str) -> Option<(f64, f64)> {
-    let window = web_sys::window()?;
-    let document = window.document()?;
-    let element = document.get_element_by_id(element_id)?;
-    let rect = element.get_bounding_client_rect();
-    if rect.width() <= 0.0 || rect.height() <= 0.0 {
-        return None;
+async fn fetch_comment_counts(image_ids: Vec<String>) -> HashMap<String, usize> {
+    let comment_count_futures = image_ids.into_iter().map(|image_id| async move {
+        let count = match api_list_threads(&image_id).await {
+            Ok(threads) => threads.iter().map(|thread| thread.comments.len()).sum::<usize>(),
+            Err(_) => 0,
+        };
+        (image_id, count)
+    });
+    let mut stream = stream::iter(comment_count_futures).buffer_unordered(6);
+    let mut counts = HashMap::new();
+    while let Some((image_id, count)) = stream.next().await {
+        counts.insert(image_id, count);
     }
-    Some((rect.width(), rect.height()))
+    counts
 }
 
-#[cfg(not(target_arch = "wasm32"))]
-fn element_dimensions(_element_id: &str) -> Option<(f64, f64)> {
-    None
-}
 
 #[component]
 pub fn FileBlockPage(
@@ -68,19 +61,16 @@ pub fn FileBlockPage(
     block_name: String,
     block_type: String,
 ) -> Element {
-    let _ = &block_type;
     let block_name_display = crate::core::route_utils::decode_route_segment(&block_name);
+    let nav = use_navigator();
     let mut media_items = use_signal(Vec::<Image>::new);
+    let mut comment_counts = use_signal(HashMap::<String, usize>::new);
     let mut loading = use_signal(|| true);
     let mut error = use_signal(|| None::<String>);
     let mut upload_items = use_signal(Vec::<UploadItem>::new);
     let mut upload_current = use_signal(|| 0usize);
     let mut upload_total = use_signal(|| 0usize);
     let mut is_uploading = use_signal(|| false);
-    let mut selected_media = use_signal(|| None::<Image>);
-    let mut markup_rects = use_signal(Vec::<MarkupRect>::new);
-    let mut drag_start = use_signal(|| None::<(f64, f64)>);
-    let mut draft_rect = use_signal(|| None::<MarkupRect>);
     let dog_icon = if THEME() == Theme::Dark { DOG_DARK_ICON } else { DOG_LIGHT_ICON };
 
     let project_id_for_load = project_id.clone();
@@ -92,7 +82,11 @@ pub fn FileBlockPage(
         let block_id = block_id_for_load.clone();
         spawn(async move {
             match list_block_media(&project_id, &block_id).await {
-                Ok(items) => media_items.set(items),
+                Ok(items) => {
+                    let image_ids = items.iter().map(|item| item.image_id.clone()).collect::<Vec<_>>();
+                    media_items.set(items);
+                    comment_counts.set(fetch_comment_counts(image_ids).await);
+                }
                 Err(e) => error.set(Some(e)),
             }
             loading.set(false);
@@ -223,7 +217,11 @@ pub fn FileBlockPage(
                                             }
 
                                             match list_block_media(&project_id, &block_id).await {
-                                                Ok(items) => media_items.set(items),
+                                                Ok(items) => {
+                                                    let image_ids = items.iter().map(|item| item.image_id.clone()).collect::<Vec<_>>();
+                                                    media_items.set(items);
+                                                    comment_counts.set(fetch_comment_counts(image_ids).await);
+                                                }
                                                 Err(e) => error.set(Some(e)),
                                             }
                                             is_uploading.set(false);
@@ -257,27 +255,26 @@ pub fn FileBlockPage(
                         class: "file-block-grid",
                         for media in media_items().iter() {
                             {
-                                let media_for_click = media.clone();
+                                let image_id_for_route = media.image_id.clone();
+                                let image_name_for_route = crate::core::route_utils::encode_route_segment(&media.image_name);
                                 let src = to_cloudfront_url(&media.url);
-                                let open_url = src.clone();
-                                let should_open_pdf_direct = is_pdf(media);
+                                let project_id_for_route = project_id.clone();
+                                let block_id_for_route = block_id.clone();
+                                let block_name_for_route = crate::core::route_utils::encode_route_segment(&block_name);
+                                let block_type_for_route = block_type.clone();
+                                let nav_for_route = nav.clone();
                                 rsx! {
                                     button {
                                         class: "file-card",
                                         onclick: move |_| {
-                                            if should_open_pdf_direct {
-                                                #[cfg(target_arch = "wasm32")]
-                                                {
-                                                    if let Some(window) = web_sys::window() {
-                                                        let _ = window.open_with_url_and_target(&open_url, "_blank");
-                                                    }
-                                                }
-                                                return;
-                                            }
-                                            selected_media.set(Some(media_for_click.clone()));
-                                            markup_rects.set(media_for_click.markup_rects.clone());
-                                            drag_start.set(None);
-                                            draft_rect.set(None);
+                                            nav_for_route.push(Route::FileItemPage {
+                                                project_id: project_id_for_route.clone(),
+                                                block_id: block_id_for_route.clone(),
+                                                block_name: block_name_for_route.clone(),
+                                                block_type: block_type_for_route.clone(),
+                                                image_id: image_id_for_route.clone(),
+                                                image_name: image_name_for_route.clone(),
+                                            });
                                         },
                                         div {
                                             class: "file-card-thumb",
@@ -323,6 +320,22 @@ pub fn FileBlockPage(
                                                     }
                                                 }
                                             }
+                                            if let Some(comment_count) = comment_counts().get(&media.image_id).copied() {
+                                                if comment_count > 0 {
+                                                    div {
+                                                        class: "file-card-comment-indicator",
+                                                        img {
+                                                            class: "file-card-comment-icon",
+                                                            src: COMMENT_BLUE_ICON,
+                                                            alt: "Comments"
+                                                        }
+                                                        sup {
+                                                            class: "file-card-comment-count",
+                                                            "{comment_count}"
+                                                        }
+                                                    }
+                                                }
+                                            }
                                         }
                                         div {
                                             class: "file-card-footer",
@@ -338,191 +351,5 @@ pub fn FileBlockPage(
             }
         }
 
-        if let Some(current_media) = selected_media() {
-            {
-                let canvas_id = format!("file-markup-canvas-{}", current_media.image_id);
-                let canvas_id_for_down = canvas_id.clone();
-                let canvas_id_for_move = canvas_id.clone();
-                let current_media_for_save = current_media.clone();
-                let project_id_for_save = project_id.clone();
-                let block_id_for_save = block_id.clone();
-                let src = to_cloudfront_url(&current_media.url);
-                rsx! {
-                    div {
-                        class: "file-modal-backdrop",
-                        onclick: move |_| selected_media.set(None),
-                        div {
-                            class: "file-modal",
-                            onclick: move |e| e.stop_propagation(),
-                            div {
-                                class: "file-modal-head",
-                                h2 { "{current_media.image_name}" }
-                                button {
-                                    class: "file-modal-close",
-                                    onclick: move |_| selected_media.set(None),
-                                    "Close"
-                                }
-                            }
-
-                            if is_image(&current_media) {
-                                div {
-                                    class: "file-markup-toolbar",
-                                    button {
-                                        class: "file-markup-save",
-                                        onclick: move |_| {
-                                            let project_id = project_id_for_save.clone();
-                                            let block_id = block_id_for_save.clone();
-                                            let image_id = current_media_for_save.image_id.clone();
-                                            let rects = markup_rects();
-                                            spawn(async move {
-                                                match api_update_image_markup(&project_id, &block_id, &image_id, rects.clone()).await {
-                                                    Ok(updated) => {
-                                                        {
-                                                            let mut all_media = media_items.write();
-                                                            for media in all_media.iter_mut() {
-                                                                if media.image_id == updated.image_id {
-                                                                    *media = updated.clone();
-                                                                    break;
-                                                                }
-                                                            }
-                                                        }
-                                                        markup_rects.set(updated.markup_rects.clone());
-                                                        selected_media.set(Some(updated));
-                                                        crate::core::progress::show_success("Markup saved");
-                                                    }
-                                                    Err(e) => {
-                                                        crate::core::progress::show_error_persistent(
-                                                            &format!("Failed to save markup: {}", e),
-                                                        );
-                                                    }
-                                                }
-                                            });
-                                        },
-                                        "Save"
-                                    }
-                                    button {
-                                        class: "file-markup-clear",
-                                        onclick: move |_| {
-                                            markup_rects.set(Vec::new());
-                                            draft_rect.set(None);
-                                            drag_start.set(None);
-                                        },
-                                        "Clear"
-                                    }
-                                }
-                                div {
-                                    id: "{canvas_id}",
-                                    class: "file-markup-canvas",
-                                    onmousedown: move |evt| {
-                                        if let Some((w, h)) = element_dimensions(&canvas_id_for_down) {
-                                            let p = evt.element_coordinates();
-                                            let x = clamp01(p.x / w);
-                                            let y = clamp01(p.y / h);
-                                            drag_start.set(Some((x, y)));
-                                            draft_rect.set(None);
-                                        }
-                                    },
-                                    onmousemove: move |evt| {
-                                        if let Some((sx, sy)) = drag_start() {
-                                            if let Some((w, h)) = element_dimensions(&canvas_id_for_move) {
-                                                let p = evt.element_coordinates();
-                                                let x = clamp01(p.x / w);
-                                                let y = clamp01(p.y / h);
-                                                draft_rect.set(Some(rect_from_points(sx, sy, x, y)));
-                                            }
-                                        }
-                                    },
-                                    onmouseup: move |_| {
-                                        if let Some(rect) = draft_rect() {
-                                            if rect.width > 0.003 && rect.height > 0.003 {
-                                                let mut rects = markup_rects.write();
-                                                rects.push(rect);
-                                            }
-                                        }
-                                        draft_rect.set(None);
-                                        drag_start.set(None);
-                                    },
-                                    onmouseleave: move |_| {
-                                        if let Some(rect) = draft_rect() {
-                                            if rect.width > 0.003 && rect.height > 0.003 {
-                                                let mut rects = markup_rects.write();
-                                                rects.push(rect);
-                                            }
-                                        }
-                                        draft_rect.set(None);
-                                        drag_start.set(None);
-                                    },
-                                    img {
-                                        class: "file-markup-image",
-                                        src: "{src}",
-                                        alt: "{current_media.image_name}",
-                                    }
-                                    for (idx, rect) in markup_rects().iter().enumerate() {
-                                        {
-                                            let idx_for_remove = idx;
-                                            let rect_style = format!(
-                                                "left:{}%;top:{}%;width:{}%;height:{}%;",
-                                                rect.x * 100.0,
-                                                rect.y * 100.0,
-                                                rect.width * 100.0,
-                                                rect.height * 100.0
-                                            );
-                                            rsx! {
-                                                div {
-                                                    class: "file-markup-rect",
-                                                    style: "{rect_style}",
-                                                    button {
-                                                        class: "file-markup-rect-remove",
-                                                        onclick: move |e| {
-                                                            e.stop_propagation();
-                                                            let mut rects = markup_rects.write();
-                                                            if idx_for_remove < rects.len() {
-                                                                rects.remove(idx_for_remove);
-                                                            }
-                                                        },
-                                                        "×"
-                                                    }
-                                                }
-                                            }
-                                        }
-                                    }
-                                    if let Some(rect) = draft_rect() {
-                                        {
-                                            let draft_style = format!(
-                                                "left:{}%;top:{}%;width:{}%;height:{}%;",
-                                                rect.x * 100.0,
-                                                rect.y * 100.0,
-                                                rect.width * 100.0,
-                                                rect.height * 100.0
-                                            );
-                                            rsx! {
-                                                div {
-                                                    class: "file-markup-rect draft",
-                                                    style: "{draft_style}",
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                            } else if is_video(&current_media) {
-                                video {
-                                    class: "file-modal-video",
-                                    src: "{src}",
-                                    controls: true,
-                                    autoplay: false,
-                                }
-                            } else {
-                                a {
-                                    class: "file-modal-link",
-                                    href: "{src}",
-                                    target: "_blank",
-                                    "Open file"
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
     }
 }

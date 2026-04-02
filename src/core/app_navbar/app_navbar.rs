@@ -84,6 +84,7 @@ pub fn AppNavbar(
             | Route::CreateBlockPage { .. }
             | Route::ImportBlockPage { .. }
             | Route::FileBlockPage { .. }
+            | Route::FileItemPage { .. }
             | Route::BuildingBlockPage { .. }
     );
     use_effect(move || {
@@ -105,6 +106,7 @@ pub fn AppNavbar(
         Route::CreateBlockPage { project_id } => project_id.clone(),
         Route::ImportBlockPage { project_id, .. } => project_id.clone(),
         Route::FileBlockPage { project_id, .. } => project_id.clone(),
+        Route::FileItemPage { project_id, .. } => project_id.clone(),
         Route::BuildingBlockPage { project_id, .. } => project_id.clone(),
         _ => "default".to_string(),
     };
@@ -120,6 +122,9 @@ pub fn AppNavbar(
         }
         Route::FileBlockPage { project_id: _, block_id, block_name, block_type } => {
             (Some(block_id.clone()), Some(block_name.clone()), block_type.clone(), None, None, None, None, None, 0, 0)
+        }
+        Route::FileItemPage { project_id: _, block_id, block_name, block_type, image_id: _, image_name } => {
+            (Some(block_id.clone()), Some(block_name.clone()), block_type.clone(), None, None, Some(image_name.clone()), None, None, 0, 0)
         }
         Route::BuildingBlockPage { project_id: _, block_id, block_name, block_type } => {
             (Some(block_id.clone()), Some(block_name.clone()), block_type.clone(), None, None, None, None, None, 0, 0)
@@ -366,7 +371,12 @@ pub fn AppNavbar(
                                         div { 
                                             class: "app-breadcrumb-item clickable",
                                             onclick: move |_| {
-                                            nav.push(Route::TasksListPage { project_id: pid().clone(), block_id: bid.clone(), block_name: bname.clone(), block_type: btype.clone() });
+                                            nav.push(Route::TasksListPage {
+                                                project_id: pid().clone(),
+                                                block_id: bid.clone(),
+                                                block_name: crate::core::route_utils::encode_route_segment(&bname),
+                                                block_type: btype.clone(),
+                                            });
                                             },
                                             "{decoded_name}" 
                                         }
@@ -425,12 +435,12 @@ pub fn AppNavbar(
                                         nav.push(Route::AnnotationCanvasPage {
                                             project_id: pid().clone(),
                                             block_id: bid.clone(),
-                                            block_name: bname.clone(),
+                                            block_name: crate::core::route_utils::encode_route_segment(&bname),
                                             block_type: btype.clone(),
                                             task_id: tid.clone(),
-                                            task_name: tname.clone(),
+                                            task_name: crate::core::route_utils::encode_route_segment(&tname),
                                             image_id: img_id.clone(),
-                                            image_name: img_name.clone(),
+                                            image_name: crate::core::route_utils::encode_route_segment(&img_name),
                                         });
                                     }
                                 }
@@ -462,12 +472,12 @@ pub fn AppNavbar(
                                         nav.push(Route::AnnotationCanvasPage {
                                             project_id: pid().clone(),
                                             block_id: bid.clone(),
-                                            block_name: bname.clone(),
+                                            block_name: crate::core::route_utils::encode_route_segment(&bname),
                                             block_type: btype.clone(),
                                             task_id: tid.clone(),
-                                            task_name: tname.clone(),
+                                            task_name: crate::core::route_utils::encode_route_segment(&tname),
                                             image_id: img_id.clone(),
-                                            image_name: img_name.clone(),
+                                            image_name: crate::core::route_utils::encode_route_segment(&img_name),
                                         });
                                     }
                                 }

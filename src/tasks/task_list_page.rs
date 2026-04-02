@@ -142,7 +142,12 @@ pub fn TasksListPage(project_id: String, block_id: String, block_name: String, b
                         onclick: {
                             
                             move |_| {
-                                nav.push(Route::CreateTaskPage { project_id: project_id().clone(), block_id: block_id_for_create_task.clone(), block_name: block_name_for_create_task.clone(), block_type: block_type_for_create_task.clone() });
+                                nav.push(Route::CreateTaskPage {
+                                    project_id: project_id().clone(),
+                                    block_id: block_id_for_create_task.clone(),
+                                    block_name: crate::core::route_utils::encode_route_segment(&block_name_for_create_task),
+                                    block_type: block_type_for_create_task.clone(),
+                                });
                             }
                         },
                         img { src: empty_add_icon, class: "tasks-create-icon" }
@@ -165,7 +170,12 @@ pub fn TasksListPage(project_id: String, block_id: String, block_name: String, b
                     onclick: {
                         
                         move |_| {
-                            nav.push(Route::CreateTaskPage { project_id: project_id().clone(), block_id: block_id_for_navbar.clone(), block_name: block_name.clone(), block_type: block_type_for_nav.clone() });
+                            nav.push(Route::CreateTaskPage {
+                                project_id: project_id().clone(),
+                                block_id: block_id_for_navbar.clone(),
+                                block_name: crate::core::route_utils::encode_route_segment(&block_name),
+                                block_type: block_type_for_nav.clone(),
+                            });
                         }
                     },
                     img { src: add_icon, class: "app-navbar-center-button-icon" }
@@ -212,12 +222,12 @@ pub fn TasksListPage(project_id: String, block_id: String, block_name: String, b
                                         nav.push(Route::AnnotationCanvasPage { 
                                             project_id: project_id().clone(),
                                             block_id: block_id_for_nav.clone(),
-                                            block_name: block_name.clone(),
+                                            block_name: crate::core::route_utils::encode_route_segment(&block_name),
                                             block_type: block_type_for_task_nav.clone(),
                                             task_id: task_id.clone(),
-                                            task_name: task_name_for_nav.clone(),
+                                            task_name: crate::core::route_utils::encode_route_segment(&task_name_for_nav),
                                             image_id: image_id.clone(),
-                                            image_name: image_name.clone(),
+                                            image_name: crate::core::route_utils::encode_route_segment(&image_name),
                                         });
                                     },
                                     
