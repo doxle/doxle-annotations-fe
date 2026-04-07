@@ -62,7 +62,7 @@
 }
 
 .dog-menu-version {
-    font-family: 'Modular Houseplant';
+    font-family: 'ModularHouseplant';
     font-size: 9px;
     font-weight: 400;
     color: var(--dog-menu-text-muted);
@@ -460,6 +460,14 @@ html.dark .app-navbar-center-button:hover .app-navbar-center-button-icon {
     margin: 0;
     padding: 0;
     line-height: 1;
+    font-size: 0;
+}
+
+.app-breadcrumb-chevron::after {
+    content: "\203A";
+    font-size: 14px;
+    color: rgba(255, 255, 255, 0.4);
+    padding: 0 2px;
 }
 
 .app-breadcrumb-item {
@@ -1159,5 +1167,44 @@ html.dark .app-navbar-tool-icon img.app-navbar-tool-icon-polygon {
 
 .account-panel-invite-delete:hover {
     color: #dc3545;
+}
+
+@media (max-width: 768px) {
+    .app-navbar {
+        height: 45px;
+    }
+
+    .user-avatar {
+        width: 26px;
+        height: 26px;
+        font-size: 13.5px;
+        font-weight: 500;
+    }
+
+    /* Horizontal scroll for breadcrumbs */
+    .app-navbar-left-section {
+        position: relative;
+        left: auto;
+        max-width: calc(100% - 60px);
+        overflow-x: auto;
+        overflow-y: hidden;
+        scrollbar-width: none;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .app-navbar-left-section::-webkit-scrollbar {
+        display: none;
+    }
+
+    /* Larger font + 44px min tap target */
+    .app-breadcrumb-item {
+        font-size: 14px;
+        padding: 12px 4px;
+        min-height: 44px;
+        display: flex;
+        align-items: center;
+    }
+
+}
 }
 

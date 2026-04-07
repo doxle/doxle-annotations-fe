@@ -3,13 +3,18 @@ use crate::blocks::annotations::models::CommentThread;
 use crate::blocks::annotations::state::{
     state_add_comment, state_create_thread, state_delete_thread, state_load_threads, state_resolve_thread,
 };
-use crate::core::client::to_cloudfront_url;
-use crate::core::{AppNavbar, LoadingScreen};
+use crate::core::client::{to_cloudfront_media_url, to_cloudfront_url};
+use crate::core::{LoadingScreen, Theme, THEME};
+use crate::Route;
 use crate::media::api::api_get_image;
 use crate::media::Image;
 use dioxus::prelude::*;
+#[cfg(target_arch = "wasm32")]
+use wasm_bindgen::JsCast;
 
 const FILE_ITEM_PAGE_CSS: &str = include_str!("file_item_page.css");
+const CLOSE_LIGHT: Asset = asset!("/assets/icons/close-light.svg");
+const CLOSE_DARK: Asset = asset!("/assets/icons/close-dark.svg");
 
 fn clamp01(v: f64) -> f64 {
     v.clamp(0.0, 1.0)
@@ -67,7 +72,8 @@ pub fn FileItemPage(
     image_id: String,
     image_name: String,
 ) -> Element {
-    let _ = (&project_id, &block_name, &block_type);
+    let nav = use_navigator();
+    let close_icon = if THEME() == Theme::Dark { CLOSE_DARK } else { CLOSE_LIGHT };
     let image_name_display = crate::core::route_utils::decode_route_segment(&image_name);
     let mut media_item = use_signal(|| None::<Image>);
     let mut loading = use_signal(|| true);
@@ -82,6 +88,7 @@ pub fn FileItemPage(
     let mut drag_start: Signal<(f64, f64)> = use_signal(|| (0.0, 0.0));
     let mut drag_last: Signal<(f64, f64)> = use_signal(|| (0.0, 0.0));
     let mut suppress_next_click: Signal<bool> = use_signal(|| false);
+    let mut video_playing: Signal<bool> = use_signal(|| false);
 
     let block_id_for_load = block_id.clone();
     let image_id_for_load = image_id.clone();
@@ -100,14 +107,26 @@ pub fn FileItemPage(
         });
     });
 
+    let pid = project_id.clone();
+    let bid = block_id.clone();
+    let bname = block_name.clone();
+    let btype = block_type.clone();
+
     rsx! {
         style { {FILE_ITEM_PAGE_CSS} }
-        AppNavbar {}
         div {
             class: "file-item-page",
-            div {
-                class: "file-item-head",
-                h1 { class: "file-item-title", "{image_name_display}" }
+            button {
+                class: "file-item-close",
+                onclick: move |_| {
+                    nav.push(Route::FileBlockPage {
+                        project_id: pid.clone(),
+                        block_id: bid.clone(),
+                        block_name: bname.clone(),
+                        block_type: btype.clone(),
+                    });
+                },
+                img { src: close_icon, alt: "Close", class: "file-item-close-icon" }
             }
             if loading() {
                 LoadingScreen { text: "Loading file".to_string() }
@@ -117,7 +136,11 @@ pub fn FileItemPage(
                 {
                     let canvas_id = format!("file-item-canvas-{}", media.image_id);
                     let canvas_id_for_click = canvas_id.clone();
-                    let src = to_cloudfront_url(&media.url);
+                    let src = if is_video(&media) {
+                        to_cloudfront_media_url(&media.url)
+                    } else {
+                        to_cloudfront_url(&media.url)
+                    };
                     let zoom_layer_style = format!("transform: translate({}px, {}px) scale({});", pan_x(), pan_y(), zoom_level());
                     rsx! {
                         div {
@@ -246,11 +269,49 @@ pub fn FileItemPage(
                                     class: "file-item-zoom-layer",
                                     style: "{zoom_layer_style}",
                                     if is_video(&media) {
-                                        video {
-                                            class: "file-item-video",
-                                            src: "{src}",
-                                            controls: true,
-                                            autoplay: false,
+                                        div {
+                                            class: "file-item-video-wrapper",
+                                            video {
+                                                id: "file-item-video-player",
+                                                class: "file-item-video",
+                                                src: "{src}",
+                                                controls: true,
+                                                autoplay: false,
+                                                playsinline: true,
+                                                onmousedown: move |e| e.stop_propagation(),
+                                                onpointerdown: move |e| e.stop_propagation(),
+                                                onclick: move |e| e.stop_propagation(),
+                                            }
+                                            if !video_playing() {
+                                                div {
+                                                    class: "file-item-play-overlay",
+                                                    onclick: move |e| {
+                                                        e.stop_propagation();
+                                                        video_playing.set(true);
+                                                        #[cfg(target_arch = "wasm32")]
+                                                        {
+                                                            if let Some(window) = web_sys::window() {
+                                                                if let Some(doc) = window.document() {
+                                                                    if let Some(el) = doc.get_element_by_id("file-item-video-player") {
+                                                                        if let Ok(vid) = el.dyn_into::<web_sys::HtmlVideoElement>() {
+                                                                            let _ = vid.play();
+                                                                        }
+                                                                    }
+                                                                }
+                                                            }
+                                                        }
+                                                    },
+                                                    div { class: "file-item-play-btn",
+                                                        svg {
+                                                            width: "32",
+                                                            height: "32",
+                                                            view_box: "0 0 24 24",
+                                                            fill: "white",
+                                                            path { d: "M8 5v14l11-7z" }
+                                                        }
+                                                    }
+                                                }
+                                            }
                                         }
                                     } else if is_image(&media) {
                                         img {

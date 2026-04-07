@@ -13,13 +13,15 @@ pub mod theme;
 pub mod progress;
 pub mod status_dialog;
 pub mod route_utils;
+pub mod platform;
 
 pub use app_navbar::AppNavbar;
 pub use app_sidebar::{AppSidebar, SidebarTab};
-pub use bottom_bar::BottomBar;
+pub use bottom_bar::{BottomBar, BLOCK_TYPE_FILTER};
 pub use global_keyboard::setup_global_keyboard_shortcuts;
 pub use loading_screen::LoadingScreen;
 pub use protected_route::ProtectedRoute;
 pub use shapes::{BBox, BBoxAction, Geometry, Point, Polygon};
 pub use theme::{apply_theme_class, is_dark_theme, load_theme_preference, Theme, THEME};
 pub use progress::{STATUS, show_success, show_error, show_info, show_progress, show_progress_danger, push_log_danger, clear_status};
+pub use platform::{is_mobile, use_mobile_listener};

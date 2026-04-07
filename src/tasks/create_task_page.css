@@ -46,7 +46,7 @@ html.dark input:focus {
 
 /* Title - matches create project/block */
 .create-tasks-title {
-  font-family: 'Modular Houseplant';
+  font-family: 'ModularHouseplant';
   font-size: 14px;
   font-weight: 500;
   color: var(--text-primary);
@@ -109,7 +109,7 @@ label {
 
 /* Required text uses Source Serif Pro */
 .required-text {
-  font-family: 'Modular Houseplant', monospace;
+  font-family: 'ModularHouseplant', monospace;
   font-weight: 300;
 }
 
@@ -325,7 +325,7 @@ html.dark .tasks-upload-button:hover {
 }
 
 .upload-progress-text {
-  font-family: 'Modular Houseplant', monospace;
+  font-family: 'ModularHouseplant', monospace;
   font-size: 12px;
   color: var(--text-secondary);
   text-align: center;

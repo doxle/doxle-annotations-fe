@@ -9,8 +9,10 @@ const CREATE_BLOCK_CSS: &str = include_str!("create_block_page.css");
 #[component]
 pub fn CreateBlockPage(project_id: String) -> Element {
     let mut block_name = use_signal(String::new);
-    let mut block_type = use_signal(|| BlockType::Building);
+    let mut block_type: Signal<Option<BlockType>> = use_signal(|| None);
     let mut is_submitting = use_signal(|| false);
+    let mut name_error = use_signal(|| false);
+    let mut type_error = use_signal(|| false);
     let navigator = use_navigator();
     let project_id = use_signal(move || project_id.clone());
 
@@ -23,12 +25,21 @@ pub fn CreateBlockPage(project_id: String) -> Element {
         }
 
         let name = block_name.read().trim().to_string();
+        let mut has_error = false;
         if name.is_empty() {
+            name_error.set(true);
             crate::core::progress::show_error("Block name is required");
-            return;
+            has_error = true;
         }
-
-        let bt = block_type().clone();
+        if block_type().is_none() {
+            type_error.set(true);
+            if !has_error {
+                crate::core::progress::show_error("Please select a block type");
+            }
+            has_error = true;
+        }
+        if has_error { return; }
+        let bt = block_type().unwrap();
         is_submitting.set(true);
         spawn(async move {
             match state_create_block(&project_id(), name.clone(), bt, None).await {
@@ -74,22 +85,25 @@ pub fn CreateBlockPage(project_id: String) -> Element {
                         div {
                             class: "input-with-icons",
                             input {
-                                class: "blocks-name-input",
+                                class: if name_error() { "blocks-name-input input-error" } else { "blocks-name-input" },
                                 r#type: "text",
                                 placeholder: "Enter block name",
                                 value: "{block_name}",
-                                oninput: move |e| block_name.set(e.value()),
+                                oninput: move |e| {
+                                    name_error.set(false);
+                                    block_name.set(e.value());
+                                },
                                 autofocus: true,
                             }
                             div {
                                 class: "input-divider",
                             }
                             div {
-                                class: "block-type-icons",
+                                class: if type_error() { "block-type-icons type-error" } else { "block-type-icons" },
                         button {
                             r#type: "button",
-                            class: if block_type() == BlockType::Building { "block-icon-button block-icon-button-first active" } else { "block-icon-button block-icon-button-first" },
-                            onclick: move |_| block_type.set(BlockType::Building),
+                            class: if block_type() == Some(BlockType::Building) { "block-icon-button block-icon-button-first active" } else { "block-icon-button block-icon-button-first" },
+                            onclick: move |_| { type_error.set(false); block_type.set(Some(BlockType::Building)); },
                             img {
                                 class: "block-icon light-icon",
                                 src: asset!("/assets/icons/build-block-light.svg"),
@@ -101,8 +115,8 @@ pub fn CreateBlockPage(project_id: String) -> Element {
                         }
                         button {
                             r#type: "button",
-                            class: if block_type() == BlockType::Annotation { "block-icon-button block-icon-button-middle active" } else { "block-icon-button block-icon-button-middle" },
-                            onclick: move |_| block_type.set(BlockType::Annotation),
+                            class: if block_type() == Some(BlockType::Annotation) { "block-icon-button block-icon-button-middle active" } else { "block-icon-button block-icon-button-middle" },
+                            onclick: move |_| { type_error.set(false); block_type.set(Some(BlockType::Annotation)); },
                             img {
                                 class: "block-icon light-icon",
                                 src: asset!("/assets/icons/annotation-block-light.svg"),
@@ -114,8 +128,8 @@ pub fn CreateBlockPage(project_id: String) -> Element {
                         }
                         button {
                             r#type: "button",
-                            class: if block_type() == BlockType::File { "block-icon-button block-icon-button-last active" } else { "block-icon-button block-icon-button-last" },
-                            onclick: move |_| block_type.set(BlockType::File),
+                            class: if block_type() == Some(BlockType::File) { "block-icon-button block-icon-button-last active" } else { "block-icon-button block-icon-button-last" },
+                            onclick: move |_| { type_error.set(false); block_type.set(Some(BlockType::File)); },
                             img {
                                 class: "block-icon light-icon",
                                 src: asset!("/assets/icons/file-block-light.svg"),

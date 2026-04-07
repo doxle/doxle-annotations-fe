@@ -5,11 +5,11 @@ use crate::tasks::state::{state_load_tasks,  state_delete_task, state_rename_tas
 use crate::blocks::state::{CURRENT_BLOCK, LABELS, state_load_labels};
 use crate::tasks::api::{api_assign_task, api_set_reviewer};
 use crate::users::state::{USER, USERS};
-use crate::users::api::{User, UserRole, list_users};
+use crate::users::api::{User, list_users};
 use super::task_menu::TaskMenu;
 use super::edit_task_modal::EditTaskModal;
 
-use crate::core::{THEME, Theme, AppNavbar};
+use crate::core::{THEME, Theme, AppNavbar, BottomBar};
 use dioxus::logger::tracing::info;
 
 /// Extract filename from image URL (last segment after /)
@@ -89,16 +89,7 @@ pub fn TasksListPage(project_id: String, block_id: String, block_name: String, b
        
     
 
-    // Filter users by block type: annotation -> annotators+admins, file/building -> builders+admins
-    let filtered_users: Vec<User> = {
-        let bt = block_type.to_lowercase();
-        USERS.read().iter().filter(|u| {
-            u.user_role == UserRole::Admin || match bt.as_str() {
-                "annotation" => u.user_role == UserRole::Annotator,
-                _ => u.user_role == UserRole::Builder,
-            }
-        }).cloned().collect()
-    };
+    let filtered_users: Vec<User> = USERS.read().iter().cloned().collect();
     let tasks_icon = if is_dark { BLOCKS_ICON_DARK } else { BLOCKS_ICON_LIGHT };
     let add_icon = if is_dark { ADD_ICON_DARK } else { ADD_ICON_LIGHT };
     let empty_add_icon = if is_dark { ADD_ICON_LIGHT } else { ADD_ICON_DARK };
@@ -136,25 +127,21 @@ pub fn TasksListPage(project_id: String, block_id: String, block_name: String, b
             style { {TASK_LIST_CSS} }
             AppNavbar {}
             div { class: "tasks-empty-page",
-                if is_admin {
-                    button {
-                        class: "create-task-btn",
-                        onclick: {
-                            
-                            move |_| {
-                                nav.push(Route::CreateTaskPage {
-                                    project_id: project_id().clone(),
-                                    block_id: block_id_for_create_task.clone(),
-                                    block_name: crate::core::route_utils::encode_route_segment(&block_name_for_create_task),
-                                    block_type: block_type_for_create_task.clone(),
-                                });
-                            }
-                        },
-                        img { src: empty_add_icon, class: "tasks-create-icon" }
-                        "New Task"
-                    }
-                } else {
-                    div { class: "tasks-empty-message", "No tasks assigned" }
+                button {
+                    class: "create-task-btn",
+                    onclick: {
+                        
+                        move |_| {
+                            nav.push(Route::CreateTaskPage {
+                                project_id: project_id().clone(),
+                                block_id: block_id_for_create_task.clone(),
+                                block_name: crate::core::route_utils::encode_route_segment(&block_name_for_create_task),
+                                block_type: block_type_for_create_task.clone(),
+                            });
+                        }
+                    },
+                    img { src: empty_add_icon, class: "tasks-create-icon" }
+                    "New Task"
                 }
             }
         };
@@ -164,23 +151,21 @@ pub fn TasksListPage(project_id: String, block_id: String, block_name: String, b
     rsx! {
         style { {TASK_LIST_CSS} }
         AppNavbar {
-            if is_admin {
-                button {
-                    class: "app-navbar-center-button",
-                    onclick: {
-                        
-                        move |_| {
-                            nav.push(Route::CreateTaskPage {
-                                project_id: project_id().clone(),
-                                block_id: block_id_for_navbar.clone(),
-                                block_name: crate::core::route_utils::encode_route_segment(&block_name),
-                                block_type: block_type_for_nav.clone(),
-                            });
-                        }
-                    },
-                    img { src: add_icon, class: "app-navbar-center-button-icon" }
-                    "New Task"
-                }
+            button {
+                class: "app-navbar-center-button",
+                onclick: {
+                    
+                    move |_| {
+                        nav.push(Route::CreateTaskPage {
+                            project_id: project_id().clone(),
+                            block_id: block_id_for_navbar.clone(),
+                            block_name: crate::core::route_utils::encode_route_segment(&block_name),
+                            block_type: block_type_for_nav.clone(),
+                        });
+                    }
+                },
+                img { src: add_icon, class: "app-navbar-center-button-icon" }
+                "New Task"
             }
         }
         div { 
@@ -209,10 +194,16 @@ pub fn TasksListPage(project_id: String, block_id: String, block_name: String, b
                                 .unwrap_or_else(|| ("no-image".to_string(), "No Image".to_string()));
 
                             let is_deleting = deleting_task_id() == Some(task.task_id.clone());
+                            let task_id_for_ctx = task.task_id.clone();
                             rsx! {
                                 li {
                                     key: "{task.task_id}",
                                     class: if is_deleting { "tasks-list-item deleting" } else { "tasks-list-item" },
+                                    oncontextmenu: move |e| {
+                                        e.prevent_default();
+                                        e.stop_propagation();
+                                        open_menu_id.set(Some(task_id_for_ctx.clone()));
+                                    },
                                     onclick: move |_| {
                                         // Don't navigate if menu is open
                                         if open_menu_id().is_some() {
@@ -453,6 +444,7 @@ pub fn TasksListPage(project_id: String, block_id: String, block_name: String, b
                 }
             }
         }
+        BottomBar { project_id: project_id().clone() }
     }
    
 }

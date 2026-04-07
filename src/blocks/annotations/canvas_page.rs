@@ -59,7 +59,7 @@ use super::image_layer::ImageLayer;
 use super::annotations_layer::AnnotationsLayer;
 use super::models::Annotation;
 use super::state::{state_load_annotations, state_update_annotation_label, state_delete_annotation, state_load_threads, state_create_thread, state_add_comment, state_delete_thread, state_resolve_thread};
-use crate::core::{AppNavbar, app_sidebar::{AppSidebar, SidebarTab}};
+use crate::core::{AppNavbar, BottomBar, app_sidebar::{AppSidebar, SidebarTab}};
 use crate::core::loading::LoadingPage;
 use super::keyboard_shortcuts::setup_keyboard_shortcuts;
 use crate::blocks::state::{LABELS, LABELS_LOADING, state_load_labels};
@@ -653,5 +653,6 @@ pub fn AnnotationCanvasPage(
                 div { class: "shortcuts-footer", "Press Space or click outside to close" }
             }
         }
+        BottomBar { project_id: project_id().clone() }
     }
 }

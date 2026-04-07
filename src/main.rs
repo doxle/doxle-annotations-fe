@@ -6,7 +6,7 @@ use projects::{ProjectsPage, CreateProjectPage};
 use tasks::{TasksListPage, CreateTaskPage};
 use blocks::annotations::AnnotationCanvasPage;
 use site::upload::UploadPage;
-use site::{HomePage, Home3Page, SignInPage, Navbar, OurStoryPage, SayHelloPage, SignupPage, VisionPage, GeometricGridPage, DotsPage, ConstellationPage, SquareGridPage};
+use site::{HomePage, Home3Page, JoinPage, JoinPreviewPage, LegacyJoinPage, SignInInvitePage, SignInPage, Navbar, OurStoryPage, SayHelloPage, SignupInvitePage, SignupPage, SignupPreviewPage, SignupPreviewVerifyPage, SignupVerifyInvitePage, SignupVerifyPage, VisionPage, GeometricGridPage, DotsPage, ConstellationPage, SquareGridPage};
 use matrix::MatrixPage;
 use stacking_bricks::StackingBricksPage;
 use letter_cycle::LetterCyclePage;
@@ -26,8 +26,9 @@ mod stacking_bricks;
 mod letter_cycle;
 mod auth;
 
-use core::theme::{apply_theme_class, load_theme_preference, save_theme_preference, THEME};
+use core::theme::{apply_theme_class, load_theme_preference, save_theme_preference, use_system_theme_listener, THEME};
 use core::global_keyboard::setup_global_keyboard_shortcuts;
+use core::platform::use_mobile_listener;
 
 // Font assets
 const HELVETICA_REGULAR: Asset = asset!("/assets/fonts/HelveticaNeue.woff2");
@@ -58,8 +59,8 @@ const FONTS_CSS_TEMPLATE: &str = include_str!("core/app/font.css");
 const THEME_CSS: &str = include_str!("core/app/theme.css");
 const HOME_CSS: &str = include_str!("site/home.css");
 const HOME3_CSS: &str = include_str!("site/home3.css");
-const SIGN_IN_CSS: &str = include_str!("site/sign_in.css");
-const SIGNUP_CSS: &str = include_str!("site/signup.css");
+const SIGN_IN_CSS: &str = include_str!("site/sign_in_page.css");
+const SIGNUP_CSS: &str = include_str!("site/signup_page.css");
 const OURSTORY_CSS: &str = include_str!("site/ourstory.css");
 const VISION_CSS: &str = include_str!("site/vision.css");
 const APP_SIDEBAR_CSS: &str = include_str!("core/app_sidebar/app_sidebar.css");
@@ -68,6 +69,7 @@ const DOTS_CSS: &str = include_str!("site/dots.css");
 const VIEWER3D_CSS: &str = include_str!("blocks/building/viewer_3d/viewer_page.css");
 const FILE_BLOCK_PAGE_CSS: &str = include_str!("blocks/files/file_block_page.css");
 const BUILDING_BLOCK_PAGE_CSS: &str = include_str!("blocks/building/building_block_page.css");
+const BOTTOM_BAR_CSS: &str = include_str!("core/bottom_bar.css");
 
 fn main() {
     // Initialize tracing and filter out noisy warnings
@@ -99,8 +101,8 @@ fn App() -> Element {
             }
         }
     });
-    // Capture invite code from query params BEFORE the router strips them.
-    // Stash in sessionStorage; HomePage will read it and navigate to signup.
+    // Capture access token from query params BEFORE the router strips them.
+    // Stash in sessionStorage; HomePage will route into the join flow.
     use_hook(|| {
         #[cfg(target_arch = "wasm32")]
         {
@@ -114,10 +116,15 @@ fn App() -> Element {
                 Ok(p) => p,
                 Err(_) => return,
             };
-            if let Some(code) = params.get("code").or_else(|| params.get("invite_code")) {
-                if !code.trim().is_empty() {
+            if let Some(token) = params
+                .get("access_token")
+                .or_else(|| params.get("code"))
+                .or_else(|| params.get("invite_code"))
+            {
+                if !token.trim().is_empty() {
                     if let Ok(Some(storage)) = window.session_storage() {
-                        let _ = storage.set_item("invite_code", &code);
+                        let _ = storage.set_item("access_token", &token);
+                        let _ = storage.set_item("invite_code", &token);
                     }
                 }
             }
@@ -138,6 +145,12 @@ fn App() -> Element {
     // Setup global keyboard shortcuts (works on all pages)
     setup_global_keyboard_shortcuts();
 
+    // Track mobile/desktop viewport
+    use_mobile_listener();
+
+    // Follow system light/dark mode changes
+    use_system_theme_listener();
+
 
     // Watch THEME signal and apply to HTML element
     use_effect(move || {
@@ -152,8 +165,10 @@ fn App() -> Element {
 
         // Head meta for proper mobile viewport and safe areas
                 document::Meta { name: "viewport", content: "width=device-width, initial-scale=1, viewport-fit=cover" }
-                document::Meta { name: "apple-mobile-web-app-capable", content: "yes" }
+        document::Meta { name: "apple-mobile-web-app-capable", content: "yes" }
                 document::Meta { name: "apple-mobile-web-app-status-bar-style", content: "black-translucent" }
+                document::Link { rel: "manifest", href: "/public/manifest.json" }
+                document::Link { rel: "apple-touch-icon", href: "/public/icon-192.png" }
                 document::Meta { name: "theme-color", content: "#ffffff" }
 
                 // Base styles
@@ -172,6 +187,7 @@ fn App() -> Element {
                 document::Style { {VIEWER3D_CSS} }
                 document::Style { {FILE_BLOCK_PAGE_CSS} }
                 document::Style { {BUILDING_BLOCK_PAGE_CSS} }
+                document::Style { {BOTTOM_BAR_CSS} }
 
                 // Fonts from template with asset URLs
                 document::Style {
@@ -201,10 +217,30 @@ enum Route {
     Home3Page {},
     #[route("/ourstory")]
     OurStoryPage {},
+    #[end_layout]
     #[route("/signin")]
     SignInPage {},
+    #[route("/signin/:access_token")]
+    SignInInvitePage { access_token: String },
+    #[route("/signup/verify")]
+    SignupVerifyPage {},
+    #[route("/signup/verify/:access_token")]
+    SignupVerifyInvitePage { access_token: String },
     #[route("/signup")]
     SignupPage {},
+    #[route("/signup/:access_token")]
+    SignupInvitePage { access_token: String },
+    #[route("/signup-preview/verify")]
+    SignupPreviewVerifyPage {},
+    #[route("/signup-preview")]
+    SignupPreviewPage {},
+    #[route("/join-preview")]
+    JoinPreviewPage {},
+    #[route("/join")]
+    LegacyJoinPage {},
+    #[route("/join/:access_token")]
+    JoinPage { access_token: String },
+    #[layout(NavBar)]
     #[route("/vision")]
     VisionPage {},
     #[route("/upload")]

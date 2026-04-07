@@ -27,14 +27,10 @@ pub fn HomePage() -> Element {
             let window = web_sys::window().unwrap();
             let document = window.document().unwrap();
 
-            // If invite code was stashed by App, redirect to signup
-            if let Ok(Some(storage)) = window.session_storage() {
-                if let Ok(Some(code)) = storage.get_item("invite_code") {
-                    if !code.trim().is_empty() {
-                        nav.push(Route::SignupPage {});
-                        return;
-                    }
-                }
+            // If an access token was stashed by App, redirect to join flow
+            if let Some(access_token) = auth::api::get_stored_access_token() {
+                nav.replace(Route::JoinPage { access_token });
+                return;
             }
 
             // Reset scroll position (mobile keyboard can leave page scrolled)

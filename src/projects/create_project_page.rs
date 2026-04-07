@@ -1,9 +1,9 @@
 use dioxus::prelude::*;
 use crate::Route;
 use crate::core::{AppNavbar, ProtectedRoute};
-use super::state::state_create_project;
+use super::project_state::state_create_project;
 
-const CSS: &str = include_str!("create_project_page.css");
+const CSS: &str = include_str!("create_project.css");
 
 #[component]
 pub fn CreateProjectPage() -> Element {

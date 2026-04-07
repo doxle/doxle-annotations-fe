@@ -1,7 +1,7 @@
 use crate::media::api::{list_block_media, upload_image_for_block};
 use crate::media::Image;
 use crate::core::client::to_cloudfront_url;
-use crate::core::{AppNavbar, LoadingScreen, Theme, THEME};
+use crate::core::{AppNavbar, BottomBar, LoadingScreen, Theme, THEME};
 use dioxus::prelude::*;
 use futures::stream::{self, StreamExt};
 
@@ -286,5 +286,6 @@ pub fn BuildingBlockPage(
                 }
             }
         }
+        BottomBar { project_id: project_id.clone() }
     }
 }

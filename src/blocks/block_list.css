@@ -740,3 +740,15 @@ html.dark .blocks-create-button-centered:hover {
   font-weight: 400;
   letter-spacing: 0.5px;
 }
+
+/* Mobile: hide list/grid toggle + their dividers, keep New Block + search */
+@media (max-width: 768px) {
+    /* Hide: divider, list btn, divider, grid btn, divider — keep last btn (search) */
+    .new-page-btn .action-btn:not(:last-child) {
+        display: none;
+    }
+
+    .new-page-btn .action-divider:not(:last-of-type) {
+        display: none;
+    }
+}

@@ -8,15 +8,31 @@ use dioxus::prelude::*;
 
 #[component]
 pub fn SignInPage() -> Element {
+    rsx! {
+        SignInPageContent { route_access_token: None }
+    }
+}
+
+#[component]
+pub fn SignInInvitePage(access_token: String) -> Element {
+    rsx! {
+        SignInPageContent { route_access_token: Some(access_token) }
+    }
+}
+
+#[component]
+fn SignInPageContent(route_access_token: Option<String>) -> Element {
     // const SIGN_IN_LOGO: Asset = asset!("/assets/icons/d-flag2.svg");
     const SIGN_IN_LOGO: Asset = asset!("/assets/icons/dog-dark.svg");
-    const SIGN_IN_CSS:&str = include_str!("sign_in.css");
+    const SIGN_IN_CSS:&str = include_str!("sign_in_page.css");
 
     let mut email = use_signal(|| String::new());
     let mut password = use_signal(|| String::new());
+    let mut access_token = use_signal(|| String::new());
     let mut error_message = use_signal(|| Option::<String>::None);
     let mut is_loading = use_signal(|| false);
     let mut show_password = use_signal(|| false);
+    let mut did_prefill = use_signal(|| false);
     let nav = navigator();
 
     // Auto-focus email input on mount
@@ -33,10 +49,46 @@ pub fn SignInPage() -> Element {
         }
     });
 
+    use_effect(move || {
+        if did_prefill() {
+            return;
+        }
+        did_prefill.set(true);
+
+        let token = route_access_token
+            .clone()
+            .filter(|value| !value.trim().is_empty())
+            .or_else(auth_api::get_stored_access_token);
+
+        if let Some(token) = token {
+            auth_api::store_access_token(&token);
+            access_token.set(token.clone());
+            spawn(async move {
+                if let Ok(invite) = auth_api::get_invite(&token).await {
+                    if let Some(invite_email) = invite.email.filter(|value| !value.trim().is_empty()) {
+                        email.set(invite_email);
+                    }
+                }
+            });
+        }
+    });
+
     let handle_submit = move |evt: Event<FormData>| {
         evt.prevent_default();
         let email_value = email();
         let password_value = password();
+        let invite_token = {
+            let current_access_token = access_token();
+            if current_access_token.trim().is_empty() {
+                auth_api::get_stored_access_token()
+            } else {
+                Some(current_access_token)
+            }
+        };
+
+        if let Some(token) = invite_token.as_ref() {
+            auth_api::store_access_token(token);
+        }
 
         spawn(async move {
             is_loading.set(true);
@@ -44,26 +96,59 @@ pub fn SignInPage() -> Element {
 
             // Step 1: Authenticate with Cognito (cookies are set automatically)
             match auth_api::authenticate(&email_value, &password_value).await {
-                Ok(_auth_result) => {
+                Ok(auth_result) => {
+                    // Persist refresh token + username in localStorage so PWA can
+                    // restore session when iOS clears cookies (PWA shares localStorage with Safari)
+                    #[cfg(target_arch = "wasm32")]
+                    {
+                        if let Some(window) = web_sys::window() {
+                            if let Ok(Some(storage)) = window.local_storage() {
+                                if let Some(rt) = &auth_result.refresh_token {
+                                    let _ = storage.set_item("refresh_token", rt);
+                                }
+                                if let Some(un) = &auth_result.username {
+                                    let _ = storage.set_item("cognito_username", un);
+                                }
+                            }
+                        }
+                    }
                     // Cookies are automatically set by browser from Set-Cookie headers
-                    // Step 2: Check if user profile exists in DynamoDB (non-blocking for sign-in)
+                    // Load user profile (created during join/signup flow)
                     match users_api::get_current_user().await {
                         Ok(user) => {
                             tracing::info!("✅ User logged in: {}", user.user_name);
                             *USER.write() = Some(user);
                         }
                         Err(e) => {
-                            tracing::warn!("User profile not found (continuing anyway): {}", e);
-                            let name = email_value.split('@').next().unwrap_or("User").to_string();
-                            match users_api::create_user_profile(name, email_value.clone(), None, users_api::UserRole::Annotator).await {
-                                Ok(_) => tracing::info!("✅ User profile created"),
-                                Err(e) => tracing::warn!("Failed to create profile: {}", e),
+                            tracing::warn!("User profile not found: {}", e);
+                        }
+                    }
+
+                    if let Some(token) = invite_token {
+                        match auth_api::accept_invite(&token).await {
+                            Ok(invite) => {
+                                auth_api::clear_stored_access_token();
+                                match auth_api::navigate_to_path(&invite.target_path) {
+                                    Ok(route) => {
+                                        nav.push(route);
+                                        return;
+                                    }
+                                    Err(error) => {
+                                        error_message.set(Some(error));
+                                        is_loading.set(false);
+                                        return;
+                                    }
+                                }
+                            }
+                            Err(error) => {
+                                error_message.set(Some(error));
+                                is_loading.set(false);
+                                return;
                             }
                         }
                     }
 
-                    // Always redirect to blocks dashboard after successful auth
-nav.push(Route::ProjectsPage {});
+                    nav.push(Route::ProjectsPage {});
                 }
                 Err(e) => {
                     error_message.set(Some(format!("Sign in failed: {}", e)));
@@ -202,7 +287,21 @@ nav.push(Route::ProjectsPage {});
                         }
                         a {
                             class: "signin-link",
-                            onclick: move |_| { nav.push(Route::SignupPage {}); },
+                            onclick: move |_| {
+                                let current_access_token = access_token();
+                                let current_access_token = if current_access_token.trim().is_empty() {
+                                    auth_api::get_stored_access_token()
+                                } else {
+                                    Some(current_access_token)
+                                };
+
+                                if let Some(token) = current_access_token.filter(|value| !value.trim().is_empty()) {
+                                    auth_api::store_access_token(&token);
+                                    nav.push(Route::SignupInvitePage { access_token: token });
+                                } else {
+                                    nav.push(Route::SignupPage {});
+                                }
+                            },
                             "Sign up"
                         }
                         span {

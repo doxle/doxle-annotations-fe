@@ -10,7 +10,7 @@ html.dark .import-page {
   flex-direction: row;
   align-items: center;
   justify-content: center;
-  min-height: 100vh;
+  min-height: calc(100vh - 40px);
 }
 
 .import-form-container {
@@ -69,14 +69,14 @@ html.dark .import-page {
   display: flex;
   align-items: center;
   justify-content: center;
-  height: 132px;
+  height: 180px;
   width: 100%;
   padding: 0 16px;
   border: 1px solid var(--border-color);
   background: transparent;
   color: var(--text-tertiary);
   border-radius: 4px;
-  font-family: 'Modular Houseplant', monospace;
+  font-family: 'ModularHouseplant', monospace;
   font-weight: 300;
   cursor: pointer;
   transition: all 0.2s;
@@ -150,7 +150,7 @@ html.dark .import-upload-button:hover {
 }
 
 .import-progress-text {
-  font-family: 'Modular Houseplant', monospace;
+  font-family: 'ModularHouseplant', monospace;
   font-size: 12px;
   color: var(--text-secondary);
   text-align: center;

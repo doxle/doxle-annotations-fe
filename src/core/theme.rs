@@ -61,6 +61,33 @@ pub fn system_prefers_dark() -> bool {
     false
 }
 
+/// Call once from App to sync theme with system prefers-color-scheme changes.
+pub fn use_system_theme_listener() {
+    use_effect(move || {
+        #[cfg(target_arch = "wasm32")]
+        {
+            use wasm_bindgen::prelude::*;
+
+            if let Some(window) = window() {
+                if let Ok(Some(mq)) = window.match_media("(prefers-color-scheme: dark)") {
+                    let closure = Closure::wrap(Box::new(move || {
+                        let prefers_dark = system_prefers_dark();
+                        let new_theme = if prefers_dark { Theme::Dark } else { Theme::Light };
+                        *THEME.write() = new_theme;
+                        apply_theme_class(new_theme);
+                        save_theme_preference(new_theme);
+                    }) as Box<dyn Fn()>);
+
+                    let _ = mq.add_listener_with_opt_callback(
+                        Some(closure.as_ref().unchecked_ref()),
+                    );
+                    closure.forget();
+                }
+            }
+        }
+    });
+}
+
 // localStorage helpers
 #[cfg(target_arch = "wasm32")]
 pub fn save_theme_preference(theme: Theme) {

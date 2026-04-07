@@ -18,5 +18,4 @@ pub use api::{
 pub use crate::users::api::{
     User,
     get_current_user,
-    create_user_profile,
 };

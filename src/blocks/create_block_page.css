@@ -57,7 +57,7 @@
   height: auto;
   padding: 6px 18px;
   border-radius: 4px;
-  font-family: 'Modular Houseplant';
+  font-family: 'ModularHouseplant';
   font-size: 14px;
   font-weight: 300;
   cursor: pointer;
@@ -122,7 +122,7 @@ html.dark .block-type-button.active {
 /* Title Text */
 .create-blocks-title {
   /*font-family: 'HelveticaNeue', Helvetica, Arial, sans-serif;
-  font-family: 'Modular Houseplant';*/
+  font-family: 'ModularHouseplant';*/
   font-family: 'Switzer', sans-serif;
   font-size: 48px;
   margin: 0;
@@ -149,7 +149,7 @@ html.dark .block-type-button.active {
 
 /* New Block Label */
 .new-block-label {
-    font-family: 'Modular Houseplant';
+    font-family: 'ModularHouseplant';
     font-size: 14px;
     font-weight: 500;
     color: var(--text-primary);
@@ -175,19 +175,32 @@ input {
   background-color: var(--input-bg);
   color: var(--text-primary);
   border-radius: 12px;
-   font-family: 'Modular Houseplant';
+   font-family: 'ModularHouseplant';
   font-weight: 400;
   outline: none;
 }
 
 /* Required text uses Source Serif Pro */
 .required-text, .optional-text {
-   font-family: 'Modular Houseplant';
+   font-family: 'ModularHouseplant';
   font-weight: 300;
 }
 
 input:focus {
   border-color: var(--border-color-hover);
+}
+
+.input-error {
+  border-color: #d9534f !important;
+}
+
+.input-with-icons:has(.input-error) {
+  border-color: #d9534f !important;
+}
+
+.type-error {
+  outline: 1px solid #d9534f;
+  border-radius: 4px;
 }
 
 /* Input with icons container */
@@ -487,7 +500,7 @@ html.dark .block-icon.dark-icon {
 }
 
 .create-progress-text {
-  font-family: 'Modular Houseplant', monospace;
+  font-family: 'ModularHouseplant', monospace;
   font-size: 12px;
   color: var(--text-secondary);
   text-align: center;
@@ -502,7 +515,7 @@ html.dark .block-icon.dark-icon {
   border-radius: 0px;
   background-color: var(--bg-primary);
   color: var(--text-primary);
-  font-family: 'Modular Houseplant';
+  font-family: 'ModularHouseplant';
   font-weight: 400;
   outline: none;
   appearance: none;
@@ -647,7 +660,78 @@ html.dark .blocks-type-select--default {
   visibility: hidden;
 }
 
-@media (max-width: 480px) {
+@media (max-width: 768px) {
+  .blocks-form-container {
+    width: 100%;
+    min-width: 0;
+    padding: 0 16px;
+    box-sizing: border-box;
+  }
+
+  .input-with-icons {
+    display: flex;
+    flex-direction: column;
+    height: auto !important;
+    border: none !important;
+    background: transparent !important;
+    overflow: visible !important;
+    gap: 12px;
+  }
+
+  input.blocks-name-input {
+    width: 100% !important;
+    height: 60px !important;
+    flex: none !important;
+    border: 1px solid var(--border-color) !important;
+    border-radius: 12px !important;
+    padding: 0 16px !important;
+    box-sizing: border-box !important;
+  }
+
+  .input-divider {
+    display: none !important;
+  }
+
+  .block-type-icons {
+    display: flex !important;
+    flex-direction: row !important;
+    height: auto !important;
+    gap: 8px;
+    background: transparent !important;
+  }
+
+  .block-icon-button {
+    width: 52px !important;
+    height: 52px !important;
+    border: 1px solid var(--border-color) !important;
+    border-radius: 8px !important;
+    background: var(--bg-primary) !important;
+  }
+
+  .block-icon-button.active {
+    background: var(--card-hover-color) !important;
+    border-color: transparent !important;
+  }
+
+  .blocks-back-button {
+    display: none !important;
+  }
+
+  .form-actions {
+    justify-content: center !important;
+  }
+
+  .blocks-create-button {
+    height: 48px !important;
+    width: 150px !important;
+    padding: 0 32px !important;
+    font-size: 15px;
+    font-family: 'HelveticaNeue', Helvetica, Arial, sans-serif;
+
+  }
+}
+
+@media (max-width: 768px) {
   .cb-idle-cursor {
     font-size: 30px;
   }
@@ -660,5 +744,6 @@ html.dark .blocks-type-select--default {
   .create-block-input {
     font-size: 30px;
     min-width: 0;
+    min-height: 60px !important;
   }
 }

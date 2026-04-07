@@ -1,6 +1,5 @@
 use serde::{Deserialize, Serialize};
-use serde_json::json;
-use gloo_net::http::Request;
+use gloo_net::http::{Request, RequestBuilder};
 use web_sys::RequestCredentials;
 
 /// Distinguishes auth failures from transient/network errors
@@ -21,30 +20,137 @@ impl std::fmt::Display for ApiError {
     }
 }
 
+// Convert S3 URL (or raw key) to a CloudFront /cdn/ path that routes directly to S3.
+// This bypasses API Gateway so the browser gets proper Range request support for video playback.
+pub fn to_cloudfront_media_url(s3_url: &str) -> String {
+    if let Some(path) = s3_url.split("doxle-app.s3.amazonaws.com/").nth(1) {
+        format!("{}/cdn/app/{}", CLOUDFRONT_URL, path.trim_start_matches('/'))
+    } else if let Some(path) = s3_url.split("doxle-annotations.s3.amazonaws.com/").nth(1) {
+        format!("{}/cdn/ann/{}", CLOUDFRONT_URL, path.trim_start_matches('/'))
+    } else if let Some(path) = s3_url.split("s3.amazonaws.com/doxle-app/").nth(1) {
+        format!("{}/cdn/app/{}", CLOUDFRONT_URL, path.trim_start_matches('/'))
+    } else if let Some(path) = s3_url.split("s3.amazonaws.com/doxle-annotations/").nth(1) {
+        format!("{}/cdn/ann/{}", CLOUDFRONT_URL, path.trim_start_matches('/'))
+    } else if let Some(path) = s3_url.split("/proxy-image/").nth(1) {
+        format!("{}/cdn/app/{}", CLOUDFRONT_URL, path.trim_start_matches('/'))
+    } else if !s3_url.starts_with("http") {
+        format!("{}/cdn/app/{}", CLOUDFRONT_URL, s3_url.trim_start_matches('/'))
+    } else {
+        s3_url.to_string()
+    }
+}
+
+#[derive(Debug, Deserialize)]
+struct RefreshSessionResponse {
+    #[serde(default)]
+    access_token: Option<String>,
+    #[serde(default)]
+    refresh_token: Option<String>,
+    #[serde(default)]
+    username: Option<String>,
+}
+
+#[derive(Debug, Serialize)]
+struct RefreshSessionRequest {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    refresh_token: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    username: Option<String>,
+}
+
 // Shared API configuration — toggle comment for local vs deploy
-pub const API_BASE_URL: &str = "http://localhost:9000"; // LOCAL
+pub const API_BASE_URL: &str = "http://192.168.68.50:9001"; // LOCAL
 // pub const API_BASE_URL: &str = "https://api.doxle.ai"; // DEPLOY
+
 
 // CloudFront CDN for image caching
 pub const CLOUDFRONT_URL: &str = "https://d1flb4kxeu5kb6.cloudfront.net";
 
+fn with_local_bearer(request: RequestBuilder) -> RequestBuilder {
+    if let Some(access_token) = crate::auth::api::get_local_access_token() {
+        request.header("Authorization", &format!("Bearer {}", access_token))
+    } else {
+        request
+    }
+}
+
 
 // If we get 401 we need to call refresh to refresh cookie from BE
+// Also sends refresh_token + username from localStorage as fallback for iOS PWA
 async fn refresh_session() -> Result<(), String> {
     let url = format!("{}/refresh", API_BASE_URL);
-    let resp = Request::post(&url)
-        .credentials(RequestCredentials::Include)
-        .header("Content-Type", "application/json")
-        .json(&json!({}))
+
+    // Read refresh token + username from localStorage as fallback
+    // (cookies may not work in WKWebView due to domain mismatch)
+    let (stored_rt, stored_username) = {
+        let mut rt: Option<String> = None;
+        let mut un: Option<String> = None;
+        #[cfg(target_arch = "wasm32")]
+        {
+            if let Some(window) = web_sys::window() {
+                if let Ok(Some(storage)) = window.local_storage() {
+                    rt = storage.get_item("refresh_token").ok().flatten();
+                    un = storage.get_item("cognito_username").ok().flatten();
+                }
+            }
+        }
+        (rt, un)
+    };
+
+    let body = RefreshSessionRequest {
+        refresh_token: stored_rt.and_then(|value| {
+            let trimmed = value.trim();
+            if trimmed.is_empty() {
+                None
+            } else {
+                Some(trimmed.to_string())
+            }
+        }),
+        username: stored_username.and_then(|value| {
+            let trimmed = value.trim();
+            if trimmed.is_empty() {
+                None
+            } else {
+                Some(trimmed.to_string())
+            }
+        }),
+    };
+
+    let request = with_local_bearer(
+        Request::post(&url)
+            .credentials(RequestCredentials::Include)
+            .header("Content-Type", "application/json"),
+    );
+    let resp = request
+        .json(&body)
         .map_err(|e| format!("Failed to serialize refresh body: {}", e))?
         .send()
         .await
         .map_err(|e| format!("Network error during refresh: {}", e))?;
-    if resp.ok() { Ok(()) } else {
+    if resp.ok() {
+        if let Ok(refresh_response) = resp.json::<RefreshSessionResponse>().await {
+            if let Some(access_token) = refresh_response.access_token.as_ref() {
+                crate::auth::api::store_local_access_token(access_token);
+            }
+            #[cfg(target_arch = "wasm32")]
+            {
+                if let Some(window) = web_sys::window() {
+                    if let Ok(Some(storage)) = window.local_storage() {
+                        if let Some(refresh_token) = refresh_response.refresh_token.as_ref() {
+                            let _ = storage.set_item("refresh_token", refresh_token);
+                        }
+                        if let Some(username) = refresh_response.username.as_ref() {
+                            let _ = storage.set_item("cognito_username", username);
+                        }
+                    }
+                }
+            }
+        }
+        Ok(())
+    } else {
         let txt = resp.text().await.unwrap_or_else(|_| "Unknown error".into());
         Err(format!("Refresh failed ({}): {}", resp.status(), txt))
     }
-
 }
 
 /// Handle 401 Unauthorized by clearing cookies (server-side) and redirecting to login
@@ -53,6 +159,7 @@ pub fn handle_unauthorized() {
 
     #[cfg(target_arch = "wasm32")]
     {
+        crate::auth::api::clear_local_access_token();
         // Clear httpOnly cookies via backend
         dioxus::prelude::spawn(async {
             let _ = crate::auth::logout().await;
@@ -101,8 +208,10 @@ pub async fn get_typed<R: for<'de> Deserialize<'de>>(endpoint: &str) -> Result<R
     let mut tried_refresh = false;
 
     loop{
-        let resp = Request::get(&url)
-            .credentials(RequestCredentials::Include)
+        let resp = with_local_bearer(
+            Request::get(&url)
+                .credentials(RequestCredentials::Include),
+        )
             .send()
             .await
             .map_err(|e| ApiError::Other(format!("Network error: {}", e)))?;
@@ -127,8 +236,10 @@ pub async fn get_text(endpoint: &str) -> Result<String, String> {
     let mut tried_refresh = false;
 
     loop {
-        let resp = Request::get(&url)
-            .credentials(RequestCredentials::Include)
+        let resp = with_local_bearer(
+            Request::get(&url)
+                .credentials(RequestCredentials::Include),
+        )
             .send()
             .await
             .map_err(|e| format!("Network error: {}", e))?;
@@ -157,9 +268,12 @@ pub async fn post<T: Serialize, R: for<'de> Deserialize<'de>>(
     let mut tried_refresh = false;
 
     loop {
-        let resp = Request::post(&url)
-            .credentials(RequestCredentials::Include)
-            .header("Content-Type", "application/json")
+        let request = with_local_bearer(
+            Request::post(&url)
+                .credentials(RequestCredentials::Include)
+                .header("Content-Type", "application/json"),
+        );
+        let resp = request
             .json(body)
             .map_err(|e| format!("Failed to serialize body: {}", e))?
             .send()
@@ -194,9 +308,12 @@ pub async fn patch<T: Serialize, R: for<'de> Deserialize<'de>>(
     let mut tried_refresh = false;
 
     loop {
-        let resp = Request::patch(&url)
-            .credentials(RequestCredentials::Include)
-            .header("Content-Type", "application/json")
+        let request = with_local_bearer(
+            Request::patch(&url)
+                .credentials(RequestCredentials::Include)
+                .header("Content-Type", "application/json"),
+        );
+        let resp = request
             .json(body)
             .map_err(|e| format!("Failed to serialize body: {}", e))?
             .send()
@@ -229,9 +346,12 @@ pub async fn patch_no_response<T: Serialize>(endpoint: &str, body: &T) -> Result
     let mut tried_refresh = false;
 
     loop {
-        let resp = Request::patch(&url)
-            .credentials(RequestCredentials::Include)
-            .header("Content-Type", "application/json")
+        let request = with_local_bearer(
+            Request::patch(&url)
+                .credentials(RequestCredentials::Include)
+                .header("Content-Type", "application/json"),
+        );
+        let resp = request
             .json(body)
             .map_err(|e| format!("Failed to serialize body: {}", e))?
             .send()
@@ -265,8 +385,10 @@ pub async fn delete(endpoint: &str) -> Result<(), String> {
     let mut tried_refresh = false;
 
     loop {
-        let resp = Request::delete(&url)
-            .credentials(RequestCredentials::Include)
+        let resp = with_local_bearer(
+            Request::delete(&url)
+                .credentials(RequestCredentials::Include),
+        )
             .send()
             .await
             .map_err(|e| format!("Network error: {}", e))?;

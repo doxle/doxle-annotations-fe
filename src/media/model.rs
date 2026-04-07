@@ -36,4 +36,6 @@ pub struct Image {
 	pub width: Option<u32>,
 	#[serde(default)]
 	pub height: Option<u32>,
+	#[serde(default)]
+	pub file_size: u64,
 }

@@ -1,19 +1,40 @@
 .file-item-page {
-    min-height: calc(100vh - 40px);
-    padding: 20px;
-    background-color: var(--bg-primary);
-    background-image: radial-gradient(circle, var(--dot-color, rgba(0,0,0,0.3)) 1.5px, transparent 1.5px);
-    background-size: 30px 30px;
+    position: fixed;
+    inset: 0;
+    z-index: 2000;
+    background: rgba(0, 0, 0, 0.92);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+.file-item-close {
+    position: absolute;
+    top: 2px;
+    right: 16px;
+    width: 36px;
+    height: 36px;
+    border: none;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.12);
+    cursor: pointer;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2001;
+}
+.file-item-close-icon {
+    width: 16px;
+    height: 16px;
+}
+.file-item-close:hover {
+    background: rgba(255, 255, 255, 0.25);
 }
 
 .file-item-head {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-    width: min(1200px, 95vw);
-    margin-left: auto;
-    margin-right: auto;
-    margin-bottom: 12px;
+    display: none;
 }
 
 .file-item-title {
@@ -21,6 +42,14 @@
     font-size: 18px;
     font-weight: 400;
     color: var(--text-primary);
+}
+
+.file-item-name {
+    color: rgba(255, 255, 255, 0.8);
+    font-size: 13px;
+    font-family: 'HelveticaNeue', Helvetica, Arial, sans-serif;
+    margin-top: 12px;
+    text-align: center;
 }
 
 .file-item-subtitle {
@@ -52,17 +81,16 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    margin-top: 8px;
 }
 
 .file-item-canvas {
     position: relative;
     width: min(1200px, 95vw);
-    max-height: calc(100vh - 180px);
-    border: 1px solid var(--border-color);
-    border-radius: 10px;
+    max-height: calc(100vh - 80px);
+    border: none;
+    border-radius: 0;
     overflow: hidden;
-    background: var(--bg-card);
+    background: transparent;
     cursor: crosshair;
     touch-action: none;
 }
@@ -77,10 +105,48 @@
 .file-item-video,
 .file-item-pdf {
     width: 100%;
-    max-height: calc(100vh - 180px);
+    max-height: calc(100vh - 80px);
     object-fit: contain;
     display: block;
-    background: #000;
+    background: transparent;
+}
+
+.file-item-video-wrapper {
+    position: relative;
+    width: 100%;
+    height: calc(100vh - 80px);
+}
+
+.file-item-video {
+    width: 100%;
+    height: 100%;
+    max-height: calc(100vh - 80px);
+    object-fit: contain;
+}
+
+.file-item-play-overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 5;
+}
+
+.file-item-play-btn {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    background: var(--dx-blue);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s;
+}
+
+.file-item-play-overlay:hover .file-item-play-btn {
+    background: var(--hover-blue);
 }
 
 .file-item-pdf {

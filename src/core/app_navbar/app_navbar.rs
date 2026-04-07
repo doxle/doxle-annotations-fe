@@ -11,7 +11,7 @@ use crate::core::status_dialog::StatusDialog;
 use crate::auth::api;
 use crate::blocks::state::{state_load_labels, LABELS, BLOCKS, state_load_blocks};
 use crate::blocks::api::{api_update_label_properties, BlockLabel, api_get_labels};
-use crate::projects::state::{PROJECTS, state_load_projects};
+use crate::projects::project_state::{PROJECTS, state_load_projects};
 use std::collections::HashMap;
 
 // const D_FLAG2: Asset = asset!("/assets/icons/d-flag2.svg");
@@ -903,9 +903,10 @@ fn SettingsDialog(show: Signal<bool>, block_id: String, project_id: String) -> E
 #[component]
 fn AccountPanel(show: Signal<bool>, user_name: String, user_email: String) -> Element {
     let nav = use_navigator();
+    let route = use_route::<Route>();
     let is_dark = THEME() == Theme::Dark;
     let mut email = use_signal(|| String::new());
-    let mut selected_role = use_signal(|| Option::<String>::None);
+    let mut selected_permission = use_signal(|| Some("write".to_string()));
     let mut is_loading = use_signal(|| false);
     let mut error_message = use_signal(|| Option::<String>::None);
     let mut success_message = use_signal(|| Option::<String>::None);
@@ -913,6 +914,19 @@ fn AccountPanel(show: Signal<bool>, user_name: String, user_email: String) -> El
     let mut invites_loading = use_signal(|| false);
 
     let is_admin = USER.read().as_ref().map(|u| u.is_admin()).unwrap_or(false);
+    let share_context = match &route {
+        Route::CreateTaskPage { project_id, block_id, .. }
+        | Route::TasksListPage { project_id, block_id, .. }
+        | Route::AnnotationCanvasPage { project_id, block_id, .. }
+        | Route::ImportBlockPage { project_id, block_id, .. }
+        | Route::FileBlockPage { project_id, block_id, .. }
+        | Route::FileItemPage { project_id, block_id, .. }
+        | Route::BuildingBlockPage { project_id, block_id, .. } => {
+            Some((project_id.clone(), block_id.clone()))
+        }
+        _ => None,
+    };
+    let share_context_for_submit = share_context.clone();
 
     // Load invites when panel opens (admin only)
     use_effect(move || {
@@ -931,18 +945,39 @@ fn AccountPanel(show: Signal<bool>, user_name: String, user_email: String) -> El
     let handle_submit = move |evt: Event<FormData>| {
         evt.prevent_default();
         let email_value = email();
-        let role_value = selected_role();
-        
+        let permission_value = selected_permission();
+
         if email_value.trim().is_empty() {
             error_message.set(Some("Please enter an email address".to_string()));
             return;
         }
 
-        let role = match role_value {
-            Some(r) => r,
+        let permission = match permission_value {
+            Some(value) => value,
             None => {
-                error_message.set(Some("Please select a role".to_string()));
+                error_message.set(Some("Please select a permission".to_string()));
                 return;
+            }
+        };
+
+        let (project_id, block_id) = match share_context_for_submit.clone() {
+            Some(context) => context,
+            None => {
+                error_message.set(Some("Open the block you want to share, then try again.".to_string()));
+                return;
+            }
+        };
+
+        let target_path = {
+            #[cfg(target_arch = "wasm32")]
+            {
+                web_sys::window()
+                    .and_then(|window| window.location().pathname().ok())
+                    .unwrap_or_else(|| "/projects".to_string())
+            }
+            #[cfg(not(target_arch = "wasm32"))]
+            {
+                "/projects".to_string()
             }
         };
 
@@ -951,18 +986,27 @@ fn AccountPanel(show: Signal<bool>, user_name: String, user_email: String) -> El
             error_message.set(None);
             success_message.set(None);
 
-            match api::create_invite(&email_value, &role).await {
+            match api::create_invite(api::CreateInvitePayload {
+                email: email_value.clone(),
+                project_id,
+                allowed_block_ids: vec![block_id],
+                permission,
+                target_path,
+                expires_days: 7,
+            })
+            .await
+            {
                 Ok(invite) => {
-                    success_message.set(Some(format!("Invite sent to {}", email_value)));
+                    success_message.set(Some(format!("Share link sent to {}", email_value)));
                     email.set(String::new());
-                    selected_role.set(None);
-                    // Add to local list
+                    selected_permission.set(Some("write".to_string()));
                     invites.write().push(invite);
                 }
-                Err(e) => {
-                    error_message.set(Some(e));
+                Err(error) => {
+                    error_message.set(Some(error));
                 }
             }
+
             is_loading.set(false);
         });
     };
@@ -970,7 +1014,7 @@ fn AccountPanel(show: Signal<bool>, user_name: String, user_email: String) -> El
     let close_panel = move |_| {
         show.set(false);
         email.set(String::new());
-        selected_role.set(None);
+        selected_permission.set(Some("write".to_string()));
         error_message.set(None);
         success_message.set(None);
     };
@@ -995,52 +1039,58 @@ fn AccountPanel(show: Signal<bool>, user_name: String, user_email: String) -> El
                 if is_admin {
                     div {
                         class: "account-panel-section",
-                        h3 { class: "account-panel-title", "Invite" }
+                        h3 { class: "account-panel-title", "Share current block" }
                         
-                        form {
-                            onsubmit: handle_submit,
-                            
-                            div {
-                                class: "account-panel-invite-form",
-                                input {
-                                    class: "account-panel-input",
-                                    r#type: "email",
-                                    placeholder: "Enter email address",
-                                    required: true,
-                                    value: "{email}",
-                                    disabled: is_loading(),
-                                    oninput: move |e| email.set(e.value())
+                        if share_context.is_some() {
+                            form {
+                                onsubmit: handle_submit,
+                                
+                                div {
+                                    class: "account-panel-invite-form",
+                                    input {
+                                        class: "account-panel-input",
+                                        r#type: "email",
+                                        placeholder: "Enter email address",
+                                        required: true,
+                                        value: "{email}",
+                                        disabled: is_loading(),
+                                        oninput: move |e| email.set(e.value())
+                                    }
+                                    button {
+                                        class: "account-panel-send-btn",
+                                        r#type: "submit",
+                                        disabled: is_loading(),
+                                        if is_loading() { "..." } else { "Send" }
+                                    }
                                 }
-                                button {
-                                    class: "account-panel-send-btn",
-                                    r#type: "submit",
-                                    disabled: is_loading(),
-                                    if is_loading() { "..." } else { "Send" }
-                                }
-                            }
 
-                            // Role selector
-                            div {
-                                class: "account-panel-role-selector",
-                                for role in ["annotator", "builder"] {
-                                    {
-                                        let role_str = role.to_string();
-                                        let role_clone = role_str.clone();
-                                        let is_selected = selected_role() == Some(role_str.clone());
-                                        rsx! {
-                                            label {
-                                                class: "account-panel-role-option",
-                                                input {
-                                                    r#type: "radio",
-                                                    name: "invite-role",
-                                                    checked: is_selected,
-                                                    onchange: move |_| selected_role.set(Some(role_clone.clone())),
+                                div {
+                                    class: "account-panel-role-selector",
+                                    for permission in ["write", "read"] {
+                                        {
+                                            let permission_value = permission.to_string();
+                                            let permission_clone = permission_value.clone();
+                                            let is_selected = selected_permission() == Some(permission_value.clone());
+                                            rsx! {
+                                                label {
+                                                    class: "account-panel-role-option",
+                                                    input {
+                                                        r#type: "radio",
+                                                        name: "invite-permission",
+                                                        checked: is_selected,
+                                                        onchange: move |_| selected_permission.set(Some(permission_clone.clone())),
+                                                    }
+                                                    "{permission}"
                                                 }
-                                                "{role}"
                                             }
                                         }
                                     }
                                 }
+                            }
+                        } else {
+                            div {
+                                class: "account-panel-error",
+                                "Open a block page to send a scoped share link."
                             }
                         }
                         
@@ -1060,45 +1110,19 @@ fn AccountPanel(show: Signal<bool>, user_name: String, user_email: String) -> El
                                 for invite in invites.read().iter() {
                                     {
                                         let code = invite.invite_code.clone();
-                                        let invite_email = invite.email.clone();
-                                        let invite_role = invite.role.clone();
+                                        let invite_email = invite.email.clone().unwrap_or_default();
+                                        let invite_permission = invite.permission.clone();
                                         let invite_status = invite.status.clone();
-                                        let toggle_email = invite.email.clone();
-                                        let toggle_code = invite.invite_code.clone();
-                                        let toggle_role = invite.role.clone();
                                         rsx! {
                                             div {
                                                 class: "account-panel-invite-row",
                                                 span { class: "account-panel-invite-email", "{invite_email}" }
-                                                select {
-                                                    class: "account-panel-invite-role-select",
-                                                    disabled: invite_status == "used",
-                                                    value: "{invite_role}",
-                                                    onchange: move |e| {
-                                                        let new_role = e.value();
-                                                        let email = toggle_email.clone();
-                                                        let code = toggle_code.clone();
-                                                        let old_status = invite_status.clone();
-                                                        spawn(async move {
-                                                            if let Ok(_) = api::delete_invite(&code).await {
-                                                                match api::create_invite(&email, &new_role).await {
-                                                                    Ok(mut new_invite) => {
-                                                                        // Preserve original status
-                                                                        new_invite.status = old_status;
-                                                                        let mut list = invites.write();
-                                                                        list.retain(|i| i.invite_code != code);
-                                                                        list.push(new_invite);
-                                                                    }
-                                                                    Err(e) => tracing::error!("Failed to recreate invite: {}", e),
-                                                                }
-                                                            }
-                                                        });
-                                                    },
-                                                    option { value: "annotator", selected: invite_role == "annotator", "annotator" }
-                                                    option { value: "builder", selected: invite_role == "builder", "builder" }
+                                                span {
+                                                    class: "account-panel-invite-status",
+                                                    "{invite_permission}"
                                                 }
                                                 span { class: "account-panel-invite-status",
-                                                    {if invite_status == "used" { "signed up" } else { invite_status.as_str() }}
+                                                    {if invite_status == "accepted" { "accepted" } else { invite_status.as_str() }}
                                                 }
                                                 button {
                                                     class: "account-panel-invite-delete",

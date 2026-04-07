@@ -1,5 +1,5 @@
 use dioxus::prelude::*;
-use crate::core::{THEME, Theme, AppNavbar};
+use crate::core::{THEME, Theme, AppNavbar, BottomBar};
 use dioxus::logger::tracing::error;
 use crate::tasks::create_task_handler::{handle_create_task, PendingUpload};
 use crate::Route;
@@ -259,5 +259,6 @@ pub fn CreateTaskPage(props: CreateTaskPageProps) -> Element {
                 }
             }
         }
+        BottomBar { project_id: props.project_id.clone() }
     }
 }

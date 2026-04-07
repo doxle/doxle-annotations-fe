@@ -75,6 +75,7 @@ struct CreateBlockMediaRequest {
     image_name: String,
     url: String,
     media_type: String,
+    file_size: u64,
 }
 
 #[derive(Debug, Serialize)]
@@ -123,6 +124,7 @@ pub async fn create_block_media(
     image_name: String,
     url: String,
     media_type: String,
+    file_size: u64,
 ) -> Result<Image, String> {
     let endpoint = format!("/projects/{}/blocks/{}/media", project_id, block_id);
     let body = CreateBlockMediaRequest {
@@ -130,6 +132,7 @@ pub async fn create_block_media(
         image_name,
         url,
         media_type,
+        file_size,
     };
     client::post::<CreateBlockMediaRequest, Image>(&endpoint, &body).await
 }
@@ -137,6 +140,7 @@ pub async fn create_block_media(
 /// Upload a file for a File block (no task link).
 pub async fn upload_image_for_block(project_id: &str, block_id: &str, file: File) -> Result<String, String> {
     let media_type = detect_media_type(&file);
+    let file_size = file.size() as u64;
     let (image_id, image_name, image_url) =
         upload_file_to_s3(block_id, file, UploadNamespace::File).await?;
 
@@ -147,6 +151,7 @@ pub async fn upload_image_for_block(project_id: &str, block_id: &str, file: File
         image_name,
         image_url,
         media_type,
+        file_size,
     )
     .await
     {
@@ -165,6 +170,7 @@ pub async fn upload_image_for_task(
     task_id: &str,
     file: File,
 ) -> Result<String, String> {
+    let file_size = file.size() as u64;
     let (image_id, image_name, image_url) =
         upload_file_to_s3(block_id, file, UploadNamespace::Annotation).await?;
 
@@ -175,6 +181,7 @@ pub async fn upload_image_for_task(
         image_id.clone(),
         image_name,
         image_url,
+        file_size,
     )
     .await
     {

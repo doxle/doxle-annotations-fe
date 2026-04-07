@@ -1,10 +1,9 @@
 use crate::Route;
 use dioxus::prelude::*;
-use crate::core::{THEME, Theme, AppNavbar, ProtectedRoute};
+use crate::core::{THEME, Theme, AppNavbar, BottomBar, BLOCK_TYPE_FILTER, ProtectedRoute, is_mobile};
 use crate::blocks::state::{BLOCKS, BLOCKS_LOADING, BLOCKS_ERROR, state_load_blocks,state_delete_block, state_set_current_block, state_rename_block};
 use crate::blocks::api::BlockType;
 use crate::users::state::USER;
-use crate::users::api::UserRole;
 use crate::core::status_dialog::LiveTimer;
 use super::block_menu::BlockMenu;
 use super::edit_block_modal::EditBlockModal;
@@ -98,9 +97,13 @@ pub fn BlocksPage(project_id: String)->Element{
 
     info!("Loading dashboard page: ");
 
+    // Track whether the resource has started loading
+    let mut did_start_load = use_signal(|| false);
+
     // Load blocks on mount
     use_resource(move || async move {
         info!("Loading dashboard page - project load");
+        did_start_load.set(true);
         state_load_blocks(&project_id()).await;
     });
 
@@ -109,12 +112,10 @@ pub fn BlocksPage(project_id: String)->Element{
     // Show loading or existing blocks
     info!("BLOCKS-LIST Page :-");
 
-    // Filter blocks by role: builders see only File + Building
-    let user_role = USER.read().as_ref().map(|u| u.user_role.clone()).unwrap_or(UserRole::Annotator);
-    let is_builder = user_role == UserRole::Builder;
+    let is_admin = USER.read().as_ref().map(|u| u.is_admin()).unwrap_or(false);
 
-    // Show loading 
-    if BLOCKS_LOADING() {
+    // Show loading: either explicitly loading, or initial state before use_resource fires
+    if BLOCKS_LOADING() || !did_start_load() {
         return rsx! {
             ProtectedRoute {
                 style { {BLOCK_LIST_CSS} }
@@ -137,14 +138,18 @@ pub fn BlocksPage(project_id: String)->Element{
             }
         };
     }
-    let mut filtered_blocks: Vec<_> = BLOCKS.read().iter().filter(|b| {
-        if is_builder {
-            b.block_type == BlockType::File || b.block_type == BlockType::Building
-        } else {
-            true
-        }
-    }).cloned().collect();
+    let mut filtered_blocks: Vec<_> = BLOCKS.read().iter().cloned().collect();
     filtered_blocks.sort_by(|a, b| b.block_created_at.cmp(&a.block_created_at));
+
+    // Filter by block type (from bottom bar — mobile only)
+    let type_filter = BLOCK_TYPE_FILTER();
+    let filtered_blocks: Vec<_> = if !is_mobile() || type_filter == "all" {
+        filtered_blocks
+    } else {
+        filtered_blocks.into_iter()
+            .filter(|b| b.block_type.as_str() == type_filter)
+            .collect()
+    };
     
     // Filter by search query
     let filtered_blocks: Vec<_> = if search_query().is_empty() {
@@ -167,7 +172,7 @@ pub fn BlocksPage(project_id: String)->Element{
                 style { {BLOCK_LIST_CSS} }
                 AppNavbar {}
                 div { class: "blocks-empty-page",
-                    if user_role == UserRole::Admin {
+                    if is_admin {
                         button {
                             class: "create-block-btn",
                             onclick: {
@@ -179,7 +184,7 @@ pub fn BlocksPage(project_id: String)->Element{
                             "Create block"
                         }
                     } else {
-                        div { class: "blocks-empty", "No blocks available for your role in this project" }
+                        div { class: "blocks-empty", "No blocks available" }
                     }
                 }
             }
@@ -294,10 +299,16 @@ pub fn BlocksPage(project_id: String)->Element{
                                 BlockType::File => if is_dark { FILE_BLOCK_DARK } else { FILE_BLOCK_LIGHT },
                                 BlockType::Building => if is_dark { BUILD_BLOCK_DARK } else { BUILD_BLOCK_LIGHT },
                             };
+                            let block_id_for_ctx = block.block_id.clone();
                             rsx!{
                                 li {
                                     key:"{block_id}",
                                     class: card_class,
+                                    oncontextmenu: move |e| {
+                                        e.prevent_default();
+                                        e.stop_propagation();
+                                        open_menu_id.set(Some(block_id_for_ctx.clone()));
+                                    },
                                     onclick:move|_|{
 
                                         // Don't navigate if menu is open
@@ -722,6 +733,7 @@ pub fn BlocksPage(project_id: String)->Element{
                 }
             }
         }
+        BottomBar { project_id: project_id().clone() }
         }
     }
 }
