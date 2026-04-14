@@ -1,7 +1,7 @@
 use dioxus::prelude::*;
 use crate::core::{THEME, Theme};
 
-const FILE_CONTEXT_MENU_CSS: &str = include_str!("file_context_menu.css");
+const NOTE_CONTEXT_MENU_CSS: &str = include_str!("note_context_menu.css");
 const DELETE_ICON_LIGHT: Asset = asset!("/assets/icons/delete-light-block-menu.svg");
 const DELETE_ICON_DARK: Asset = asset!("/assets/icons/delete-dark-block-menu.svg");
 const EDIT_ICON_LIGHT: Asset = asset!("/assets/icons/edit-light-block-menu.svg");
@@ -23,7 +23,7 @@ pub fn FileContextMenu(
     let dropdown_style = format!("left:{}px;top:{}px;", pos_x, pos_y);
 
     rsx! {
-        style { {FILE_CONTEXT_MENU_CSS} }
+        style { {NOTE_CONTEXT_MENU_CSS} }
         div {
             class: "file-context-menu-overlay",
             onclick: move |e| {

@@ -59,7 +59,7 @@ struct RefreshSessionRequest {
 }
 
 // Shared API configuration — toggle comment for local vs deploy
-pub const API_BASE_URL: &str = "http://192.168.68.50:9001"; // LOCAL
+pub const API_BASE_URL: &str = "http://192.168.68.51:9001"; // LOCAL
 // pub const API_BASE_URL: &str = "https://api.doxle.ai"; // DEPLOY
 
 
@@ -82,6 +82,7 @@ async fn refresh_session() -> Result<(), String> {
 
     // Read refresh token + username from localStorage as fallback
     // (cookies may not work in WKWebView due to domain mismatch)
+    tracing::info!("🔄 Attempting session refresh");
     let (stored_rt, stored_username) = {
         let mut rt: Option<String> = None;
         let mut un: Option<String> = None;
@@ -127,6 +128,7 @@ async fn refresh_session() -> Result<(), String> {
         .send()
         .await
         .map_err(|e| format!("Network error during refresh: {}", e))?;
+    tracing::info!("🔄 Refresh response status: {} has_rt={} has_un={}", resp.status(), body.refresh_token.is_some(), body.username.is_some());
     if resp.ok() {
         if let Ok(refresh_response) = resp.json::<RefreshSessionResponse>().await {
             if let Some(access_token) = refresh_response.access_token.as_ref() {
@@ -180,16 +182,16 @@ pub fn to_cloudfront_url(s3_url: &str) -> String {
     // Convert to: https://d1flb4kxeu5kb6.cloudfront.net/proxy-image/projects/.../image.jpg
 
     if let Some(path) = s3_url.split("doxle-app.s3.amazonaws.com/").nth(1) {
-        format!("{}/proxy-image/{}", CLOUDFRONT_URL, path)
+        format!("{}/cdn/app/{}", CLOUDFRONT_URL, path.trim_start_matches('/'))
     } else if let Some(path) = s3_url.split("doxle-annotations.s3.amazonaws.com/").nth(1) {
-        format!("{}/proxy-image/{}", CLOUDFRONT_URL, path)
+        format!("{}/cdn/ann/{}", CLOUDFRONT_URL, path.trim_start_matches('/'))
     } else if let Some(path) = s3_url.split("s3.amazonaws.com/doxle-app/").nth(1) {
-        format!("{}/proxy-image/{}", CLOUDFRONT_URL, path)
+        format!("{}/cdn/app/{}", CLOUDFRONT_URL, path.trim_start_matches('/'))
     } else if let Some(path) = s3_url.split("s3.amazonaws.com/doxle-annotations/").nth(1) {
-        format!("{}/proxy-image/{}", CLOUDFRONT_URL, path)
+        format!("{}/cdn/ann/{}", CLOUDFRONT_URL, path.trim_start_matches('/'))
     } else if !s3_url.starts_with("http") {
         // Treat as a raw S3 key (e.g. "annotations/blocks/.../image.png")
-        format!("{}/proxy-image/{}", CLOUDFRONT_URL, s3_url)
+        format!("{}/cdn/app/{}", CLOUDFRONT_URL, s3_url.trim_start_matches('/'))
     } else {
         // Fallback to original URL if parsing fails
         s3_url.to_string()

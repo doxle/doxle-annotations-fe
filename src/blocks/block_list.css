@@ -33,6 +33,7 @@
   margin: 0 auto;
   display: flex;
   flex-direction: column;
+  align-items: center;
   padding: 0 20px;
 }
 
@@ -741,14 +742,104 @@ html.dark .blocks-create-button-centered:hover {
   letter-spacing: 0.5px;
 }
 
-/* Mobile: hide list/grid toggle + their dividers, keep New Block + search */
+/* Grid view: list-card dimensions in a grid */
+.blocks-list.blocks-grid-view {
+    grid-template-columns: repeat(auto-fit, minmax(250px, max-content));
+    justify-content: center;
+    gap: 16px;
+    width: 100%;
+}
+
+.blocks-grid-view .block-card {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 24px 40px 24px;
+    gap: 16px;
+    min-width: 180px;
+    min-height: 80px;
+}
+
+.blocks-grid-view .block-name {
+    font-size: 21px;
+    white-space: normal;
+    overflow-wrap: anywhere;
+}
+
+.blocks-grid-view .block-type-icon-container {
+    margin-bottom: 0;
+}
+
+.blocks-grid-view .block-type-icon-top {
+    width: 24px;
+    height: 24px;
+}
+
+.blocks-grid-view .block-row-1 {
+    display: contents;
+}
+
+.blocks-grid-view .block-name-section {
+    order: 1;
+}
+
+.blocks-grid-view .block-row-2 {
+    order: 2;
+}
+
+.blocks-grid-view .block-actions {
+    order: 3;
+    margin-left: auto;
+}
+
+.blocks-grid-view .block-image-count {
+    font-size: 16px;
+    position: relative;
+    top: 4px;
+}
+
+.blocks-grid-view .block-row-6 {
+    position: absolute;
+    bottom: 8px;
+    left: 0;
+    right: 0;
+    width: 100%;
+    padding: 0 24px;
+    justify-content: center;
+    margin: 0;
+}
+
+.blocks-grid-view .block-dates {
+    flex-direction: row;
+    gap: 12px;
+    align-items: center;
+}
+
 @media (max-width: 768px) {
-    /* Hide: divider, list btn, divider, grid btn, divider — keep last btn (search) */
-    .new-page-btn .action-btn:not(:last-child) {
-        display: none;
+    .blocks-list.blocks-grid-view {
+        grid-template-columns: 1fr;
+        padding: 0;
     }
 
-    .new-page-btn .action-divider:not(:last-of-type) {
-        display: none;
+    .blocks-grid-view .block-card {
+        max-width: calc(100vw - 32px) !important;
+        min-width: 0 !important;
+        width: fit-content !important;
+        margin: 0 auto;
+    }
+
+    .blocks-grid-view .block-name {
+        white-space: nowrap !important;
+    }
+
+    .blocks-page {
+        padding-left: 16px;
+        padding-right: 16px;
+    }
+
+    .blocks-list-container {
+        max-width: 100%;
+        padding: 0;
+        align-items: center;
     }
 }

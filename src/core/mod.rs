@@ -1,6 +1,5 @@
 pub mod app_navbar;
 pub mod app_sidebar;
-pub mod app;
 pub mod bottom_bar;
 pub mod global_keyboard;
 pub mod loading;

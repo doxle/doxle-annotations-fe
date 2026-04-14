@@ -128,8 +128,8 @@ pub fn CreateBlockPage(project_id: String) -> Element {
                         }
                         button {
                             r#type: "button",
-                            class: if block_type() == Some(BlockType::File) { "block-icon-button block-icon-button-last active" } else { "block-icon-button block-icon-button-last" },
-                            onclick: move |_| { type_error.set(false); block_type.set(Some(BlockType::File)); },
+                            class: if block_type() == Some(BlockType::Note) { "block-icon-button block-icon-button-last active" } else { "block-icon-button block-icon-button-last" },
+                            onclick: move |_| { type_error.set(false); block_type.set(Some(BlockType::Note)); },
                             img {
                                 class: "block-icon light-icon",
                                 src: asset!("/assets/icons/file-block-light.svg"),

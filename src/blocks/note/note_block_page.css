@@ -153,8 +153,10 @@
     cursor: pointer;
     transition: border-color 0s;
 }
-.file-card:hover {
-    border-color: var(--dx-blue);
+@media (hover: hover) {
+    .file-card:hover {
+        border-color: var(--dx-blue);
+    }
 }
 .file-card-thumb {
     position: relative;
@@ -171,8 +173,10 @@
     transition: background-color 0s;
     pointer-events: none;
 }
-.file-card:hover .file-card-thumb::after {
-    background: rgba(59, 130, 246, 0.12);
+@media (hover: hover) {
+    .file-card:hover .file-card-thumb::after {
+        background: rgba(59, 130, 246, 0.12);
+    }
 }
 
 .file-card-image,
@@ -259,6 +263,24 @@
     color: var(--text-secondary);
     font-size: 11px;
     flex-shrink: 0;
+}
+
+.file-card-dots {
+    color: var(--text-tertiary);
+    font-size: 10px;
+    cursor: pointer;
+    padding: 4px 6px;
+    flex-shrink: 0;
+    line-height: 1;
+    letter-spacing: 2px;
+}
+
+.file-card:hover .file-card-dots {
+    color: #fff;
+}
+
+.file-card-dots:hover {
+    color: #fff;
 }
 
 .file-modal-backdrop {

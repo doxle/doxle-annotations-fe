@@ -1,6 +1,6 @@
 use crate::tasks::api;
 use crate::tasks::model::Task;
-use crate::media::api::upload_image_for_task;
+use crate::media::api::upload_attachment_for_task;
 use dioxus::prelude::*;
 
 
@@ -57,7 +57,7 @@ pub async fn state_create_task(project_id: &str, block_id:&str, name:String) -> 
 
 /// Fetch full images for a task and update TASKS signal in-place
 pub async fn state_load_task_images(project_id: &str, block_id: &str, task_id: &str) {
-    match api::api_list_task_images(project_id, block_id, task_id).await {
+    match api::api_list_task_attachments(project_id, block_id, task_id).await {
         Ok(images) => {
             let count = images.len();
             let mut tasks = TASKS.write();
@@ -106,7 +106,7 @@ pub fn state_get_current_task_id() -> Option<String> {
 }
 
 pub async fn state_upload_task_file(project_id: &str, block_id:&str, task_id:&str, file:web_sys::File)-> Result<String, String>{
-    upload_image_for_task(project_id, block_id, task_id, file).await
+    upload_attachment_for_task(project_id, block_id, task_id, file).await
 }
 
 pub async fn state_delete_task(project_id: &str, block_id: &str, task_id: &str) {
@@ -133,7 +133,7 @@ pub async fn state_delete_task(project_id: &str, block_id: &str, task_id: &str) 
             &format!("Deleting img {}/{} ({} annotations)", i + 1, total, ann_count),
             i, total, start.elapsed().as_secs(),
         );
-        if let Err(e) = crate::media::api::api_delete_image(project_id, &bid, &image_id).await {
+        if let Err(e) = crate::media::api::api_delete_attachment(project_id, &bid, &image_id).await {
             tracing::error!("❌ Failed to delete image {}: {}", image_id, e);
         }
         let done = i + 1;

@@ -1,6 +1,5 @@
 pub mod home3;
 pub mod home;
-pub mod home_old;
 pub mod home_navbar;
 pub mod join_page;
 pub mod vision_page;
@@ -13,6 +12,7 @@ pub mod geometric_grid;
 pub mod dots;
 pub mod constellation;
 pub mod square_grid;
+pub mod privacy_page;
 
 pub use home3::Home3Page;
 pub use home::HomePage;
@@ -27,3 +27,4 @@ pub use signup_page::{SignupInvitePage, SignupPage, SignupPreviewPage, SignupPre
 pub use ourstory_page::OurStoryPage;
 pub use sayhello_page::SayHelloPage;
 pub use vision_page::VisionPage;
+pub use privacy_page::PrivacyPage;

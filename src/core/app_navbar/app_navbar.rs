@@ -4,7 +4,7 @@ use crate::core::progress::show_success;
 use crate::core::app_sidebar::SidebarTab;
 use crate::Route;
 use crate::tasks::state::TASKS;
-use crate::media::Image;
+use crate::media::Attachment;
 use crate::core::svg_canvas::state::Tool;
 use crate::users::state::{USER, load_user};
 use crate::core::status_dialog::StatusDialog;
@@ -83,8 +83,8 @@ pub fn AppNavbar(
             | Route::BlocksPage { .. }
             | Route::CreateBlockPage { .. }
             | Route::ImportBlockPage { .. }
-            | Route::FileBlockPage { .. }
-            | Route::FileItemPage { .. }
+            | Route::NoteBlockPage { .. }
+            | Route::NoteItemPage { .. }
             | Route::BuildingBlockPage { .. }
     );
     use_effect(move || {
@@ -105,14 +105,14 @@ pub fn AppNavbar(
         Route::BlocksPage { project_id } => project_id.clone(),
         Route::CreateBlockPage { project_id } => project_id.clone(),
         Route::ImportBlockPage { project_id, .. } => project_id.clone(),
-        Route::FileBlockPage { project_id, .. } => project_id.clone(),
-        Route::FileItemPage { project_id, .. } => project_id.clone(),
+        Route::NoteBlockPage { project_id, .. } => project_id.clone(),
+        Route::NoteItemPage { project_id, .. } => project_id.clone(),
         Route::BuildingBlockPage { project_id, .. } => project_id.clone(),
         _ => "default".to_string(),
     };
 
     let (block_id, block_name, block_type_str, task_id, task_name, image_name, prev_img, next_img, current_idx, total_imgs): (
-        Option<String>, Option<String>, String, Option<String>, Option<String>, Option<String>, Option<Image>, Option<Image>, usize, usize
+        Option<String>, Option<String>, String, Option<String>, Option<String>, Option<String>, Option<Attachment>, Option<Attachment>, usize, usize
     ) = match &route {
         Route::CreateTaskPage { project_id: _, block_id, block_name, block_type } => {
             (Some(block_id.clone()), Some(block_name.clone()), block_type.clone(), None, None, None, None, None, 0, 0)
@@ -120,18 +120,18 @@ pub fn AppNavbar(
         Route::TasksListPage { project_id: _, block_id, block_name, block_type } => {
             (Some(block_id.clone()), Some(block_name.clone()), block_type.clone(), None, None, None, None, None, 0, 0)
         }
-        Route::FileBlockPage { project_id: _, block_id, block_name, block_type } => {
+        Route::NoteBlockPage { project_id: _, block_id, block_name, block_type } => {
             (Some(block_id.clone()), Some(block_name.clone()), block_type.clone(), None, None, None, None, None, 0, 0)
         }
-        Route::FileItemPage { project_id: _, block_id, block_name, block_type, image_id: _, image_name } => {
-            (Some(block_id.clone()), Some(block_name.clone()), block_type.clone(), None, None, Some(image_name.clone()), None, None, 0, 0)
+        Route::NoteItemPage { project_id: _, block_id, block_name, block_type, attachment_id: _, attachment_name } => {
+            (Some(block_id.clone()), Some(block_name.clone()), block_type.clone(), None, None, Some(attachment_name.clone()), None, None, 0, 0)
         }
         Route::BuildingBlockPage { project_id: _, block_id, block_name, block_type } => {
             (Some(block_id.clone()), Some(block_name.clone()), block_type.clone(), None, None, None, None, None, 0, 0)
         }
         Route::AnnotationCanvasPage { project_id: _, block_id, block_name, block_type, task_id, task_name, image_id, image_name } => {
-            let mut prev_img: Option<Image> = None;
-            let mut next_img: Option<Image> = None;
+            let mut prev_img: Option<Attachment> = None;
+            let mut next_img: Option<Attachment> = None;
             let mut current_idx: usize = 0;
             let mut total_imgs: usize = 0;
             
@@ -919,8 +919,8 @@ fn AccountPanel(show: Signal<bool>, user_name: String, user_email: String) -> El
         | Route::TasksListPage { project_id, block_id, .. }
         | Route::AnnotationCanvasPage { project_id, block_id, .. }
         | Route::ImportBlockPage { project_id, block_id, .. }
-        | Route::FileBlockPage { project_id, block_id, .. }
-        | Route::FileItemPage { project_id, block_id, .. }
+        | Route::NoteBlockPage { project_id, block_id, .. }
+        | Route::NoteItemPage { project_id, block_id, .. }
         | Route::BuildingBlockPage { project_id, block_id, .. } => {
             Some((project_id.clone(), block_id.clone()))
         }

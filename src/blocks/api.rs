@@ -61,7 +61,7 @@ pub async fn api_delete_label(project_id: &str, label_id: &str) -> Result<(), St
 #[serde(rename_all = "lowercase")]
 pub enum BlockType {
     Annotation,
-    File,
+    Note,
     Building,
 }
 
@@ -75,7 +75,7 @@ impl BlockType {
     pub fn as_str(&self) -> &str {
         match self {
             BlockType::Annotation => "annotation",
-            BlockType::File => "file",
+            BlockType::Note => "note",
             BlockType::Building => "building",
         }
     }
@@ -83,7 +83,7 @@ impl BlockType {
     pub fn label(&self) -> &str {
         match self {
             BlockType::Annotation => "Annotation",
-            BlockType::File => "File",
+            BlockType::Note => "Note",
             BlockType::Building => "Building",
         }
     }
@@ -91,7 +91,7 @@ impl BlockType {
     pub fn from_str(s: &str) -> Option<BlockType> {
         match s {
             "annotation" => Some(BlockType::Annotation),
-            "file" => Some(BlockType::File),
+            "note" | "file" => Some(BlockType::Note),
             "building" => Some(BlockType::Building),
             _ => None,
         }

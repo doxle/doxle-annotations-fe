@@ -10,7 +10,7 @@ const BUILD_BLOCK_LIGHT: Asset = asset!("/assets/icons/build-block-light.svg");
 const BUILD_BLOCK_DARK: Asset = asset!("/assets/icons/build-block-dark.svg");
 
 /// Which block-type filter is active in the bottom bar.
-/// "all" | "file" | "building" | "annotation"
+/// "all" | "note" | "building" | "annotation"
 pub static BLOCK_TYPE_FILTER: GlobalSignal<String> = Signal::global(|| "all".to_string());
 
 #[component]
@@ -26,7 +26,7 @@ pub fn BottomBar(project_id: String) -> Element {
         Route::TasksListPage { block_type, .. }
         | Route::CreateTaskPage { block_type, .. }
         | Route::AnnotationCanvasPage { block_type, .. } => block_type.as_str(),
-        Route::FileBlockPage { .. } | Route::FileItemPage { .. } => "file",
+        Route::NoteBlockPage { .. } | Route::NoteItemPage { .. } => "note",
         Route::BuildingBlockPage { .. } => "building",
         Route::ImportBlockPage { block_type, .. } => block_type.as_str(),
         _ => "all",
@@ -46,14 +46,14 @@ pub fn BottomBar(project_id: String) -> Element {
         }
     };
 
-    let nav_files = make_handler("file");
+    let nav_files = make_handler("note");
     let nav_build = make_handler("building");
     let nav_tasks = make_handler("annotation");
 
     rsx! {
         div { class: "app-bottom-bar",
             div {
-                class: if active_tab == "file" { "bottom-bar-tab active" } else { "bottom-bar-tab" },
+                class: if active_tab == "note" { "bottom-bar-tab active" } else { "bottom-bar-tab" },
                 onclick: nav_files,
                 img { src: files_icon, class: "bottom-bar-tab-icon", alt: "Files" }
             }

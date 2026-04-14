@@ -4,15 +4,15 @@ use crate::blocks::annotations::state::{
     state_add_comment, state_create_thread, state_delete_thread, state_load_threads, state_resolve_thread,
 };
 use crate::core::client::{to_cloudfront_media_url, to_cloudfront_url};
-use crate::core::{LoadingScreen, Theme, THEME};
+use crate::core::{is_mobile, LoadingScreen, Theme, THEME};
 use crate::Route;
-use crate::media::api::api_get_image;
-use crate::media::Image;
+use crate::media::api::api_get_file_attachment;
+use crate::media::FileAttachment;
 use dioxus::prelude::*;
 #[cfg(target_arch = "wasm32")]
 use wasm_bindgen::JsCast;
 
-const FILE_ITEM_PAGE_CSS: &str = include_str!("file_item_page.css");
+const NOTE_ITEM_PAGE_CSS: &str = include_str!("note_item_page.css");
 const CLOSE_LIGHT: Asset = asset!("/assets/icons/close-light.svg");
 const CLOSE_DARK: Asset = asset!("/assets/icons/close-dark.svg");
 
@@ -20,21 +20,17 @@ fn clamp01(v: f64) -> f64 {
     v.clamp(0.0, 1.0)
 }
 
-fn is_video(media: &Image) -> bool {
+fn is_video(media: &FileAttachment) -> bool {
     media.media_type == "video"
 }
 
-fn is_image(media: &Image) -> bool {
+fn is_image(media: &FileAttachment) -> bool {
     media.media_type == "image"
 }
 
-fn is_pdf(media: &Image) -> bool {
-    media.image_name.to_ascii_lowercase().ends_with(".pdf")
+fn is_pdf(media: &FileAttachment) -> bool {
+    media.attachment_name.to_ascii_lowercase().ends_with(".pdf")
         || media.url.to_ascii_lowercase().contains(".pdf")
-}
-
-fn pdf_thumbnail_src(url: &str) -> String {
-    format!("{url}#page=1&toolbar=0&navpanes=0&scrollbar=0&view=FitH")
 }
 
 fn comment_rect_style(world_x: f64, world_y: f64) -> String {
@@ -64,18 +60,18 @@ fn local_coords_from_client(element_id: &str, client_x: f64, client_y: f64) -> O
 }
 
 #[component]
-pub fn FileItemPage(
+pub fn NoteItemPage(
     project_id: String,
     block_id: String,
     block_name: String,
     block_type: String,
-    image_id: String,
-    image_name: String,
+    attachment_id: String,
+    attachment_name: String,
 ) -> Element {
     let nav = use_navigator();
     let close_icon = if THEME() == Theme::Dark { CLOSE_DARK } else { CLOSE_LIGHT };
-    let image_name_display = crate::core::route_utils::decode_route_segment(&image_name);
-    let mut media_item = use_signal(|| None::<Image>);
+    let image_name_display = crate::core::route_utils::decode_route_segment(&attachment_name);
+    let mut media_item = use_signal(|| None::<FileAttachment>);
     let mut loading = use_signal(|| true);
     let mut error = use_signal(|| None::<String>);
     let mut comment_threads: Signal<Vec<CommentThread>> = use_signal(|| Vec::new());
@@ -91,14 +87,14 @@ pub fn FileItemPage(
     let mut video_playing: Signal<bool> = use_signal(|| false);
 
     let block_id_for_load = block_id.clone();
-    let image_id_for_load = image_id.clone();
+    let image_id_for_load = attachment_id.clone();
     use_effect(move || {
         loading.set(true);
         error.set(None);
         let block_id = block_id_for_load.clone();
         let image_id = image_id_for_load.clone();
         spawn(async move {
-            match api_get_image(&block_id, &image_id).await {
+            match api_get_file_attachment(&block_id, &image_id).await {
                 Ok(item) => media_item.set(Some(item)),
                 Err(e) => error.set(Some(e)),
             }
@@ -113,13 +109,13 @@ pub fn FileItemPage(
     let btype = block_type.clone();
 
     rsx! {
-        style { {FILE_ITEM_PAGE_CSS} }
+        style { {NOTE_ITEM_PAGE_CSS} }
         div {
             class: "file-item-page",
             button {
                 class: "file-item-close",
                 onclick: move |_| {
-                    nav.push(Route::FileBlockPage {
+                    nav.push(Route::NoteBlockPage {
                         project_id: pid.clone(),
                         block_id: bid.clone(),
                         block_name: bname.clone(),
@@ -134,7 +130,7 @@ pub fn FileItemPage(
                 div { class: "file-item-error", "{err}" }
             } else if let Some(media) = media_item() {
                 {
-                    let canvas_id = format!("file-item-canvas-{}", media.image_id);
+                    let canvas_id = format!("file-item-canvas-{}", media.attachment_id);
                     let canvas_id_for_click = canvas_id.clone();
                     let src = if is_video(&media) {
                         to_cloudfront_media_url(&media.url)
@@ -317,13 +313,30 @@ pub fn FileItemPage(
                                         img {
                                             class: "file-item-image",
                                             src: "{src}",
-                                            alt: "{media.image_name}",
+                                            alt: "{media.attachment_name}",
                                         }
                                     } else if is_pdf(&media) {
-                                        iframe {
-                                            class: "file-item-pdf",
-                                            src: "{pdf_thumbnail_src(&src)}",
-                                            title: "{media.image_name}",
+                                        if is_mobile() {
+                                            div {
+                                                class: "file-item-pdf-mobile",
+                                                span { class: "file-item-pdf-icon", "PDF" }
+                                                span { class: "file-item-pdf-name", "{media.attachment_name}" }
+                                                a {
+                                                    class: "file-item-pdf-open-btn",
+                                                    href: "{src}",
+                                                    onclick: move |e| {
+                                                        e.stop_propagation();
+                                                    },
+                                                    "Open PDF"
+                                                }
+                                            }
+                                        } else {
+                                            iframe {
+                                                class: "file-item-pdf",
+                                                src: "{src}",
+                                                style: "height: calc(100vh - 80px);",
+                                                title: "{media.attachment_name}",
+                                            }
                                         }
                                     } else {
                                         div {
@@ -387,9 +400,9 @@ pub fn FileItemPage(
         if let Some((world_x, world_y, screen_x, screen_y, thread_id)) = comment_dialog() {
             {
                 let thread = comment_threads.read().iter().find(|t| t.id == thread_id).cloned();
-                let parent_id_for_post = image_id.clone();
-                let parent_id_for_resolve = image_id.clone();
-                let parent_id_for_delete = image_id.clone();
+                let parent_id_for_post = attachment_id.clone();
+                let parent_id_for_resolve = attachment_id.clone();
+                let parent_id_for_delete = attachment_id.clone();
                 rsx! {
                     CommentDialog {
                         screen_x: screen_x,

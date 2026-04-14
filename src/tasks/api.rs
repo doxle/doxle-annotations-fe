@@ -1,11 +1,11 @@
 use crate::core::client;
 
 use serde::Serialize;
-use crate::media::Image;
+use crate::media::Attachment;
 use crate::tasks::model::Task;
 
 /// POST /projects/{pid}/blocks/{block_id}/tasks/{task_id}/images
-pub async fn api_create_task_image(project_id:&str, block_id:&str, task_id:&str, image_id: String, image_name: String, image_url:String, file_size: u64)->Result<Image,String> {
+pub async fn api_create_task_attachment(project_id:&str, block_id:&str, task_id:&str, image_id: String, image_name: String, image_url:String, file_size: u64)->Result<Attachment,String> {
     #[derive(Debug, Serialize)]
     struct CreateTaskImageRequest {
         image_id: String,
@@ -21,15 +21,15 @@ pub async fn api_create_task_image(project_id:&str, block_id:&str, task_id:&str,
         url: image_url,
         file_size,
     };
-    client::post::<CreateTaskImageRequest, Image>(&endpoint, &body).await
+    client::post::<CreateTaskImageRequest, Attachment>(&endpoint, &body).await
 }
 
 
 
 /// GET /projects/{pid}/blocks/{block_id}/tasks/{task_id}/images
-pub async fn api_list_task_images(project_id: &str, block_id: &str, task_id: &str) -> Result<Vec<crate::media::Image>, String> {
+pub async fn api_list_task_attachments(project_id: &str, block_id: &str, task_id: &str) -> Result<Vec<crate::media::Attachment>, String> {
     let endpoint = format!("/projects/{}/blocks/{}/tasks/{}/images", project_id, block_id, task_id);
-    client::get::<Vec<crate::media::Image>>(&endpoint).await
+    client::get::<Vec<crate::media::Attachment>>(&endpoint).await
 }
 
 /// GET /projects/{pid}/blocks/{block_id}/tasks

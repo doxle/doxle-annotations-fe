@@ -205,7 +205,7 @@ pub fn BlocksPage(project_id: String)->Element{
                 }
             },
             div{
-                class: if view_mode() == "list" { "blocks-list-container list-mode" } else { "blocks-list-container" },
+                class: "blocks-list-container",
                 div {
                     class: if search_active() { "new-page-btn search-mode" } else { "new-page-btn" },
                     if search_active() {
@@ -249,18 +249,6 @@ pub fn BlocksPage(project_id: String)->Element{
                         }
                         div { class: "action-divider" }
                         button {
-                            class: if view_mode() == "list" { "action-btn active" } else { "action-btn" },
-                            onclick: move |_| view_mode.set("list".to_string()),
-                            img { src: list_icon, class: "action-icon" }
-                        }
-                        div { class: "action-divider" }
-                        button {
-                            class: if view_mode() == "grid" { "action-btn active" } else { "action-btn" },
-                            onclick: move |_| view_mode.set("grid".to_string()),
-                            img { src: grid_icon, class: "action-icon" }
-                        }
-                        div { class: "action-divider" }
-                        button {
                             class: "action-btn",
                             onclick: move |_| search_active.set(true),
                             img { src: search_icon, class: "action-icon search-icon" }
@@ -271,7 +259,7 @@ pub fn BlocksPage(project_id: String)->Element{
                     div { class: "no-results", "No blocks matched" }
                 } else {
                     ul{
-                        class: if view_mode() == "list" { "blocks-list blocks-list-view" } else { "blocks-list" },
+                        class: "blocks-list blocks-grid-view",
                         for block in filtered_blocks.iter() {
                         {
                             let project_id_for_card = project_id().clone();
@@ -296,7 +284,7 @@ pub fn BlocksPage(project_id: String)->Element{
                             // Select icon based on block type and theme
                             let block_type_icon = match block.block_type {
                                 BlockType::Annotation => if is_dark { ANNOTATION_BLOCK_DARK } else { ANNOTATION_BLOCK_LIGHT },
-                                BlockType::File => if is_dark { FILE_BLOCK_DARK } else { FILE_BLOCK_LIGHT },
+                                BlockType::Note => if is_dark { FILE_BLOCK_DARK } else { FILE_BLOCK_LIGHT },
                                 BlockType::Building => if is_dark { BUILD_BLOCK_DARK } else { BUILD_BLOCK_LIGHT },
                             };
                             let block_id_for_ctx = block.block_id.clone();
@@ -318,8 +306,8 @@ pub fn BlocksPage(project_id: String)->Element{
                                         }
                                         let id = block_id.clone();
                                         let encoded_name = js_sys::encode_uri_component(&block_name).as_string().unwrap_or(block_name.clone());
-                                        if block_type_for_onclick == BlockType::File {
-                                            navigator.push(Route::FileBlockPage {
+                                        if block_type_for_onclick == BlockType::Note {
+                                            navigator.push(Route::NoteBlockPage {
                                                 project_id: project_id_for_card.clone(),
                                                 block_id: id,
                                                 block_name: block_name_for_route.clone(),
@@ -690,11 +678,13 @@ pub fn BlocksPage(project_id: String)->Element{
                                         }
                                     }
                                     
-                                    // Row 2: Image count
-                                    if !(view_mode() == "list" && block_type != BlockType::Annotation) {
-                                        div {
-                                            class: "block-row-2",
+                                    // Row 2: Image/annotation count
+                                    div {
+                                        class: "block-row-2",
+                                        if block_type == BlockType::Annotation {
                                             span { class: "block-image-count", "{approved_image_count}/{image_count}" }
+                                        } else {
+                                            span { class: "block-image-count", "{image_count}" }
                                         }
                                     }
                                     

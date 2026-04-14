@@ -33,6 +33,18 @@ pub fn HomePage() -> Element {
                 return;
             }
 
+            // If user has a stored session (refresh token), skip landing page
+            if auth::api::has_persisted_session_hint() {
+                nav.replace(Route::ProjectsPage {});
+                return;
+            }
+
+            // If user has a stored session (refresh token), skip landing page
+            if auth::api::has_persisted_session_hint() {
+                nav.replace(Route::ProjectsPage {});
+                return;
+            }
+
             // Reset scroll position (mobile keyboard can leave page scrolled)
             window.scroll_to_with_x_and_y(0.0, 0.0);
 

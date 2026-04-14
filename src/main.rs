@@ -1,12 +1,32 @@
 #![allow(dead_code, unused_imports, unused_variables, unused_mut, deprecated)]
+#![allow(
+    clippy::uninlined_format_args,
+    clippy::redundant_closure,
+    clippy::unnecessary_map_or,
+    clippy::type_complexity,
+    clippy::clone_on_copy,
+    clippy::let_underscore_future,
+    clippy::needless_question_mark,
+    clippy::too_many_arguments,
+    clippy::empty_line_after_doc_comments,
+    clippy::module_inception,
+    clippy::double_ended_iterator_last,
+    clippy::unnecessary_cast,
+    clippy::redundant_field_names,
+    clippy::needless_return,
+    clippy::manual_swap,
+    clippy::needless_borrow,
+    clippy::if_same_then_else,
+    clippy::enum_variant_names
+)]
 
 use dioxus::prelude::*;
-use blocks::{BlocksPage, CreateBlockPage, FileBlockPage, FileItemPage, ImportBlockPage, BuildingBlockPage};
+use blocks::{BlocksPage, CreateBlockPage, NoteBlockPage, NoteItemPage, ImportBlockPage, BuildingBlockPage};
 use projects::{ProjectsPage, CreateProjectPage};
 use tasks::{TasksListPage, CreateTaskPage};
 use blocks::annotations::AnnotationCanvasPage;
 use site::upload::UploadPage;
-use site::{HomePage, Home3Page, JoinPage, JoinPreviewPage, LegacyJoinPage, SignInInvitePage, SignInPage, Navbar, OurStoryPage, SayHelloPage, SignupInvitePage, SignupPage, SignupPreviewPage, SignupPreviewVerifyPage, SignupVerifyInvitePage, SignupVerifyPage, VisionPage, GeometricGridPage, DotsPage, ConstellationPage, SquareGridPage};
+use site::{HomePage, Home3Page, JoinPage, JoinPreviewPage, LegacyJoinPage, SignInInvitePage, SignInPage, Navbar, OurStoryPage, SayHelloPage, SignupInvitePage, SignupPage, SignupPreviewPage, SignupPreviewVerifyPage, SignupVerifyInvitePage, SignupVerifyPage, VisionPage, GeometricGridPage, DotsPage, ConstellationPage, SquareGridPage, PrivacyPage};
 use matrix::MatrixPage;
 use stacking_bricks::StackingBricksPage;
 use letter_cycle::LetterCyclePage;
@@ -67,7 +87,7 @@ const APP_SIDEBAR_CSS: &str = include_str!("core/app_sidebar/app_sidebar.css");
 const APP_NAVBAR_CSS: &str = include_str!("core/app_navbar/app_navbar.css");
 const DOTS_CSS: &str = include_str!("site/dots.css");
 const VIEWER3D_CSS: &str = include_str!("blocks/building/viewer_3d/viewer_page.css");
-const FILE_BLOCK_PAGE_CSS: &str = include_str!("blocks/files/file_block_page.css");
+const NOTE_BLOCK_PAGE_CSS: &str = include_str!("blocks/note/note_block_page.css");
 const BUILDING_BLOCK_PAGE_CSS: &str = include_str!("blocks/building/building_block_page.css");
 const BOTTOM_BAR_CSS: &str = include_str!("core/bottom_bar.css");
 
@@ -185,7 +205,7 @@ fn App() -> Element {
                 document::Style { {APP_NAVBAR_CSS} }
                 document::Style { {DOTS_CSS} }
                 document::Style { {VIEWER3D_CSS} }
-                document::Style { {FILE_BLOCK_PAGE_CSS} }
+                document::Style { {NOTE_BLOCK_PAGE_CSS} }
                 document::Style { {BUILDING_BLOCK_PAGE_CSS} }
                 document::Style { {BOTTOM_BAR_CSS} }
 
@@ -260,9 +280,9 @@ enum Route {
     #[route("/projects/:project_id/blocks/:block_id/:block_name/:block_type/import")]
     ImportBlockPage { project_id: String, block_id: String, block_name: String, block_type: String },
     #[route("/projects/:project_id/blocks/:block_id/:block_name/:block_type/files")]
-    FileBlockPage { project_id: String, block_id: String, block_name: String, block_type: String },
-    #[route("/projects/:project_id/blocks/:block_id/:block_name/:block_type/files/:image_id/:image_name")]
-    FileItemPage { project_id: String, block_id: String, block_name: String, block_type: String, image_id: String, image_name: String },
+    NoteBlockPage { project_id: String, block_id: String, block_name: String, block_type: String },
+    #[route("/projects/:project_id/blocks/:block_id/:block_name/:block_type/files/:attachment_id/:attachment_name")]
+    NoteItemPage { project_id: String, block_id: String, block_name: String, block_type: String, attachment_id: String, attachment_name: String },
     #[route("/projects/:project_id/blocks/:block_id/:block_name/:block_type/building")]
     BuildingBlockPage { project_id: String, block_id: String, block_name: String, block_type: String },
     #[route("/projects/:project_id/blocks/:block_id/:block_name/:block_type/tasks/new")]
@@ -285,6 +305,8 @@ enum Route {
     ConstellationPage {},
     #[route("/squares")]
     SquareGridPage {},
+    #[route("/privacy")]
+    PrivacyPage {},
     #[route("/viewer3d")]
     ViewerPage {},
     #[route("/livetimer")]

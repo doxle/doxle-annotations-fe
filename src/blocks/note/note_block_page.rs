@@ -1,7 +1,7 @@
 use crate::blocks::annotations::api::api_list_threads;
-use crate::blocks::files::file_context_menu::FileContextMenu;
-use crate::media::api::{list_block_media, upload_image_for_block, api_delete_image};
-use crate::media::Image;
+use crate::blocks::note::note_context_menu::FileContextMenu;
+use crate::media::api::{api_delete_note_attachment, list_note_block_attachments, upload_attachment_for_note_block};
+use crate::media::FileAttachment;
 use crate::core::client::{to_cloudfront_media_url, to_cloudfront_url};
 use crate::core::{AppNavbar, BottomBar, LoadingScreen, Theme, THEME};
 use crate::Route;
@@ -9,7 +9,7 @@ use dioxus::prelude::*;
 use futures::stream::{self, StreamExt};
 use std::collections::HashMap;
 
-const FILE_BLOCK_PAGE_CSS: &str = include_str!("file_block_page.css");
+const NOTE_BLOCK_PAGE_CSS: &str = include_str!("note_block_page.css");
 const BLOCK_LIST_CSS: &str = include_str!("../../blocks/block_list.css");
 const DOG_LIGHT_ICON: Asset = asset!("/assets/icons/dog-light.svg");
 const DOG_DARK_ICON: Asset = asset!("/assets/icons/dog-dark.svg");
@@ -28,42 +28,44 @@ struct UploadItem {
 }
 
 
-fn is_video(media: &Image) -> bool {
+fn is_video(media: &FileAttachment) -> bool {
     media.media_type == "video"
 }
 
-fn is_image(media: &Image) -> bool {
+fn is_image(media: &FileAttachment) -> bool {
     media.media_type == "image"
 }
 
-fn is_pdf(media: &Image) -> bool {
-    media.image_name.to_ascii_lowercase().ends_with(".pdf")
+fn is_pdf(media: &FileAttachment) -> bool {
+    media.attachment_name.to_ascii_lowercase().ends_with(".pdf")
         || media.url.to_ascii_lowercase().contains(".pdf")
 }
 
 fn pdf_thumbnail_src(url: &str) -> String {
     format!("{url}#page=1&toolbar=0&navpanes=0&scrollbar=0&view=FitH")
 }
+/// How long to ignore clicks after file cards become visible (prevents ghost taps on iOS).
+const MOBILE_CARDS_GUARD_MS: u128 = 800;
 
-async fn fetch_comment_counts(image_ids: Vec<String>) -> HashMap<String, usize> {
-    let comment_count_futures = image_ids.into_iter().map(|image_id| async move {
-        let count = match api_list_threads(&image_id).await {
+async fn fetch_comment_counts(attachment_ids: Vec<String>) -> HashMap<String, usize> {
+    let comment_count_futures = attachment_ids.into_iter().map(|attachment_id| async move {
+        let count = match api_list_threads(&attachment_id).await {
             Ok(threads) => threads.iter().map(|thread| thread.comments.len()).sum::<usize>(),
             Err(_) => 0,
         };
-        (image_id, count)
+        (attachment_id, count)
     });
     let mut stream = stream::iter(comment_count_futures).buffer_unordered(6);
     let mut counts = HashMap::new();
-    while let Some((image_id, count)) = stream.next().await {
-        counts.insert(image_id, count);
+    while let Some((attachment_id, count)) = stream.next().await {
+        counts.insert(attachment_id, count);
     }
     counts
 }
 
 
 #[component]
-pub fn FileBlockPage(
+pub fn NoteBlockPage(
     project_id: String,
     block_id: String,
     block_name: String,
@@ -71,7 +73,7 @@ pub fn FileBlockPage(
 ) -> Element {
     let block_name_display = crate::core::route_utils::decode_route_segment(&block_name);
     let nav = use_navigator();
-    let mut media_items = use_signal(Vec::<Image>::new);
+    let mut media_items = use_signal(Vec::<FileAttachment>::new);
     let mut comment_counts = use_signal(HashMap::<String, usize>::new);
     let mut loading = use_signal(|| true);
     let mut error = use_signal(|| None::<String>);
@@ -87,6 +89,9 @@ pub fn FileBlockPage(
     // Search state
     let mut search_active = use_signal(|| false);
     let mut search_query = use_signal(String::new);
+    // Single timestamp: when were file cards last made visible?
+    // All mobile clicks are blocked for MOBILE_CARDS_GUARD_MS after this.
+    let mut cards_visible_since = use_signal(web_time::Instant::now);
     let is_dark = THEME() == Theme::Dark;
     let dog_icon = if is_dark { DOG_DARK_ICON } else { DOG_LIGHT_ICON };
     let add_icon = if is_dark { ADD_ICON_DARK } else { ADD_ICON_LIGHT };
@@ -101,20 +106,22 @@ pub fn FileBlockPage(
         let project_id = project_id_for_load.clone();
         let block_id = block_id_for_load.clone();
         spawn(async move {
-            match list_block_media(&project_id, &block_id).await {
+            match list_note_block_attachments(&project_id, &block_id).await {
                 Ok(items) => {
-                    let image_ids = items.iter().map(|item| item.image_id.clone()).collect::<Vec<_>>();
+                    let attachment_ids = items.iter().map(|item| item.attachment_id.clone()).collect::<Vec<_>>();
                     media_items.set(items);
-                    comment_counts.set(fetch_comment_counts(image_ids).await);
+                    comment_counts.set(fetch_comment_counts(attachment_ids).await);
                 }
                 Err(e) => error.set(Some(e)),
             }
+            // Start the guard RIGHT BEFORE cards become visible
+            cards_visible_since.set(web_time::Instant::now());
             loading.set(false);
         });
     });
 
     rsx! {
-        style { {FILE_BLOCK_PAGE_CSS} }
+        style { {NOTE_BLOCK_PAGE_CSS} }
         style { {BLOCK_LIST_CSS} }
         AppNavbar {}
         div {
@@ -151,10 +158,34 @@ pub fn FileBlockPage(
                         img { src: close_icon, class: "action-icon" }
                     }
                 } else {
-                    label {
-                        r#for: "file-block-upload-input",
+                    button {
+                        r#type: "button",
                         class: "new-project-action",
-                        img { src: add_icon, class: "action-icon" }
+                        disabled: is_uploading(),
+                        onclick: move |_| {
+                            if is_uploading() {
+                                return;
+                            }
+                            if crate::core::is_mobile() && cards_visible_since().elapsed().as_millis() < MOBILE_CARDS_GUARD_MS {
+                                return;
+                            }
+                            #[cfg(target_arch = "wasm32")]
+                            {
+                                use wasm_bindgen::JsCast;
+                                if let Some(window) = web_sys::window() {
+                                    if let Some(document) = window.document() {
+                                        if let Some(element) = document.get_element_by_id("file-block-upload-input") {
+                                            if let Ok(input) = element.dyn_into::<web_sys::HtmlInputElement>() {
+                                                input.click();
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        if !is_uploading() {
+                            img { src: add_icon, class: "action-icon" }
+                        }
                         if is_uploading() { "Uploading..." } else { "New File" }
                     }
                     div { class: "action-divider" }
@@ -191,6 +222,10 @@ pub fn FileBlockPage(
                                                 files_to_upload.push(file);
                                             }
                                         }
+                                        input.set_value("");
+                                        if crate::core::is_mobile() {
+                                            cards_visible_since.set(web_time::Instant::now());
+                                        }
 
                                         if files_to_upload.is_empty() {
                                             return;
@@ -216,7 +251,7 @@ pub fn FileBlockPage(
                                                     let block_id = block_id.clone();
                                                     async move {
                                                         let name = file.name();
-                                                        let result = upload_image_for_block(&project_id, &block_id, file).await;
+                                                        let result = upload_attachment_for_note_block(&project_id, &block_id, file).await;
                                                         (idx, name, result)
                                                     }
                                                 });
@@ -279,11 +314,11 @@ pub fn FileBlockPage(
                                                 );
                                             }
 
-                                            match list_block_media(&project_id, &block_id).await {
+                                            match list_note_block_attachments(&project_id, &block_id).await {
                                                 Ok(items) => {
-                                                    let image_ids = items.iter().map(|item| item.image_id.clone()).collect::<Vec<_>>();
+                                                    let attachment_ids = items.iter().map(|item| item.attachment_id.clone()).collect::<Vec<_>>();
                                                     media_items.set(items);
-                                                    comment_counts.set(fetch_comment_counts(image_ids).await);
+                                                    comment_counts.set(fetch_comment_counts(attachment_ids).await);
                                                 }
                                                 Err(e) => error.set(Some(e)),
                                             }
@@ -316,11 +351,11 @@ pub fn FileBlockPage(
                 } else {
                     {
                         let query = search_query().to_lowercase();
-                        let filtered: Vec<Image> = if query.is_empty() {
+                        let filtered: Vec<FileAttachment> = if query.is_empty() {
                             media_items()
                         } else {
                             media_items().into_iter()
-                                .filter(|m| m.image_name.to_lowercase().contains(&query))
+                                .filter(|m| m.attachment_name.to_lowercase().contains(&query))
                                 .collect()
                         };
                         rsx! {
@@ -331,8 +366,8 @@ pub fn FileBlockPage(
                         class: "file-block-grid",
                         for media in filtered.iter() {
                             {
-                                let image_id_for_route = media.image_id.clone();
-                                let image_name_for_route = crate::core::route_utils::encode_route_segment(&media.image_name);
+                                let attachment_id_for_route = media.attachment_id.clone();
+                                let attachment_name_for_route = crate::core::route_utils::encode_route_segment(&media.attachment_name);
                                 let src = if is_video(media) {
                                     to_cloudfront_media_url(&media.url)
                                 } else {
@@ -343,37 +378,60 @@ pub fn FileBlockPage(
                                 let block_name_for_route = crate::core::route_utils::encode_route_segment(&block_name);
                                 let block_type_for_route = block_type.clone();
                                 let nav_for_route = nav.clone();
+                                let src_for_open = src.clone();
+                                let is_file_media = !is_image(media) && !is_video(media);
                                 // For long-press context menu
-                                let ctx_image_id = media.image_id.clone();
-                                let ctx_file_name = media.image_name.clone();
+                                let ctx_attachment_id = media.attachment_id.clone();
+                                let ctx_file_name = media.attachment_name.clone();
                                 let ctx_media_type = media.media_type.clone();
                                 // For long-press touch
-                                let lp_image_id = media.image_id.clone();
-                                let lp_file_name = media.image_name.clone();
+                                let lp_attachment_id = media.attachment_id.clone();
+                                let lp_file_name = media.attachment_name.clone();
                                 let lp_media_type = media.media_type.clone();
                                 rsx! {
                                     button {
                                         class: "file-card",
                                         onclick: move |_| {
+                                            let elapsed = cards_visible_since().elapsed().as_millis();
+                                            tracing::info!("FILE-CARD onclick: elapsed={}ms guard={}ms mobile={}", elapsed, MOBILE_CARDS_GUARD_MS, crate::core::is_mobile());
+                                            if is_uploading() { return; }
+                                            if crate::core::is_mobile() && elapsed < MOBILE_CARDS_GUARD_MS {
+                                                tracing::info!("FILE-CARD onclick BLOCKED by guard");
+                                                return;
+                                            }
                                             if context_menu().is_some() { return; }
                                             if long_press_active() {
                                                 long_press_active.set(false);
                                                 return;
                                             }
-                                            nav_for_route.push(Route::FileItemPage {
+                                            // PDFs & generic files: open directly (no NoteItemPage)
+                                            if is_file_media {
+                                                #[cfg(target_arch = "wasm32")]
+                                                {
+                                                    if let Some(window) = web_sys::window() {
+                                                        if crate::core::is_mobile() {
+                                                            let _ = window.location().set_href(&src_for_open);
+                                                        } else {
+                                                            let _ = window.open_with_url(&src_for_open);
+                                                        }
+                                                    }
+                                                }
+                                                return;
+                                            }
+                                            nav_for_route.push(Route::NoteItemPage {
                                                 project_id: project_id_for_route.clone(),
                                                 block_id: block_id_for_route.clone(),
                                                 block_name: block_name_for_route.clone(),
                                                 block_type: block_type_for_route.clone(),
-                                                image_id: image_id_for_route.clone(),
-                                                image_name: image_name_for_route.clone(),
+                                                attachment_id: attachment_id_for_route.clone(),
+                                                attachment_name: attachment_name_for_route.clone(),
                                             });
                                         },
                                         oncontextmenu: move |e| {
                                             e.prevent_default();
                                             let coords = e.client_coordinates();
                                             context_menu.set(Some((
-                                                ctx_image_id.clone(),
+                                                ctx_attachment_id.clone(),
                                                 ctx_file_name.clone(),
                                                 ctx_media_type.clone(),
                                                 coords.x,
@@ -381,7 +439,7 @@ pub fn FileBlockPage(
                                             )));
                                         },
                                         ontouchstart: move |e| {
-                                            let id = lp_image_id.clone();
+                                            let id = lp_attachment_id.clone();
                                             let fname = lp_file_name.clone();
                                             let mtype = lp_media_type.clone();
                                             long_press_active.set(false);
@@ -390,7 +448,7 @@ pub fn FileBlockPage(
                                                 gloo_timers::future::TimeoutFuture::new(500).await;
                                                 if long_press_id() == Some(id.clone()) {
                                                     long_press_active.set(true);
-                                                    long_press_id.set(None);
+                                    long_press_id.set(None);
                                                     // Center menu on screen for mobile
                                                     context_menu.set(Some((
                                                         id,
@@ -422,16 +480,12 @@ pub fn FileBlockPage(
                                                 img {
                                                     class: "file-card-image",
                                                     src: "{src}",
-                                                    alt: "{media.image_name}",
-                                                }
-                                            } else if is_pdf(media) {
-                                                iframe {
-                                                    class: "file-card-file-preview",
-                                                    src: "{pdf_thumbnail_src(&src)}",
-                                                    title: "{media.image_name}",
+                                                    alt: "{media.attachment_name}",
                                                 }
                                             } else {
-                                                div { class: "file-card-generic", "FILE" }
+                                                div { class: "file-card-generic",
+                                                    if is_pdf(media) { "PDF" } else { "FILE" }
+                                                }
                                             }
 
                                             if !is_video(media) {
@@ -453,7 +507,7 @@ pub fn FileBlockPage(
                                                     }
                                                 }
                                             }
-                                            if let Some(comment_count) = comment_counts().get(&media.image_id).copied() {
+                                            if let Some(comment_count) = comment_counts().get(&media.attachment_id).copied() {
                                                 if comment_count > 0 {
                                                     div {
                                                         class: "file-card-comment-indicator",
@@ -472,8 +526,29 @@ pub fn FileBlockPage(
                                         }
                                         div {
                                             class: "file-card-footer",
-                                            span { class: "file-card-name", "{media.image_name}" }
-                                            span { class: "file-card-type", "{media.media_type}" }
+                                            span { class: "file-card-name", "{media.attachment_name}" }
+                                            {
+                                                let dot_attachment_id = media.attachment_id.clone();
+                                                let dot_file_name = media.attachment_name.clone();
+                                                let dot_media_type = media.media_type.clone();
+                                                rsx! {
+                                                    span {
+                                                        class: "file-card-dots",
+                                                        onclick: move |e| {
+                                                            e.stop_propagation();
+                                                            let coords = e.client_coordinates();
+                                                            context_menu.set(Some((
+                                                                dot_attachment_id.clone(),
+                                                                dot_file_name.clone(),
+                                                                dot_media_type.clone(),
+                                                                coords.x,
+                                                                coords.y,
+                                                            )));
+                                                        },
+                                                        "•••"
+                                                    }
+                                                }
+                                            }
                                         }
                                     }
                                 }
@@ -486,9 +561,9 @@ pub fn FileBlockPage(
             }
         }
         // Context menu
-        if let Some((ref ctx_image_id, ref ctx_file_name, ref ctx_media_type, ctx_x, ctx_y)) = context_menu() {
+        if let Some((ref ctx_attachment_id, ref ctx_file_name, ref ctx_media_type, ctx_x, ctx_y)) = context_menu() {
             {
-                let image_id_for_delete = ctx_image_id.clone();
+                let attachment_id_for_delete = ctx_attachment_id.clone();
                 let project_id_for_delete = project_id.clone();
                 let block_id_for_delete = block_id.clone();
                 rsx! {
@@ -504,12 +579,12 @@ pub fn FileBlockPage(
                         on_delete: move |_| {
                             let pid = project_id_for_delete.clone();
                             let bid = block_id_for_delete.clone();
-                            let iid = image_id_for_delete.clone();
+                            let iid = attachment_id_for_delete.clone();
                             context_menu.set(None);
                             spawn(async move {
-                                match api_delete_image(&pid, &bid, &iid).await {
+                                match api_delete_note_attachment(&pid, &bid, &iid).await {
                                     Ok(_) => {
-                                        media_items.write().retain(|m| m.image_id != iid);
+                                        media_items.write().retain(|m| m.attachment_id != iid);
                                         crate::core::progress::show_success("File deleted");
                                     }
                                     Err(e) => {

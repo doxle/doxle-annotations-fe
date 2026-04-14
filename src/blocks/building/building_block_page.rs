@@ -1,5 +1,5 @@
-use crate::media::api::{list_block_media, upload_image_for_block};
-use crate::media::Image;
+use crate::media::api::{list_building_block_attachments, upload_attachment_for_building_block};
+use crate::media::FileAttachment;
 use crate::core::client::to_cloudfront_url;
 use crate::core::{AppNavbar, BottomBar, LoadingScreen, Theme, THEME};
 use dioxus::prelude::*;
@@ -15,8 +15,8 @@ struct UploadItem {
     status: String,
 }
 
-fn is_pdf(media: &Image) -> bool {
-    media.image_name.to_ascii_lowercase().ends_with(".pdf")
+fn is_pdf(media: &FileAttachment) -> bool {
+    media.attachment_name.to_ascii_lowercase().ends_with(".pdf")
         || media.url.to_ascii_lowercase().contains(".pdf")
 }
 
@@ -33,11 +33,11 @@ pub fn BuildingBlockPage(
 ) -> Element {
     let _ = &block_type;
     let block_name_display = crate::core::route_utils::decode_route_segment(&block_name);
-    let mut media_items = use_signal(Vec::<Image>::new);
+    let mut media_items = use_signal(Vec::<FileAttachment>::new);
     let mut loading = use_signal(|| true);
     let mut error = use_signal(|| None::<String>);
     let mut is_uploading = use_signal(|| false);
-    let mut selected_media = use_signal(|| None::<Image>);
+    let mut selected_media = use_signal(|| None::<FileAttachment>);
     let dog_icon = if THEME() == Theme::Dark { DOG_DARK_ICON } else { DOG_LIGHT_ICON };
 
     let project_id_for_load = project_id.clone();
@@ -48,7 +48,7 @@ pub fn BuildingBlockPage(
         let project_id = project_id_for_load.clone();
         let block_id = block_id_for_load.clone();
         spawn(async move {
-            match list_block_media(&project_id, &block_id).await {
+            match list_building_block_attachments(&project_id, &block_id).await {
                 Ok(items) => media_items.set(items),
                 Err(e) => error.set(Some(e)),
             }
@@ -71,7 +71,7 @@ pub fn BuildingBlockPage(
                 }
             }
             input {
-                r#type: "file",
+                r#type: "note",
                 id: "building-block-upload-input",
                 class: "building-block-upload-input",
                 multiple: true,
@@ -109,7 +109,7 @@ pub fn BuildingBlockPage(
                                                     let block_id = block_id.clone();
                                                     async move {
                                                         let name = file.name();
-                                                        let result = upload_image_for_block(&project_id, &block_id, file).await;
+                                                        let result = upload_attachment_for_building_block(&project_id, &block_id, file).await;
                                                         (idx, name, result)
                                                     }
                                                 });
@@ -165,7 +165,7 @@ pub fn BuildingBlockPage(
                                                 );
                                             }
 
-                                            match list_block_media(&project_id, &block_id).await {
+                                            match list_building_block_attachments(&project_id, &block_id).await {
                                                 Ok(items) => media_items.set(items),
                                                 Err(e) => error.set(Some(e)),
                                             }
@@ -225,19 +225,19 @@ pub fn BuildingBlockPage(
                                                 iframe {
                                                     class: "plan-card-preview",
                                                     src: "{pdf_thumbnail_src(&src)}",
-                                                    title: "{media.image_name}",
+                                                    title: "{media.attachment_name}",
                                                 }
                                             } else {
                                                 img {
                                                     class: "plan-card-image",
                                                     src: "{src}",
-                                                    alt: "{media.image_name}",
+                                                    alt: "{media.attachment_name}",
                                                 }
                                             }
                                         }
                                         div {
                                             class: "plan-card-footer",
-                                            span { class: "plan-card-name", "{media.image_name}" }
+                                            span { class: "plan-card-name", "{media.attachment_name}" }
                                         }
                                     }
                                 }
@@ -260,7 +260,7 @@ pub fn BuildingBlockPage(
                             onclick: move |e| e.stop_propagation(),
                             div {
                                 class: "plan-modal-head",
-                                h2 { "{current_media.image_name}" }
+                                h2 { "{current_media.attachment_name}" }
                                 button {
                                     class: "plan-modal-close",
                                     onclick: move |_| selected_media.set(None),
@@ -272,13 +272,13 @@ pub fn BuildingBlockPage(
                                 iframe {
                                     class: "plan-modal-pdf",
                                     src: "{src}",
-                                    title: "{current_media.image_name}",
+                                    title: "{current_media.attachment_name}",
                                 }
                             } else {
                                 img {
                                     class: "plan-modal-image",
                                     src: "{src}",
-                                    alt: "{current_media.image_name}",
+                                    alt: "{current_media.attachment_name}",
                                 }
                             }
                         }

@@ -114,7 +114,7 @@ pub fn AnnotationCanvasPage(
         let bid = block_id_single.clone();
         let iid = image_id_single.clone();
         spawn(async move {
-            if let Ok(img) = crate::media::api::api_get_image(&bid, &iid).await {
+            if let Ok(img) = crate::media::api::api_get_attachment(&bid, &iid).await {
                 current_image_url.set(Some(crate::core::client::to_cloudfront_url(&img.url)));
             }
         });

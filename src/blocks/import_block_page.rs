@@ -287,7 +287,7 @@ pub fn ImportBlockPage(props: ImportBlockPageProps) -> Element {
 
                             // Hidden file input
                             input {
-                                r#type: "file",
+                                r#type: "note",
                                 id: "import-file-input",
                                 class: "import-hidden-file-input",
                                 accept: ".zip",

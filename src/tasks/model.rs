@@ -1,4 +1,4 @@
-use crate::media::Image;
+use crate::media::Attachment;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
@@ -30,7 +30,7 @@ pub struct Task {
 	pub task_name:String,
 	pub task_state:TaskState,
 	pub created_at:String,
-	pub images:Vec<Image>,
+	pub images:Vec<Attachment>,
 	pub annotation_count:u32,
 	pub assignee:String,
 	pub reviewer:String,

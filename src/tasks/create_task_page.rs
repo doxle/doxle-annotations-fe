@@ -141,7 +141,7 @@ pub fn CreateTaskPage(props: CreateTaskPageProps) -> Element {
                             
                             // Hidden file input
                             input {
-                                r#type: "file",
+                                r#type: "note",
                                 id: "task-file-input",
                                 class: "hidden-file-input",
                                 multiple: true,
