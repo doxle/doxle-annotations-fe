@@ -25,38 +25,38 @@ pub fn FileContextMenu(
     rsx! {
         style { {NOTE_CONTEXT_MENU_CSS} }
         div {
-            class: "file-context-menu-overlay",
+            class: "note-context-menu-overlay",
             onclick: move |e| {
                 e.stop_propagation();
                 on_close.call(());
             }
         }
         div {
-            class: "file-context-menu-dropdown",
+            class: "note-context-menu-dropdown",
             style: "{dropdown_style}",
             onclick: move |e| e.stop_propagation(),
             div {
-                class: "file-context-menu-info",
-                div { class: "file-context-menu-info-label", "File name" }
+                class: "note-context-menu-info",
+                div { class: "note-context-menu-info-label", "File name" }
                 div { "{file_name}" }
             }
-            div { class: "file-context-menu-divider" }
+            div { class: "note-context-menu-divider" }
             div {
-                class: "file-context-menu-item",
+                class: "note-context-menu-item",
                 onclick: move |e| {
                     e.stop_propagation();
                     on_rename.call(());
                 },
-                img { src: edit_icon, class: "file-context-menu-icon", alt: "Rename" }
+                img { src: edit_icon, class: "note-context-menu-icon", alt: "Rename" }
                 "Rename"
             }
             div {
-                class: "file-context-menu-item",
+                class: "note-context-menu-item",
                 onclick: move |e| {
                     e.stop_propagation();
                     on_delete.call(());
                 },
-                img { src: delete_icon, class: "file-context-menu-icon", alt: "Delete" }
+                img { src: delete_icon, class: "note-context-menu-icon", alt: "Delete" }
                 "Delete"
             }
         }

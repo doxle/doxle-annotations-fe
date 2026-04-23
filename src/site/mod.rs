@@ -7,7 +7,6 @@ pub mod sign_in_page;
 pub mod signup_page;
 pub mod ourstory_page;
 pub mod sayhello_page;
-pub mod upload;
 pub mod geometric_grid;
 pub mod dots;
 pub mod constellation;

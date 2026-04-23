@@ -22,10 +22,10 @@
 
 use dioxus::prelude::*;
 use blocks::{BlocksPage, CreateBlockPage, NoteBlockPage, NoteItemPage, ImportBlockPage, BuildingBlockPage};
+use public::{LegalConsentPage, UploadPlansPage, CollectEmailPage, DesignProjectPage, EstimatePage};
 use projects::{ProjectsPage, CreateProjectPage};
 use tasks::{TasksListPage, CreateTaskPage};
 use blocks::annotations::AnnotationCanvasPage;
-use site::upload::UploadPage;
 use site::{HomePage, Home3Page, JoinPage, JoinPreviewPage, LegacyJoinPage, SignInInvitePage, SignInPage, Navbar, OurStoryPage, SayHelloPage, SignupInvitePage, SignupPage, SignupPreviewPage, SignupPreviewVerifyPage, SignupVerifyInvitePage, SignupVerifyPage, VisionPage, GeometricGridPage, DotsPage, ConstellationPage, SquareGridPage, PrivacyPage};
 use matrix::MatrixPage;
 use stacking_bricks::StackingBricksPage;
@@ -45,8 +45,9 @@ mod matrix;
 mod stacking_bricks;
 mod letter_cycle;
 mod auth;
+mod public;
 
-use core::theme::{apply_theme_class, load_theme_preference, save_theme_preference, use_system_theme_listener, THEME};
+use core::theme::{apply_theme_class, load_theme_preference, save_theme_preference, use_system_theme_listener, Theme, THEME};
 use core::global_keyboard::setup_global_keyboard_shortcuts;
 use core::platform::use_mobile_listener;
 
@@ -90,6 +91,9 @@ const VIEWER3D_CSS: &str = include_str!("blocks/building/viewer_3d/viewer_page.c
 const NOTE_BLOCK_PAGE_CSS: &str = include_str!("blocks/note/note_block_page.css");
 const BUILDING_BLOCK_PAGE_CSS: &str = include_str!("blocks/building/building_block_page.css");
 const BOTTOM_BAR_CSS: &str = include_str!("core/bottom_bar.css");
+const UPLOAD_PLANS_CSS: &str = include_str!("public/upload_plans_page.css");
+const LEGAL_CONSENT_CSS: &str = include_str!("public/legal_consent_page.css");
+const COLLECT_EMAIL_CSS: &str = include_str!("public/collect_email_page.css");
 
 fn main() {
     // Initialize tracing and filter out noisy warnings
@@ -176,6 +180,27 @@ fn App() -> Element {
     use_effect(move || {
         let theme = *THEME.read();
         apply_theme_class(theme);
+        #[cfg(target_arch = "wasm32")]
+        {
+            if let Some(window) = web_sys::window() {
+                if let Some(document) = window.document() {
+                    if let Ok(Some(theme_meta)) = document.query_selector("meta[name='theme-color']") {
+                        let color = if theme == Theme::Dark { "#060606" } else { "#ffffff" };
+                        let _ = theme_meta.set_attribute("content", color);
+                    }
+                    if let Ok(Some(status_meta)) =
+                        document.query_selector("meta[name='apple-mobile-web-app-status-bar-style']")
+                    {
+                        let style = if theme == Theme::Dark {
+                            "black-translucent"
+                        } else {
+                            "default"
+                        };
+                        let _ = status_meta.set_attribute("content", style);
+                    }
+                }
+            }
+        }
     });
 
 
@@ -186,7 +211,7 @@ fn App() -> Element {
         // Head meta for proper mobile viewport and safe areas
                 document::Meta { name: "viewport", content: "width=device-width, initial-scale=1, viewport-fit=cover" }
         document::Meta { name: "apple-mobile-web-app-capable", content: "yes" }
-                document::Meta { name: "apple-mobile-web-app-status-bar-style", content: "black-translucent" }
+                document::Meta { name: "apple-mobile-web-app-status-bar-style", content: "default" }
                 document::Link { rel: "manifest", href: "/public/manifest.json" }
                 document::Link { rel: "apple-touch-icon", href: "/public/icon-192.png" }
                 document::Meta { name: "theme-color", content: "#ffffff" }
@@ -208,6 +233,9 @@ fn App() -> Element {
                 document::Style { {NOTE_BLOCK_PAGE_CSS} }
                 document::Style { {BUILDING_BLOCK_PAGE_CSS} }
                 document::Style { {BOTTOM_BAR_CSS} }
+                document::Style { {UPLOAD_PLANS_CSS} }
+                document::Style { {LEGAL_CONSENT_CSS} }
+                document::Style { {COLLECT_EMAIL_CSS} }
 
                 // Fonts from template with asset URLs
                 document::Style {
@@ -263,10 +291,14 @@ enum Route {
     #[layout(NavBar)]
     #[route("/vision")]
     VisionPage {},
-    #[route("/upload")]
-    UploadPage {},
     #[route("/sayhello")]
     SayHelloPage {},
+    #[route("/legal-consent")]
+    LegalConsentPage {},
+    #[route("/upload-plans")]
+    UploadPlansPage {},
+    #[route("/collect-email")]
+    CollectEmailPage {},
     #[end_layout]
     // App pages (no layout - each page includes AppNavbar directly)
     #[route("/projects")]
@@ -285,6 +317,10 @@ enum Route {
     NoteItemPage { project_id: String, block_id: String, block_name: String, block_type: String, attachment_id: String, attachment_name: String },
     #[route("/projects/:project_id/blocks/:block_id/:block_name/:block_type/building")]
     BuildingBlockPage { project_id: String, block_id: String, block_name: String, block_type: String },
+    #[route("/design/:project_id")]
+    DesignProjectPage { project_id: String },
+    #[route("/estimate/:project_id")]
+    EstimatePage { project_id: String },
     #[route("/projects/:project_id/blocks/:block_id/:block_name/:block_type/tasks/new")]
     CreateTaskPage { project_id: String, block_id: String, block_name: String, block_type: String },
     #[route("/projects/:project_id/blocks/:block_id/:block_name/:block_type/tasks")]
@@ -318,6 +354,7 @@ enum Route {
 #[component]
 fn NavBar() -> Element {
     rsx! {
+        crate::core::status_dialog::StatusDialog {}
         Navbar {}
         Outlet::<Route> {}
     }

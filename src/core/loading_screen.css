@@ -18,11 +18,31 @@
     font-family: 'ModularHouseplant', monospace;
     font-size: 15px;
     font-weight: bold;
-    gap: 20px;
+    gap: 8px;
+}
+
+.loading-screen-text {
+    font-family: 'ModularHouseplant', monospace;
+    font-size: 15px;
+    font-weight: bold;
+    color: var(--text-primary);
 }
 
 .loading-lottie {
-    width: 100px;
-    height: 100px;
-    margin-bottom: -30px;
+    width: 55px !important;
+    height: 55px !important;
+    margin-bottom: 0;
+    margin-top: 4px;
+    position: relative;
+    z-index: 1;
+}
+
+.loading-screen .live-timer-loader {
+    font-size: 15px;
+    line-height: 1.1;
+    z-index: 2;
+}
+
+.loading-screen .live-timer-loader::after {
+    display: none;
 }

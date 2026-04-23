@@ -1,8 +1,8 @@
 use crate::Route;
+use crate::core::{Theme, THEME};
 use dioxus::prelude::*;
-// const LOGO: Asset = asset!("/assets/icons/d-flag1.svg");
-const LOGO: Asset = asset!("/assets/icons/dog-dark.svg");
-const LOGO_HOVER: Asset = asset!("/assets/icons/dog-dark.svg");
+const LOGO_LIGHT: Asset = asset!("/assets/icons/dog-light.svg");
+const LOGO_DARK: Asset = asset!("/assets/icons/dog-dark.svg");
 const NAVBAR_CSS: &str = include_str!("home_navbar.css");
 
 #[cfg(target_arch = "wasm32")]
@@ -32,7 +32,15 @@ pub fn Navbar() -> Element {
     let route = use_route::<Route>();
     let is_ourstory = matches!(route, Route::OurStoryPage {});
     let is_vision = matches!(route, Route::VisionPage {});
-let is_signin = matches!(route, Route::SignInPage {});
+    let is_signin = matches!(route, Route::SignInPage {});
+
+    // Pages with light bg need black logo (LOGO_LIGHT), dark bg pages need white logo (LOGO_DARK)
+    let has_light_bg = matches!(route, Route::LegalConsentPage {} | Route::UploadPlansPage {} | Route::CollectEmailPage {});
+    let logo = if has_light_bg && THEME() != Theme::Dark {
+        LOGO_LIGHT  // black fill for light bg
+    } else {
+        LOGO_DARK   // white fill for dark bg
+    };
 
     rsx! {
         style { {NAVBAR_CSS} }
@@ -48,14 +56,9 @@ let is_signin = matches!(route, Route::SignInPage {});
                     nav.push(Route::HomePage {});
                 },
                 img {
-                    class: "home-logo-img home-logo-default",
-                    src: LOGO,
+                    class: "home-logo-img",
+                    src: logo,
                     alt: "Doxle Logo",
-                }
-                img {
-                    class: "home-logo-img home-logo-hover",
-                    src: LOGO_HOVER,
-                    alt: "Doxle Logo Hover",
                 }
             }
 

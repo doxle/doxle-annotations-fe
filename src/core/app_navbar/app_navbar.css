@@ -1172,6 +1172,7 @@ html.dark .app-navbar-tool-icon img.app-navbar-tool-icon-polygon {
 @media (max-width: 768px) {
     .app-navbar {
         height: 45px;
+        background: #ffffff;
     }
 
     .user-avatar {

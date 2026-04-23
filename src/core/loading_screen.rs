@@ -20,9 +20,9 @@ pub fn LoadingScreen(text: String) -> Element {
         style { {LOADING_SCREEN_CSS} }
         div { class: "loading-screen",
             div { class: "loading-screen-content",
-                div { id: "loading-lottie", class: "loading-lottie" }
+                span { class: "loading-screen-text", "{text}" }
                 LiveTimer {}
-                span { "{text}" }
+                div { id: "loading-lottie", class: "loading-lottie" }
             }
         }
     }

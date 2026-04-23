@@ -1,0 +1,165 @@
+SINGLE CANVAS ESTIMATE PAGE REBUILD
+=====================================
+
+GOAL
+----
+Replace the per-page PageCanvas approach with ONE big SVG canvas
+containing all pages. Figma-style single viewport.
+
+ARCHITECTURE
+------------
+One SVG element fills the left 70% of the estimate page.
+All pages are <image> elements stacked vertically inside a single
+<g transform="translate(pan_x, pan_y) scale(zoom)"> group.
+No section headers. Pages ordered by classification:
+  floor_plan → elevation → electrical → site_plan → other
+
+LAYOUT IN WORLD SPACE
+---------------------
+Pages stacked vertically with 150px gap between each:
+
+  y=0:      page-2.png  (floor plan, 2482×1755)
+  y=1905:   page-3.png  (elevation, 2482×1755)   [1755 + 150 gap]
+  y=3810:   page-4.png  (elevation, 2482×1755)
+  y=5715:   page-5.png  (electrical, 2482×1755)
+  ...
+
+Each page's y-offset is computed: sum of all previous heights + gaps.
+All pages are left-aligned at x=0.
+
+CANVAS COLORS
+-------------
+Light mode (default):
+  Canvas background: rgb(245, 245, 245)
+  Dot color: rgb(180, 180, 180)
+
+Dark mode (press t to toggle):
+  Canvas background: var(--bg-primary) → rgb(6, 6, 6)
+  Dot color: rgba(255, 255, 255, 0.15)
+
+Implementation: Use CSS custom properties on the SVG or inline.
+Do NOT use theme vars for light mode canvas bg/dots — hardcode
+245/180 for light, use theme vars for dark.
+
+DEFAULT THEME: Always light on first load. User presses 't' to
+toggle. Saved in localStorage. Already implemented in theme.rs.
+
+PAN/ZOOM (exact SvgCanvasV2 pattern)
+-------------------------------------
+Copy EXACTLY from src/core/svg_canvas/svg_canvas_v2.rs:
+  - Wheel zoom: factor = (-dy * 0.009).exp().clamp(0.7, 1.4)
+  - Cursor-based zoom: new_pan = p - (p - old_pan) * (new_zoom / old_zoom)
+  - Mouse drag pan with 5px travel threshold
+  - Touch pointer panning (onpointerdown/move/up)
+  - evt.prevent_default() on wheel
+  - cursor:none for scale tool, cursor:grabbing when panning
+
+AUTO-FIT ON LOAD
+-----------------
+Calculate total content bounds (max width, total height with gaps).
+Fit-zoom = min(viewport_width / content_width, viewport_height / content_height).
+Center content in viewport.
+
+SCALE TOOL (per-page, auto-detect)
+-----------------------------------
+When scale tool is active:
+  - Red crosshair cursor (CrosshairOverlay)
+  - Click places a point in world coordinates
+  - Auto-detect which page: check which page's y-range contains the click y
+    For each page, if click_y >= page.y_offset && click_y < page.y_offset + page.height
+    → that's the target page
+  - First click: red dot on the page
+  - Second click: red dot + line + distance input form
+  - Enter distance → compute px_per_meter, save with page_id
+  - Scale line + measurement text drawn as SVG in world space
+  - Third click resets (starts new measurement)
+
+SCALE PERSISTENCE
+-----------------
+  - On load: GET /public/projects/{id}/scales → hydrate scale lines
+  - On set: optimistic UI + POST /public/projects/{id}/scale
+  - Scale stored with page_id (stringified page_num)
+  - Each page can have a different scale
+
+DATA STRUCTURES
+---------------
+struct PageLayout {
+    page_num: usize,
+    classification: String,
+    image_url: String,
+    display_width: u32,
+    display_height: u32,
+    y_offset: f64,  // computed: cumulative height + gaps
+}
+
+struct ScaleData {
+    page_id: String,
+    point1: (f64, f64),  // world coords
+    point2: (f64, f64),  // world coords
+    real_distance_m: f64,
+    px_per_meter: f64,
+}
+
+COMPONENT STRUCTURE
+-------------------
+EstimatePage (data fetching, step panel, layout)
+  └── EstimateCanvas (single SVG, all pan/zoom/scale logic)
+        Props: pages: Vec<PageLayout>, scales: HashMap<String, ScaleData>,
+               scale_tool_active: bool, on_scale_submit: EventHandler
+
+SVG STRUCTURE
+-------------
+<svg width="100%" height="100%">
+  <defs>
+    <pattern id="estimate-dots" width="80" height="80" patternUnits="userSpaceOnUse">
+      <circle cx="40" cy="40" r="3" fill="rgb(180,180,180)" />
+    </pattern>
+  </defs>
+  <rect width="100%" height="100%" fill="rgb(245,245,245)" />  <!-- bg -->
+  <g transform="translate(pan_x, pan_y) scale(zoom)">
+    <rect x="-10000" y="-10000" width="20000" height="20000"
+          fill="url(#estimate-dots)" pointer-events="none" />
+    <!-- Pages -->
+    <image href="page-2.png" x="0" y="0" width="2482" height="1755" />
+    <image href="page-3.png" x="0" y="1905" width="2482" height="1755" />
+    <image href="page-4.png" x="0" y="3810" width="2482" height="1755" />
+    ...
+    <!-- Scale lines (per-page, in world coords) -->
+    <circle cx="100" cy="200" r="4" fill="#EF4444" />  <!-- point 1 -->
+    <circle cx="500" cy="200" r="4" fill="#EF4444" />  <!-- point 2 -->
+    <line x1="100" y1="200" x2="500" y2="200" stroke="#EF4444" stroke-width="2" />
+    <text x="300" y="195" fill="#EF4444" font-size="22">10.00 m</text>
+  </g>
+  <!-- Crosshair overlay (screen space, outside g) -->
+</svg>
+
+SIDE PANEL
+----------
+- Cmd/Ctrl+\ toggles visibility (keep in estimate_page.rs for now)
+- Resizable via drag divider (already implemented)
+- Step panel content unchanged
+
+CSS CHANGES
+-----------
+- Remove .estimate-page-card, .estimate-page-canvas-shell, .estimate-page-canvas
+- Remove per-card SVG styles
+- .estimate-pages: overflow hidden, position relative (single canvas)
+- .estimate-pages svg: position absolute, inset 0
+- Canvas bg hardcoded to rgb(245,245,245) for light
+- Add html.dark .estimate-pages svg rect.canvas-bg { fill: var(--bg-primary) }
+
+DARK MODE DOT HANDLING
+-----------------------
+Light: dot fill = rgb(180, 180, 180)  (hardcoded in pattern)
+Dark: need to override pattern circle fill via CSS or inline check.
+Simplest: use THEME signal to set dot color inline:
+  fill: if is_dark { "rgba(255,255,255,0.15)" } else { "rgb(180,180,180)" }
+
+FILES TO MODIFY
+---------------
+src/public/estimate_page.rs   ← full rewrite of EstimateCanvas
+src/public/estimate_page.css  ← simplify, remove per-card styles
+
+COMPILATION
+-----------
+cargo check --target wasm32-unknown-unknown

@@ -111,9 +111,9 @@ pub fn NoteItemPage(
     rsx! {
         style { {NOTE_ITEM_PAGE_CSS} }
         div {
-            class: "file-item-page",
+            class: "note-item-page",
             button {
-                class: "file-item-close",
+                class: "note-item-close",
                 onclick: move |_| {
                     nav.push(Route::NoteBlockPage {
                         project_id: pid.clone(),
@@ -122,15 +122,15 @@ pub fn NoteItemPage(
                         block_type: btype.clone(),
                     });
                 },
-                img { src: close_icon, alt: "Close", class: "file-item-close-icon" }
+                img { src: close_icon, alt: "Close", class: "note-item-close-icon" }
             }
             if loading() {
                 LoadingScreen { text: "Loading file".to_string() }
             } else if let Some(err) = error() {
-                div { class: "file-item-error", "{err}" }
+                div { class: "note-item-error", "{err}" }
             } else if let Some(media) = media_item() {
                 {
-                    let canvas_id = format!("file-item-canvas-{}", media.attachment_id);
+                    let canvas_id = format!("note-item-canvas-{}", media.attachment_id);
                     let canvas_id_for_click = canvas_id.clone();
                     let src = if is_video(&media) {
                         to_cloudfront_media_url(&media.url)
@@ -140,10 +140,10 @@ pub fn NoteItemPage(
                     let zoom_layer_style = format!("transform: translate({}px, {}px) scale({});", pan_x(), pan_y(), zoom_level());
                     rsx! {
                         div {
-                            class: "file-item-stage",
+                            class: "note-item-stage",
                             div {
                                 id: "{canvas_id}",
-                                class: "file-item-canvas",
+                                class: "note-item-canvas",
                                 onwheel: move |evt| {
                                     evt.prevent_default();
                                     let old_zoom = zoom_level();
@@ -262,14 +262,14 @@ pub fn NoteItemPage(
                                     }
                                 },
                                 div {
-                                    class: "file-item-zoom-layer",
+                                    class: "note-item-zoom-layer",
                                     style: "{zoom_layer_style}",
                                     if is_video(&media) {
                                         div {
-                                            class: "file-item-video-wrapper",
+                                            class: "note-item-video-wrapper",
                                             video {
-                                                id: "file-item-video-player",
-                                                class: "file-item-video",
+                                                id: "note-item-video-player",
+                                                class: "note-item-video",
                                                 src: "{src}",
                                                 controls: true,
                                                 autoplay: false,
@@ -280,7 +280,7 @@ pub fn NoteItemPage(
                                             }
                                             if !video_playing() {
                                                 div {
-                                                    class: "file-item-play-overlay",
+                                                    class: "note-item-play-overlay",
                                                     onclick: move |e| {
                                                         e.stop_propagation();
                                                         video_playing.set(true);
@@ -288,7 +288,7 @@ pub fn NoteItemPage(
                                                         {
                                                             if let Some(window) = web_sys::window() {
                                                                 if let Some(doc) = window.document() {
-                                                                    if let Some(el) = doc.get_element_by_id("file-item-video-player") {
+                                                                    if let Some(el) = doc.get_element_by_id("note-item-video-player") {
                                                                         if let Ok(vid) = el.dyn_into::<web_sys::HtmlVideoElement>() {
                                                                             let _ = vid.play();
                                                                         }
@@ -297,7 +297,7 @@ pub fn NoteItemPage(
                                                             }
                                                         }
                                                     },
-                                                    div { class: "file-item-play-btn",
+                                                    div { class: "note-item-play-btn",
                                                         svg {
                                                             width: "32",
                                                             height: "32",
@@ -311,18 +311,18 @@ pub fn NoteItemPage(
                                         }
                                     } else if is_image(&media) {
                                         img {
-                                            class: "file-item-image",
+                                            class: "note-item-image",
                                             src: "{src}",
                                             alt: "{media.attachment_name}",
                                         }
                                     } else if is_pdf(&media) {
                                         if is_mobile() {
                                             div {
-                                                class: "file-item-pdf-mobile",
-                                                span { class: "file-item-pdf-icon", "PDF" }
-                                                span { class: "file-item-pdf-name", "{media.attachment_name}" }
+                                                class: "note-item-pdf-mobile",
+                                                span { class: "note-item-pdf-icon", "PDF" }
+                                                span { class: "note-item-pdf-name", "{media.attachment_name}" }
                                                 a {
-                                                    class: "file-item-pdf-open-btn",
+                                                    class: "note-item-pdf-open-btn",
                                                     href: "{src}",
                                                     onclick: move |e| {
                                                         e.stop_propagation();
@@ -332,7 +332,7 @@ pub fn NoteItemPage(
                                             }
                                         } else {
                                             iframe {
-                                                class: "file-item-pdf",
+                                                class: "note-item-pdf",
                                                 src: "{src}",
                                                 style: "height: calc(100vh - 80px);",
                                                 title: "{media.attachment_name}",
@@ -340,7 +340,7 @@ pub fn NoteItemPage(
                                         }
                                     } else {
                                         div {
-                                            class: "file-item-generic",
+                                            class: "note-item-generic",
                                             a {
                                                 href: "{src}",
                                                 target: "_blank",
@@ -358,7 +358,7 @@ pub fn NoteItemPage(
                                                 // Rect marker (kept for later use)
                                                 // button {
                                                 //     key: "{tid}",
-                                                //     class: if thread.resolved { "file-item-comment-rect resolved" } else { "file-item-comment-rect" },
+                                                //     class: if thread.resolved { "note-item-comment-rect resolved" } else { "note-item-comment-rect" },
                                                 //     style: "{rect_style}",
                                                 //     "data-index": "{idx + 1}",
                                                 //     onmousedown: move |e| {
@@ -371,7 +371,7 @@ pub fn NoteItemPage(
                                                 // }
                                                 button {
                                                     key: "{tid}",
-                                                    class: if thread.resolved { "file-item-comment-arrow resolved" } else { "file-item-comment-arrow" },
+                                                    class: if thread.resolved { "note-item-comment-arrow resolved" } else { "note-item-comment-arrow" },
                                                     style: "{rect_style}",
                                                     onmousedown: move |e| {
                                                         e.stop_propagation();
@@ -380,9 +380,9 @@ pub fn NoteItemPage(
                                                         e.stop_propagation();
                                                         comment_dialog.set(Some((world_x, world_y, e.client_coordinates().x, e.client_coordinates().y, tid.clone())));
                                                     },
-                                                    span { class: "file-item-comment-arrow-shaft" }
-                                                    span { class: "file-item-comment-arrow-head" }
-                                                    span { class: "file-item-comment-arrow-badge", "{idx + 1}" }
+                                                    span { class: "note-item-comment-arrow-shaft" }
+                                                    span { class: "note-item-comment-arrow-head" }
+                                                    span { class: "note-item-comment-arrow-badge", "{idx + 1}" }
                                                 }
                                             }
                                         }
@@ -393,7 +393,7 @@ pub fn NoteItemPage(
                     }
                 }
             } else {
-                div { class: "file-item-error", "File not found" }
+                div { class: "note-item-error", "File not found" }
             }
         }
 

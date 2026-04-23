@@ -9,5 +9,5 @@ title = "Doxle"
 
 [web.watcher]
 reload_html = true
-watch_path = ["src", "public"]
+watch_path = ["src", "public", "assets", "index.html"]
 

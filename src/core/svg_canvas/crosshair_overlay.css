@@ -142,6 +142,15 @@ html.dark :root, html.dark {
   );
 }
 
+@media (max-width: 768px) {
+  .crosshair-overlay::before,
+  .crosshair-overlay::after,
+  .bbox-crosshair-overlay::before,
+  .bbox-crosshair-overlay::after {
+    display: none;
+  }
+}
+
 .bbox-crosshair-overlay .v {
   width: 2px;
   height: 35px;

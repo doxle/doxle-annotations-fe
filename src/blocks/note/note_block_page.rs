@@ -125,7 +125,7 @@ pub fn NoteBlockPage(
         style { {BLOCK_LIST_CSS} }
         AppNavbar {}
         div {
-            class: "file-block-page",
+            class: "note-block-page",
             div {
                 class: if search_active() { "new-page-btn search-mode" } else { "new-page-btn" },
                 if search_active() {
@@ -174,7 +174,7 @@ pub fn NoteBlockPage(
                                 use wasm_bindgen::JsCast;
                                 if let Some(window) = web_sys::window() {
                                     if let Some(document) = window.document() {
-                                        if let Some(element) = document.get_element_by_id("file-block-upload-input") {
+                                        if let Some(element) = document.get_element_by_id("note-block-upload-input") {
                                             if let Ok(input) = element.dyn_into::<web_sys::HtmlInputElement>() {
                                                 input.click();
                                             }
@@ -198,8 +198,8 @@ pub fn NoteBlockPage(
             }
             input {
                 r#type: "file",
-                id: "file-block-upload-input",
-                class: "file-block-upload-input",
+                id: "note-block-upload-input",
+                class: "note-block-upload-input",
                 multiple: true,
                 accept: "image/*,video/*,application/pdf,.pdf",
                 disabled: is_uploading(),
@@ -333,16 +333,16 @@ pub fn NoteBlockPage(
             }
 
             div {
-                class: "file-block-content",
+                class: "note-block-content",
                 if loading() {
                     LoadingScreen { text: "Loading media".to_string() }
                 } else if let Some(err) = error() {
-                    div { class: "file-block-error", "{err}" }
+                    div { class: "note-block-error", "{err}" }
                 } else if media_items().is_empty() {
                     div {
-                        class: "file-block-empty",
+                        class: "note-block-empty",
                         img {
-                            class: "file-block-empty-icon",
+                            class: "note-block-empty-icon",
                             src: dog_icon,
                             alt: "No files"
                         }
@@ -363,7 +363,7 @@ pub fn NoteBlockPage(
                         div { class: "no-results", "No files matched" }
                     }
                     div {
-                        class: "file-block-grid",
+                        class: "note-block-grid",
                         for media in filtered.iter() {
                             {
                                 let attachment_id_for_route = media.attachment_id.clone();
@@ -390,7 +390,7 @@ pub fn NoteBlockPage(
                                 let lp_media_type = media.media_type.clone();
                                 rsx! {
                                     button {
-                                        class: "file-card",
+                                        class: "note-card",
                                         onclick: move |_| {
                                             let elapsed = cards_visible_since().elapsed().as_millis();
                                             tracing::info!("FILE-CARD onclick: elapsed={}ms guard={}ms mobile={}", elapsed, MOBILE_CARDS_GUARD_MS, crate::core::is_mobile());
@@ -467,10 +467,10 @@ pub fn NoteBlockPage(
                                             long_press_id.set(None);
                                         },
                                         div {
-                                            class: "file-card-thumb",
+                                            class: "note-card-thumb",
                                             if is_video(media) {
                                                 video {
-                                                    class: "file-card-video",
+                                                    class: "note-card-video",
                                                     src: "{src}#t=0.1",
                                                     preload: "metadata",
                                                     muted: true,
@@ -478,12 +478,12 @@ pub fn NoteBlockPage(
                                                 }
                                             } else if is_image(media) {
                                                 img {
-                                                    class: "file-card-image",
+                                                    class: "note-card-image",
                                                     src: "{src}",
                                                     alt: "{media.attachment_name}",
                                                 }
                                             } else {
-                                                div { class: "file-card-generic",
+                                                div { class: "note-card-generic",
                                                     if is_pdf(media) { "PDF" } else { "FILE" }
                                                 }
                                             }
@@ -500,7 +500,7 @@ pub fn NoteBlockPage(
                                                         );
                                                         rsx! {
                                                             div {
-                                                                class: "file-card-markup-rect",
+                                                                class: "note-card-markup-rect",
                                                                 style: "{rect_style}",
                                                             }
                                                         }
@@ -510,14 +510,14 @@ pub fn NoteBlockPage(
                                             if let Some(comment_count) = comment_counts().get(&media.attachment_id).copied() {
                                                 if comment_count > 0 {
                                                     div {
-                                                        class: "file-card-comment-indicator",
+                                                        class: "note-card-comment-indicator",
                                                         img {
-                                                            class: "file-card-comment-icon",
+                                                            class: "note-card-comment-icon",
                                                             src: COMMENT_BLUE_ICON,
                                                             alt: "Comments"
                                                         }
                                                         sup {
-                                                            class: "file-card-comment-count",
+                                                            class: "note-card-comment-count",
                                                             "{comment_count}"
                                                         }
                                                     }
@@ -525,15 +525,15 @@ pub fn NoteBlockPage(
                                             }
                                         }
                                         div {
-                                            class: "file-card-footer",
-                                            span { class: "file-card-name", "{media.attachment_name}" }
+                                            class: "note-card-footer",
+                                            span { class: "note-card-name", "{media.attachment_name}" }
                                             {
                                                 let dot_attachment_id = media.attachment_id.clone();
                                                 let dot_file_name = media.attachment_name.clone();
                                                 let dot_media_type = media.media_type.clone();
                                                 rsx! {
                                                     span {
-                                                        class: "file-card-dots",
+                                                        class: "note-card-dots",
                                                         onclick: move |e| {
                                                             e.stop_propagation();
                                                             let coords = e.client_coordinates();

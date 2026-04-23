@@ -1,0 +1,147 @@
+FOOTPRINT POLYGON DRAWING - BRIEF
+===================================
+
+GOAL
+----
+Step 2 of the estimate wizard: user draws a polygon outlining the
+ground floor footprint on the floor plan page. Red fill at 50% opacity.
+
+TRIGGER
+-------
+User clicks "Next" from Step 1 (scale) → Step 2 activates.
+Canvas animates zoom/pan to the first floor_plan page.
+
+ANIMATED ZOOM TO FLOOR PLAN
+-----------------------------
+When step changes to 2:
+  1. Find the first page with classification == "floor_plan"
+  2. Calculate target pan/zoom to fit that page in the viewport
+  3. Animate from current pan/zoom to target over ~300ms (ease-out cubic)
+     Same pattern as SvgCanvasV2 scroll-to-thread animation (lines 219-236)
+
+Target zoom: fit page width at 90% of viewport width
+Target pan: center the page vertically
+
+POLYGON TOOL
+-------------
+Copy interaction pattern from SvgCanvasV2 (lines 565-607):
+
+  - Click adds a point (world coordinates)
+  - Points drawn as red dots (same as scale tool)
+  - Lines drawn between consecutive points (red, 2px stroke)
+  - Active drawing line from last point to cursor (dashed red)
+  - When clicking near first point (snap threshold = 15px / zoom):
+    → Close the polygon
+    → Fill with #EF4444 at 50% opacity
+    → Save to backend
+  - Right-click pops the last point (undo)
+  - Escape cancels the drawing
+
+POLYGON STATE
+--------------
+  active_footprint_drawing: Signal<Vec<(f64, f64)>>  (points being drawn)
+  footprint_page_id: Signal<Option<String>>           (which page)
+
+POLYGON RENDERING (in SVG)
+---------------------------
+Active drawing (in progress):
+  <polygon points="x1,y1 x2,y2 ..." 
+           fill="rgba(239,68,68,0.5)" 
+           stroke="#EF4444" 
+           stroke-width="2" />
+  + individual point circles (r=4, fill=#EF4444)
+  + dashed line from last point to cursor
+
+Saved footprint (after closing):
+  Same visual but stored in page_scales or a separate footprints signal
+
+SAVE TO BACKEND
+----------------
+POST /public/projects/{id}/geometry
+{
+  "geometry_type": "footprint",
+  "page_id": "2",
+  "geometry": {
+    "type": "polygon",
+    "points": [{"x": 100, "y": 200}, ...]
+  }
+}
+
+Already implemented in backend.
+
+CURSOR
+------
+cursor:none + CrosshairOverlay (same as scale tool, already there)
+When step == 2, scale_tool_active = false, footprint_tool_active = true
+
+INTERACTION DETAILS
+--------------------
+- Click on canvas when footprint tool active → add point
+- Must be on a floor_plan page (auto-detect from y_offset)
+- If clicking on a different page → ignore or start new polygon
+- Snap threshold for closing: 15px / zoom (in world coords)
+- Right-click → remove last point
+- Escape → clear all points, cancel drawing
+- After polygon closes → save, clear active drawing
+
+SIDE PANEL (Step 2)
+--------------------
+Title: "Draw footprint"
+Description: "Trace the outline of the ground floor area."
+Show saved footprint area in m² (computed from polygon + scale)
+  area_m2 = polygon_pixel_area / (px_per_meter²)
+
+FILE STRUCTURE (REFACTOR)
+--------------------------
+Split estimate_page.rs (currently 1036 lines) into separate files:
+
+src/public/
+  estimate_page.rs         ← main page: EstimatePage component
+                              - data fetching (files, scales, project info)
+                              - step state, panel layout, panel content per step
+                              - owns all top-level signals
+                              - renders EstimateCanvas + side panel
+                              - ~300 lines
+
+  estimate_canvas.rs       ← EstimateCanvas component
+                              - single SVG, pan/zoom, mouse/touch/wheel handlers
+                              - renders pages, dots, scale lines, footprint polygons
+                              - receives all tool state via props/signals
+                              - auto-fit logic
+                              - ~400 lines
+
+  estimate_scale.rs        ← scale tool types + rendering helpers
+                              - ScaleData, ScalePoint, SaveScaleRequest structs
+                              - scale badge SVG rendering function
+                              - scale line + dots SVG rendering function
+                              - scale panel section component (list + input form)
+                              - ~150 lines
+
+  estimate_footprint.rs    ← footprint polygon tool (NEW)
+                              - FootprintData struct
+                              - polygon SVG rendering (active drawing + saved)
+                              - footprint click handler logic
+                              - footprint panel section component
+                              - animated zoom to floor plan
+                              - ~200 lines
+
+  estimate_types.rs        ← shared types
+                              - PageLayout, PageInfo, ResultJson, ClassifiedSection
+                              - classification helpers
+                              - canvas_content_bounds, detect_page_id_from_world_y
+                              - ~100 lines
+
+  estimate_page.css        ← all styles (unchanged location)
+
+Update src/public/mod.rs to export new modules.
+
+CODE REFERENCES
+----------------
+Polygon snap close:    svg_canvas_v2.rs lines 579-603
+Right-click undo:      svg_canvas_v2.rs lines 267-275
+Animated pan/zoom:     svg_canvas_v2.rs lines 219-236
+Polygon area formula:  projects/service.rs polygon_area()
+
+COMPILATION
+-----------
+cargo check --target wasm32-unknown-unknown

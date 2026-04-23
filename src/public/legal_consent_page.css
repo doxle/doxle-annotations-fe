@@ -1,0 +1,250 @@
+.legal-consent-page {
+    min-height: 100vh;
+    background: var(--bg-primary);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+    cursor: default;
+}
+
+/* Fix navbar text on light background (light mode only) */
+html:not(.dark):has(.legal-consent-page) .home-nav-btn {
+    color: var(--text-primary) !important;
+}
+html:not(.dark):has(.legal-consent-page) .home-say-hello-btn {
+    background: var(--text-primary) !important;
+    color: var(--primary-button-text) !important;
+}
+
+.legal-consent-title {
+    font-family: 'HelveticaNeue-Light', 'HelveticaNeue', Helvetica, sans-serif;
+    font-weight: 200;
+    font-size: 22px;
+    color: var(--text-primary);
+    margin: 0 0 0.5rem 0;
+}
+
+.legal-consent-card {
+    width: 45%;
+    padding: 1rem 1.5rem;
+}
+
+.legal-consent-text {
+    font-family: 'ModularHouseplant', 'HelveticaNeue-Light', 'HelveticaNeue', Helvetica, sans-serif;
+    font-weight: 400;
+    font-size: 14px;
+    color: var(--text-primary);
+    line-height: 1.4;
+    background: var(--doxle-blue-light);
+    padding: 2rem 2.5rem;
+    border-radius: 4px;
+    display: block;
+}
+
+.legal-consent-link {
+    text-decoration: underline;
+    color: var(--dx-blue);
+    cursor: pointer;
+}
+
+.legal-consent-checkbox-row {
+    display: flex;
+    flex-direction: row;
+    gap: 0.75rem;
+    margin-top: 0.75rem;
+    cursor: pointer;
+}
+
+.legal-consent-checkbox {
+    width: 20px;
+    height: 20px;
+    min-width: 20px;
+    border-radius: 50%;
+    border: 1px solid var(--border-color);
+    cursor: pointer;
+    margin-top: 0.25rem;
+    transition: background 0.2s;
+}
+
+.legal-consent-checkbox.checked {
+    background: var(--dx-blue);
+    border-color: var(--dx-blue);
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='20 6 9 17 4 12'/%3E%3C/svg%3E");
+    background-size: 14px;
+    background-position: center;
+    background-repeat: no-repeat;
+}
+
+.legal-consent-label {
+    font-family: 'HelveticaNeue-Light', 'HelveticaNeue', Helvetica, sans-serif;
+    font-weight: 200;
+    font-size: 14px;
+    font-style: italic;
+    color: var(--text-primary);
+    line-height: 1.5;
+}
+
+/* Actions */
+.legal-consent-actions {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    margin-top: 1.5rem;
+}
+
+.legal-consent-cancel-btn {
+    padding: 0.75rem 1.5rem;
+    border: 1px solid var(--border-color);
+    font-family: 'HelveticaNeue-Light', 'HelveticaNeue', Helvetica, sans-serif;
+    font-weight: 200;
+    font-size: 14px;
+    background: transparent;
+    color: var(--text-primary);
+    cursor: pointer;
+    transition: border-color 0.2s;
+}
+
+.legal-consent-cancel-btn:hover {
+    border-color: var(--text-tertiary);
+}
+
+.legal-consent-agree-btn {
+    padding: 0.75rem 1.5rem;
+    border: 1px solid var(--border-color);
+    font-family: 'HelveticaNeue-Light', 'HelveticaNeue', Helvetica, sans-serif;
+    font-weight: 200;
+    font-size: 14px;
+    background: var(--text-primary);
+    color: var(--primary-button-text);
+    cursor: pointer;
+    transition: background 0.2s, opacity 0.2s;
+}
+
+.legal-consent-agree-btn:hover {
+    opacity: 0.8;
+}
+
+.legal-consent-agree-btn.active {
+    background: var(--dx-blue);
+    border-color: var(--dx-blue);
+    color: var(--primary-button-text);
+}
+
+.legal-consent-agree-btn.active:hover {
+    opacity: 0.8;
+}
+
+/* Error dialog overlay */
+.legal-consent-dialog-backdrop {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+.legal-consent-dialog-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.4);
+}
+
+.legal-consent-dialog {
+    position: relative;
+    width: 30%;
+    min-width: 280px;
+    background: var(--bg-secondary);
+    padding: 2rem;
+    border-radius: 12px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1.5rem;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+}
+
+.legal-consent-dialog-message {
+    font-family: 'HelveticaNeue-Light', 'HelveticaNeue', Helvetica, sans-serif;
+    font-weight: 200;
+    font-size: 14px;
+    color: var(--text-primary);
+    text-align: center;
+}
+
+.legal-consent-dialog-btn {
+    padding: 0.5rem 1.5rem;
+    background: var(--text-primary);
+    color: var(--primary-button-text);
+    border: none;
+    border-radius: 6px;
+    font-family: 'HelveticaNeue-Light', 'HelveticaNeue', Helvetica, sans-serif;
+    font-weight: 200;
+    font-size: 14px;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    transition: background 0.2s;
+}
+
+.legal-consent-dialog-btn:hover {
+    background: var(--hover-blue);
+}
+
+@media (max-width: 768px) {
+    .legal-consent-page {
+        padding: 1rem;
+        padding-top: 80px;
+        padding-bottom: 2rem;
+        justify-content: center;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .legal-consent-card {
+        width: 95%;
+        padding: 0.75rem;
+    }
+
+    .legal-consent-title {
+        font-size: 26px;
+    }
+
+    .legal-consent-text {
+        font-size: 14px;
+        line-height: 1.35;
+        padding: 1rem;
+    }
+
+    .legal-consent-label {
+        font-size: 15px;
+    }
+
+    .legal-consent-checkbox {
+        width: 24px;
+        height: 24px;
+        min-width: 24px;
+    }
+
+    .legal-consent-cancel-btn,
+    .legal-consent-agree-btn {
+        font-size: 16px;
+        padding: 0.9rem 1.8rem;
+    }
+
+    .legal-consent-dialog {
+        width: 85%;
+    }
+
+    .legal-consent-dialog-message {
+        font-size: 16px;
+    }
+
+    .legal-consent-dialog-btn {
+        font-size: 16px;
+        padding: 0.75rem 2rem;
+    }
+}

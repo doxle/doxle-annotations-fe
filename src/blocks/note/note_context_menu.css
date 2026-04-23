@@ -1,4 +1,4 @@
-.file-context-menu-overlay {
+.note-context-menu-overlay {
     position: fixed;
     top: 0;
     left: 0;
@@ -8,7 +8,7 @@
     z-index: 99;
 }
 
-.file-context-menu-dropdown {
+.note-context-menu-dropdown {
     position: fixed;
     background: var(--bg-primary);
     border: 1px solid var(--border-color);
@@ -22,7 +22,7 @@
     gap: 6px;
 }
 
-.file-context-menu-item {
+.note-context-menu-item {
     padding: 6px 24px;
     white-space: nowrap;
     font-size: 12px;
@@ -37,25 +37,25 @@
     gap: 8px;
 }
 
-.file-context-menu-item:hover {
+.note-context-menu-item:hover {
     background: var(--card-hover-color);
     color: var(--text-primary);
 }
 
-.file-context-menu-icon {
+.note-context-menu-icon {
     width: 14px;
     height: 14px;
     position: relative;
     top: 1px;
 }
 
-.file-context-menu-divider {
+.note-context-menu-divider {
     height: 1px;
     background: var(--border-color);
     margin: 4px 0;
 }
 
-.file-context-menu-info {
+.note-context-menu-info {
     padding: 6px 24px;
     font-size: 11px;
     font-family: 'HelveticaNeue', Helvetica, Arial, sans-serif;
@@ -65,13 +65,13 @@
     gap: 2px;
 }
 
-.file-context-menu-info-label {
+.note-context-menu-info-label {
     color: var(--text-tertiary);
     font-size: 10px;
 }
 
 @media (max-width: 768px) {
-    .file-context-menu-dropdown {
+    .note-context-menu-dropdown {
         left: 50% !important;
         transform: translateX(-50%);
         bottom: 16px !important;
@@ -81,25 +81,25 @@
         padding: 16px 12px;
         border-radius: 24px;
     }
-    .file-context-menu-item {
+    .note-context-menu-item {
         padding: 12px 16px;
         font-size: 14.5px;
         font-weight: 600;
     }
-    .file-context-menu-icon {
+    .note-context-menu-icon {
         width: 18px;
         height: 18px;
     }
-    .file-context-menu-info {
+    .note-context-menu-info {
         padding: 10px 16px;
         font-size: 18px;
         font-weight: 500;
     }
-    .file-context-menu-info-label {
+    .note-context-menu-info-label {
         font-size: 18px;
         font-weight: 500;
     }
-    .file-context-menu-overlay {
+    .note-context-menu-overlay {
         background: rgba(0, 0, 0, 0.4);
     }
 }

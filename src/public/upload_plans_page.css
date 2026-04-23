@@ -1,0 +1,365 @@
+.upload-plans-page {
+    min-height: 100vh;
+    background-color: var(--bg-primary);
+    background-image: radial-gradient(circle, var(--dot-color, rgba(0,0,0,0.3)) 1.5px, transparent 1.5px);
+    background-size: 30px 30px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem;
+}
+
+/* Fix navbar text on light background (light mode only) */
+html:not(.dark):has(.upload-plans-page) .home-nav-btn {
+    color: var(--text-primary) !important;
+}
+html:not(.dark):has(.upload-plans-page) .home-say-hello-btn {
+    background: var(--text-primary) !important;
+    color: var(--primary-button-text) !important;
+}
+
+.upload-plans-container {
+    padding: 3rem 4rem;
+    display: flex;
+    flex-direction: column;
+    width: 50vw;
+    height:50vh;
+    align-items: center;
+    justify-content: center;
+}
+
+.upload-plans-title {
+    font-family: 'HelveticaNeue-Light', 'HelveticaNeue', Helvetica, sans-serif;
+    font-weight: 200;
+    font-size: 36px;
+    color: var(--text-primary);
+    margin: 0;
+}
+
+.upload-plans-subtitle {
+    margin-top: 2px;
+    font-family: 'HelveticaNeue-Light', 'HelveticaNeue', Helvetica, sans-serif;
+    font-weight: 300;
+    font-size: 16px;
+    color: var(--text-secondary);
+    text-align: center;
+}
+
+.upload-plans-subtitle-count {
+    font-weight: 400;
+    color: var(--text-primary);
+}
+
+.upload-plans-subtitle-label {
+    font-weight: 300;
+}
+
+.upload-plans-subtitle-size {
+    font-weight: 400;
+    color: var(--text-primary);
+}
+
+/* Browse zone */
+.upload-plans-zone {
+    padding: 2rem;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    margin-top: 0.75rem;
+    align-items: flex-start;
+    justify-content: flex-start;
+    background-color: var(--doxle-blue-light);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+/* Empty state inside zone */
+.upload-plans-zone-empty {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    margin-top: 1.5rem;
+}
+
+.upload-plans-browse-label {
+    padding: 0.75rem 1.5rem;
+    border: 1px solid var(--border-color);
+    font-family: 'HelveticaNeue-Light', 'HelveticaNeue', Helvetica, sans-serif;
+    font-weight: 200;
+    font-size: 16px;
+    background: var(--text-primary);
+    color: var(--primary-button-text);
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.upload-plans-browse-label:hover {
+    background: var(--hover-blue);
+}
+
+.upload-plans-browse-input {
+    display: none;
+}
+
+.upload-plans-hint {
+    margin-top: 2rem;
+    font-family: 'HelveticaNeue', Helvetica, sans-serif;
+    font-weight: 200;
+    font-size: 13.5px;
+    font-style: italic;
+    font-family: 'ModularHouseplant', 'HelveticaNeue-Light', 'HelveticaNeue', Helvetica, sans-serif;
+    color: var(--text-secondary);
+}
+
+/* File list inside zone */
+.upload-plans-file-list {
+    padding: 0.25rem;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: flex-start;
+    overflow-y: auto;
+    width: 100%;
+    max-height: 60vh;
+}
+
+.upload-plans-file-row {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 0.5rem;
+    border-bottom: 1px solid var(--border-color);
+    height: 3rem;
+    line-height: 3rem;
+    width: 100%;
+}
+
+.upload-plans-file-icon {
+    width: 18px;
+    height: 18px;
+    opacity: 0.6;
+}
+
+.upload-plans-file-name {
+    font-family: 'HelveticaNeue-Light', 'HelveticaNeue', Helvetica, sans-serif;
+    font-weight: 300;
+    font-size: 14px;
+    color: var(--text-primary);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* File attachment list (blue bg) */
+.upload-plans-attachments {
+    display: inline-flex;
+    flex-direction: column;
+    gap: 0;
+    background: var(--doxle-blue-light);
+    border: 1px solid var(--border-color);
+    border-radius: 16px;
+    padding: 8px 20px;
+    margin-top: 1.5rem;
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+.upload-plans-attachment-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.upload-plans-attachment-row:last-child {
+    border-bottom: none;
+}
+
+.upload-plans-file-size {
+    font-family: 'HelveticaNeue-Light', 'HelveticaNeue', Helvetica, sans-serif;
+    font-weight: 300;
+    font-size: 12px;
+    color: var(--text-tertiary);
+    margin-left: auto;
+    white-space: nowrap;
+}
+
+/* Project details (name + email) */
+.upload-plans-details {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    margin-top: 1.5rem;
+    width: 100%;
+}
+
+.upload-plans-input {
+    font-family: 'HelveticaNeue-Light', 'HelveticaNeue', Helvetica, sans-serif;
+    font-size: 16px;
+    font-weight: 100;
+    width: 60%;
+    height: 58px;
+    padding: 0 16px;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    outline: none;
+    transition: border-color 0.2s;
+}
+
+.upload-plans-input:focus {
+    border-color: var(--dx-blue);
+}
+
+.upload-plans-input::placeholder {
+    color: var(--text-tertiary);
+}
+
+.upload-plans-email-hint {
+    font-family: 'ModularHouseplant', 'HelveticaNeue-Light', 'HelveticaNeue', Helvetica, sans-serif;
+    font-weight: 400;
+    font-size: 12px;
+    color: var(--text-secondary);
+    margin-top: 4px;
+    text-align: center;
+    width: 60%;
+}
+
+
+/* Bottom actions */
+.upload-plans-actions {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    margin-top: 1.5rem;
+    gap: 0.5rem;
+}
+
+.upload-plans-undo-btn {
+    padding: 0.75rem 1.5rem;
+    border: 1px solid var(--border-color);
+    font-family: 'HelveticaNeue-Light', 'HelveticaNeue', Helvetica, sans-serif;
+    font-weight: 300;
+    font-size: 16px;
+    background: transparent;
+    color: var(--text-primary);
+    cursor: pointer;
+    transition: border-color 0.2s;
+}
+
+.upload-plans-undo-btn:hover {
+    border-color: var(--text-tertiary);
+}
+
+.upload-plans-submit-btn {
+    padding: 0.75rem 1.5rem;
+    border: 1px solid var(--dx-blue);
+    font-family: 'HelveticaNeue-Light', 'HelveticaNeue', Helvetica, sans-serif;
+    font-weight: 300;
+    font-size: 16px;
+    background: var(--dx-blue);
+    color: #ffffff;
+    cursor: pointer;
+    transition: opacity 0.2s;
+}
+
+.upload-plans-submit-btn:hover {
+    opacity: 0.85;
+}
+
+.upload-plans-submit-btn:disabled {
+    cursor: not-allowed;
+}
+
+@media (max-height: 900px) {
+    .upload-plans-container {
+        height: 70vh;
+    }
+}
+
+@media (max-width: 768px) {
+    .upload-plans-page {
+        padding: 1rem;
+    }
+
+    .upload-plans-container {
+        width: 92vw;
+        height: 70vh;
+        padding: 1rem;
+    }
+
+    .upload-plans-title {
+        font-size: 30px;
+    }
+
+    .upload-plans-subtitle {
+        font-size: 17px;
+    }
+
+    .upload-plans-zone {
+        padding: 1rem;
+    }
+
+    .upload-plans-browse-label {
+        font-size: 18px;
+        padding: 1.2rem 2rem;
+    }
+    .upload-plans-file-icon {
+        width: 21px;
+        height: 21px;
+        opacity: 0.6;
+    }
+
+    .upload-plans-file-name {
+        font-family: 'HelveticaNeue-Light', 'HelveticaNeue', Helvetica, sans-serif;
+        font-weight: 300;
+        font-size: 16.5px;
+        color: var(--text-primary);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+    .upload-plans-input {
+        /*font-family: 'HelveticaNeue-Light', 'HelveticaNeue', Helvetica, sans-serif;
+        font-size: 16px;
+        font-weight: 100;*/
+        width: 90%;
+        height: 65px;
+        
+    }
+
+    .upload-plans-email-hint {
+        /*font-family: 'ModularHouseplant', 'HelveticaNeue-Light', 'HelveticaNeue', Helvetica, sans-serif;
+        font-weight: 400;
+        font-size: 12px;
+        color: var(--text-secondary);
+        margin-top: 4px;
+        text-align: center;*/
+        width: 90%;
+    }
+
+    .upload-plans-undo-btn,
+    .upload-plans-submit-btn {
+        font-size: 18px;
+        padding: 1.2rem 1.8rem;
+    }
+
+    .upload-plans-input {
+        width: 100%;
+    }
+
+    .upload-plans-details {
+        width: 100%;
+    }
+}

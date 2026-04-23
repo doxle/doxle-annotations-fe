@@ -59,7 +59,9 @@ struct RefreshSessionRequest {
 }
 
 // Shared API configuration — toggle comment for local vs deploy
-pub const API_BASE_URL: &str = "http://192.168.68.51:9001"; // LOCAL
+pub const API_BASE_URL: &str = "http://192.168.68.51:9001"; // LOCAL_WIFI_ROUTER
+// pub const API_BASE_URL: &str = "http://192.168.1.12:9001"; // LOCAL_NETCOMM
+
 // pub const API_BASE_URL: &str = "https://api.doxle.ai"; // DEPLOY
 
 

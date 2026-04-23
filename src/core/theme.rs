@@ -1,6 +1,6 @@
 use dioxus::prelude::*;
 #[cfg(target_arch = "wasm32")]
-use { wasm_bindgen::JsCast,  web_sys::{window, HtmlElement} };
+use { wasm_bindgen::{JsCast, JsValue},  web_sys::{window, HtmlElement} };
 
 
 #[derive(Clone, Copy, PartialEq, Debug)]
@@ -11,22 +11,55 @@ pub enum Theme {
 
 
 
-// Global theme signal - checks localStorage first, then system preference
+// Global theme signal - checks localStorage first, defaults to Light
 pub const THEME: GlobalSignal<Theme> = Signal::global(|| {
     if let Some(saved) = load_theme_preference() {
         return saved;
     }
-    if system_prefers_dark() {
-        Theme::Dark
-    } else {
-        Theme::Light
-    }
+    Theme::Light
 });
 
 
 /// Check if current theme is dark
 pub fn is_dark_theme() -> bool {
     *THEME.read() == Theme::Dark
+}
+
+#[cfg(target_arch = "wasm32")]
+fn notify_native_theme(theme: Theme) {
+    let Some(window) = window() else {
+        return;
+    };
+    let theme_value = match theme {
+        Theme::Light => "light",
+        Theme::Dark => "dark",
+    };
+
+    let Ok(webkit) = js_sys::Reflect::get(&window, &JsValue::from_str("webkit")) else {
+        return;
+    };
+    if webkit.is_null() || webkit.is_undefined() {
+        return;
+    }
+    let Ok(message_handlers) = js_sys::Reflect::get(&webkit, &JsValue::from_str("messageHandlers")) else {
+        return;
+    };
+    if message_handlers.is_null() || message_handlers.is_undefined() {
+        return;
+    }
+    let Ok(theme_handler) = js_sys::Reflect::get(&message_handlers, &JsValue::from_str("themeChange")) else {
+        return;
+    };
+    if theme_handler.is_null() || theme_handler.is_undefined() {
+        return;
+    }
+    let Ok(post_message) = js_sys::Reflect::get(&theme_handler, &JsValue::from_str("postMessage")) else {
+        return;
+    };
+    let Some(post_message_fn) = post_message.dyn_ref::<js_sys::Function>() else {
+        return;
+    };
+    let _ = post_message_fn.call1(&theme_handler, &JsValue::from_str(theme_value));
 }
 
 
@@ -141,6 +174,7 @@ pub fn apply_theme_class(theme: Theme) {
                         Theme::Dark => "dark",
                     };
                     html_el.set_class_name(class);
+                    notify_native_theme(theme);
                 }
             }
         }

@@ -8,6 +8,7 @@ const LOGO_DARK: Asset = asset!("/assets/icons/floorplan-dark.svg");
 const DOTS_JS: &str = include_str!("home.js");
 const TYPEWRITER_JS: &str = include_str!("../../js/typewriter.js");
 const HOME_CSS: &str = include_str!("home.css");
+const LAST_PUBLIC_PROJECT_ID_KEY: &str = "doxle_public_last_project_id";
 
 
 #[component]
@@ -38,11 +39,14 @@ pub fn HomePage() -> Element {
                 nav.replace(Route::ProjectsPage {});
                 return;
             }
-
-            // If user has a stored session (refresh token), skip landing page
-            if auth::api::has_persisted_session_hint() {
-                nav.replace(Route::ProjectsPage {});
-                return;
+            if let Ok(Some(storage)) = window.local_storage() {
+                if let Ok(Some(last_project_id)) = storage.get_item(LAST_PUBLIC_PROJECT_ID_KEY) {
+                    let project_id = last_project_id.trim().to_string();
+                    if !project_id.is_empty() {
+                        nav.replace(Route::EstimatePage { project_id });
+                        return;
+                    }
+                }
             }
 
             // Reset scroll position (mobile keyboard can leave page scrolled)
@@ -104,7 +108,7 @@ pub fn HomePage() -> Element {
                 }
                 button {
                     class: "upload-button",
-                    onclick: move |_| { nav.push(Route::SignInPage {}); },
+onclick: move |_| { nav.push(Route::UploadPlansPage {}); },
                     span {
                         class: "home-button-text",
                         "Upload Plans"

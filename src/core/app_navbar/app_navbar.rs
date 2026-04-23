@@ -10,7 +10,7 @@ use crate::users::state::{USER, load_user};
 use crate::core::status_dialog::StatusDialog;
 use crate::auth::api;
 use crate::blocks::state::{state_load_labels, LABELS, BLOCKS, state_load_blocks};
-use crate::blocks::api::{api_update_label_properties, BlockLabel, api_get_labels};
+use crate::blocks::api::{api_update_label_properties, Block, BlockLabel, api_get_labels, api_list_blocks};
 use crate::projects::project_state::{PROJECTS, state_load_projects};
 use std::collections::HashMap;
 
@@ -64,7 +64,9 @@ pub fn AppNavbar(
     let mut show_account_panel = use_signal(|| false);
     let mut show_settings = use_signal(|| false);
     let mut show_opacity_slider = use_signal(|| false);
-    let is_admin = USER.read().as_ref().map(|u| u.is_admin()).unwrap_or(false);
+    let current_user = USER.read().clone();
+    let is_admin = current_user.as_ref().map(|u| u.is_admin()).unwrap_or(false);
+    let current_user_id = current_user.as_ref().map(|u| u.user_id.clone());
 
     // Load user once when AppNavbar mounts (no signal reads = runs once, won't loop)
     use_effect(|| {
@@ -382,6 +384,7 @@ pub fn AppNavbar(
                                         }
                                     }
                                 }
+
                             } else {
                                 div { class: "app-breadcrumb-item current", "{decoded_name}" }
                             }
@@ -912,25 +915,94 @@ fn AccountPanel(show: Signal<bool>, user_name: String, user_email: String) -> El
     let mut success_message = use_signal(|| Option::<String>::None);
     let mut invites: Signal<Vec<api::InviteResponse>> = use_signal(Vec::new);
     let mut invites_loading = use_signal(|| false);
+    let mut share_scope = use_signal(|| "all".to_string());
+    let mut share_blocks: Signal<Vec<Block>> = use_signal(Vec::new);
+    let mut share_blocks_loading = use_signal(|| false);
+    let mut selected_block_ids: Signal<Vec<String>> = use_signal(Vec::new);
 
     let is_admin = USER.read().as_ref().map(|u| u.is_admin()).unwrap_or(false);
-    let share_context = match &route {
-        Route::CreateTaskPage { project_id, block_id, .. }
-        | Route::TasksListPage { project_id, block_id, .. }
-        | Route::AnnotationCanvasPage { project_id, block_id, .. }
-        | Route::ImportBlockPage { project_id, block_id, .. }
-        | Route::NoteBlockPage { project_id, block_id, .. }
-        | Route::NoteItemPage { project_id, block_id, .. }
-        | Route::BuildingBlockPage { project_id, block_id, .. } => {
-            Some((project_id.clone(), block_id.clone()))
-        }
+    let current_user_id = USER.read().as_ref().map(|u| u.user_id.clone());
+    let share_project_id = match &route {
+        Route::BlocksPage { project_id }
+        | Route::CreateBlockPage { project_id }
+        | Route::CreateTaskPage { project_id, .. }
+        | Route::TasksListPage { project_id, .. }
+        | Route::AnnotationCanvasPage { project_id, .. }
+        | Route::ImportBlockPage { project_id, .. }
+        | Route::NoteBlockPage { project_id, .. }
+        | Route::NoteItemPage { project_id, .. }
+        | Route::BuildingBlockPage { project_id, .. } => Some(project_id.clone()),
         _ => None,
     };
-    let share_context_for_submit = share_context.clone();
+    let current_block_id = match &route {
+        Route::CreateTaskPage { block_id, .. }
+        | Route::TasksListPage { block_id, .. }
+        | Route::AnnotationCanvasPage { block_id, .. }
+        | Route::ImportBlockPage { block_id, .. }
+        | Route::NoteBlockPage { block_id, .. }
+        | Route::NoteItemPage { block_id, .. }
+        | Route::BuildingBlockPage { block_id, .. } => Some(block_id.clone()),
+        _ => None,
+    };
+    let share_project_id_for_submit = share_project_id.clone();
+    let current_block_id_for_submit = current_block_id.clone();
+    let share_project_id_for_blocks = share_project_id.clone();
+    let current_block_id_for_blocks = current_block_id.clone();
+    let is_project_owner = share_project_id
+        .as_ref()
+        .and_then(|project_id| {
+            PROJECTS
+                .read()
+                .iter()
+                .find(|project| project.project_id == *project_id)
+                .map(|project| project.project_owner.clone())
+        })
+        .and_then(|owner_id| current_user_id.as_ref().map(|user_id| owner_id == *user_id))
+        .unwrap_or(false);
+    let can_share_project = is_admin || is_project_owner;
 
-    // Load invites when panel opens (admin only)
     use_effect(move || {
-        if is_admin {
+        if !is_admin {
+            return;
+        }
+        match share_project_id_for_blocks.clone() {
+            Some(project_id) => {
+                let current_block_id_for_blocks = current_block_id_for_blocks.clone();
+                spawn(async move {
+                    share_blocks_loading.set(true);
+                    match api_list_blocks(&project_id).await {
+                        Ok(blocks) => {
+                            let selected = current_block_id_for_blocks
+                                .as_ref()
+                                .and_then(|block_id| {
+                                    blocks
+                                        .iter()
+                                        .find(|block| block.block_id == *block_id)
+                                        .map(|_| vec![block_id.clone()])
+                                })
+                                .unwrap_or_default();
+                            share_blocks.set(blocks);
+                            selected_block_ids.set(selected);
+                        }
+                        Err(e) => {
+                            tracing::error!("Failed to load blocks for sharing: {}", e);
+                            share_blocks.set(Vec::new());
+                            selected_block_ids.set(Vec::new());
+                        }
+                    }
+                    share_blocks_loading.set(false);
+                });
+            }
+            None => {
+                share_blocks.set(Vec::new());
+                selected_block_ids.set(Vec::new());
+            }
+        }
+    });
+
+    // Load invites when panel opens (admin sees all, owner sees own project invites)
+    use_effect(move || {
+        if can_share_project {
             spawn(async move {
                 invites_loading.set(true);
                 match api::list_invites().await {
@@ -946,6 +1018,8 @@ fn AccountPanel(show: Signal<bool>, user_name: String, user_email: String) -> El
         evt.prevent_default();
         let email_value = email();
         let permission_value = selected_permission();
+        let share_scope_value = share_scope();
+        let selected_blocks_value = selected_block_ids();
 
         if email_value.trim().is_empty() {
             error_message.set(Some("Please enter an email address".to_string()));
@@ -960,12 +1034,21 @@ fn AccountPanel(show: Signal<bool>, user_name: String, user_email: String) -> El
             }
         };
 
-        let (project_id, block_id) = match share_context_for_submit.clone() {
-            Some(context) => context,
+        let project_id = match share_project_id_for_submit.clone() {
+            Some(project_id) => project_id,
             None => {
-                error_message.set(Some("Open the block you want to share, then try again.".to_string()));
+                error_message.set(Some("Open a project page to share access.".to_string()));
                 return;
             }
+        };
+        let allowed_block_ids = if share_scope_value == "selected" {
+            if selected_blocks_value.is_empty() {
+                error_message.set(Some("Select at least one block to share.".to_string()));
+                return;
+            }
+            selected_blocks_value
+        } else {
+            Vec::new()
         };
 
         let target_path = {
@@ -980,6 +1063,7 @@ fn AccountPanel(show: Signal<bool>, user_name: String, user_email: String) -> El
                 "/projects".to_string()
             }
         };
+        let current_block_id_after_submit = current_block_id_for_submit.clone();
 
         spawn(async move {
             is_loading.set(true);
@@ -989,7 +1073,7 @@ fn AccountPanel(show: Signal<bool>, user_name: String, user_email: String) -> El
             match api::create_invite(api::CreateInvitePayload {
                 email: email_value.clone(),
                 project_id,
-                allowed_block_ids: vec![block_id],
+                allowed_block_ids,
                 permission,
                 target_path,
                 expires_days: 7,
@@ -1000,6 +1084,13 @@ fn AccountPanel(show: Signal<bool>, user_name: String, user_email: String) -> El
                     success_message.set(Some(format!("Share link sent to {}", email_value)));
                     email.set(String::new());
                     selected_permission.set(Some("write".to_string()));
+                    share_scope.set("all".to_string());
+                    selected_block_ids.set(
+                        current_block_id_after_submit
+                            .clone()
+                            .map(|block_id| vec![block_id])
+                            .unwrap_or_default(),
+                    );
                     invites.write().push(invite);
                 }
                 Err(error) => {
@@ -1011,18 +1102,40 @@ fn AccountPanel(show: Signal<bool>, user_name: String, user_email: String) -> El
         });
     };
 
-    let close_panel = move |_| {
-        show.set(false);
-        email.set(String::new());
-        selected_permission.set(Some("write".to_string()));
-        error_message.set(None);
-        success_message.set(None);
-    };
+    let mut overlay_show = show.clone();
+    let mut overlay_email = email.clone();
+    let mut overlay_selected_permission = selected_permission.clone();
+    let mut overlay_share_scope = share_scope.clone();
+    let mut overlay_selected_block_ids = selected_block_ids.clone();
+    let mut overlay_error_message = error_message.clone();
+    let mut overlay_success_message = success_message.clone();
+    let overlay_block_id = current_block_id.clone();
+    let mut button_show = show.clone();
+    let mut button_email = email.clone();
+    let mut button_selected_permission = selected_permission.clone();
+    let mut button_share_scope = share_scope.clone();
+    let mut button_selected_block_ids = selected_block_ids.clone();
+    let mut button_error_message = error_message.clone();
+    let mut button_success_message = success_message.clone();
+    let button_block_id = current_block_id.clone();
 
     rsx! {
         div {
             class: "account-panel-overlay",
-            onmousedown: close_panel,
+            onmousedown: move |_| {
+                overlay_show.set(false);
+                overlay_email.set(String::new());
+                overlay_selected_permission.set(Some("write".to_string()));
+                overlay_share_scope.set("all".to_string());
+                overlay_selected_block_ids.set(
+                    overlay_block_id
+                        .clone()
+                        .map(|block_id| vec![block_id])
+                        .unwrap_or_default(),
+                );
+                overlay_error_message.set(None);
+                overlay_success_message.set(None);
+            },
             
             div {
                 class: "account-panel",
@@ -1031,17 +1144,30 @@ fn AccountPanel(show: Signal<bool>, user_name: String, user_email: String) -> El
                 // Close button
                 button {
                     class: "account-panel-close",
-                    onclick: close_panel,
+                    onclick: move |_| {
+                        button_show.set(false);
+                        button_email.set(String::new());
+                        button_selected_permission.set(Some("write".to_string()));
+                        button_share_scope.set("all".to_string());
+                        button_selected_block_ids.set(
+                            button_block_id
+                                .clone()
+                                .map(|block_id| vec![block_id])
+                                .unwrap_or_default(),
+                        );
+                        button_error_message.set(None);
+                        button_success_message.set(None);
+                    },
                     img { src: CLOSE_DARK, alt: "Close" }
                 }
                 
                 // Invite section (admin only)
-                if is_admin {
+                if can_share_project {
                     div {
                         class: "account-panel-section",
-                        h3 { class: "account-panel-title", "Share current block" }
+                        h3 { class: "account-panel-title", "Share project" }
                         
-                        if share_context.is_some() {
+                        if share_project_id.is_some() {
                             form {
                                 onsubmit: handle_submit,
                                 
@@ -1086,11 +1212,69 @@ fn AccountPanel(show: Signal<bool>, user_name: String, user_email: String) -> El
                                         }
                                     }
                                 }
+
+                                div {
+                                    class: "account-panel-role-selector",
+                                    label { class: "account-panel-role-option", "Share scope" }
+                                    select {
+                                        class: "account-panel-input",
+                                        value: "{share_scope}",
+                                        disabled: is_loading(),
+                                        onchange: move |e| share_scope.set(e.value()),
+                                        option { value: "all", "All blocks in project" }
+                                        option { value: "selected", "Selected blocks" }
+                                    }
+                                }
+
+                                if share_scope() == "selected" {
+                                    if share_blocks_loading() {
+                                        div { class: "account-panel-invite-status", "Loading blocks..." }
+                                    } else if share_blocks().is_empty() {
+                                        div { class: "account-panel-error", "No blocks found for this project." }
+                                    } else {
+                                        details {
+                                            class: "account-panel-role-selector",
+                                            summary {
+                                                class: "account-panel-role-option",
+                                                "{selected_block_ids().len()} block(s) selected"
+                                            }
+                                            div {
+                                                class: "account-panel-role-selector",
+                                                for block in share_blocks().iter() {
+                                                    {
+                                                        let block_id = block.block_id.clone();
+                                                        let block_name = block.block_name.clone();
+                                                        let is_selected = selected_block_ids().iter().any(|id| id == &block_id);
+                                                        rsx! {
+                                                            label {
+                                                                class: "account-panel-role-option",
+                                                                input {
+                                                                    r#type: "checkbox",
+                                                                    checked: is_selected,
+                                                                    disabled: is_loading(),
+                                                                    onclick: move |_| {
+                                                                        let mut selected = selected_block_ids.write();
+                                                                        if selected.iter().any(|id| id == &block_id) {
+                                                                            selected.retain(|id| id != &block_id);
+                                                                        } else {
+                                                                            selected.push(block_id.clone());
+                                                                        }
+                                                                    },
+                                                                }
+                                                                "{block_name}"
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
                             }
                         } else {
                             div {
                                 class: "account-panel-error",
-                                "Open a block page to send a scoped share link."
+                                "Open a project page to send a share link."
                             }
                         }
                         
@@ -1175,10 +1359,23 @@ fn AccountPanel(show: Signal<bool>, user_name: String, user_email: String) -> El
                     button {
                         class: "account-panel-logout",
                         onclick: move |_| {
+                            // Clear all local session data
+                            api::clear_local_access_token();
+                            api::clear_stored_access_token();
+                            #[cfg(target_arch = "wasm32")]
+                            {
+                                if let Some(window) = web_sys::window() {
+                                    if let Ok(Some(storage)) = window.local_storage() {
+                                        let _ = storage.remove_item("refresh_token");
+                                        let _ = storage.remove_item("cognito_username");
+                                    }
+                                }
+                            }
+                            *USER.write() = None;
                             spawn(async {
                                 let _ = api::logout().await;
                             });
-                            nav.push(Route::SignInPage {});
+                            nav.push(Route::HomePage {});
                         },
                         "Sign Out"
                     }

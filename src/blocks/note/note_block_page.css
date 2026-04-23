@@ -1,4 +1,4 @@
-.file-block-page {
+.note-block-page {
     height: calc(100vh - 40px);
     padding: 20px;
     overflow-y: auto;
@@ -7,11 +7,11 @@
     background-image: radial-gradient(circle, var(--dot-color, rgba(0,0,0,0.3)) 1.5px, transparent 1.5px);
     background-size: 30px 30px;
 }
-.file-block-page::-webkit-scrollbar {
+.note-block-page::-webkit-scrollbar {
     display: none;
 }
 
-.file-block-head {
+.note-block-head {
     display: flex;
     align-items: center;
     justify-content: flex-start;
@@ -19,14 +19,14 @@
     margin-bottom: 14px;
 }
 
-.file-block-title {
+.note-block-title {
     font-family: 'HelveticaNeue', Helvetica, Arial, sans-serif;
     font-size: 33px;
     font-weight: 300;
     color: var(--text-primary);
 }
 
-.file-block-subtitle {
+.note-block-subtitle {
     font-family: 'HelveticaNeue', Helvetica, Arial, sans-serif;
     font-size: 12px;
     color: var(--text-secondary);
@@ -35,11 +35,11 @@
 
 
 
-.file-block-upload-input {
+.note-block-upload-input {
     display: none !important;
 }
 
-.file-block-upload-btn {
+.note-block-upload-btn {
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -56,11 +56,11 @@
     font-family: 'HelveticaNeue', Helvetica, Arial, sans-serif;
 }
 
-.file-block-upload-btn:hover {
+.note-block-upload-btn:hover {
     border-color: var(--text-primary);
 }
 
-.file-block-upload-progress {
+.note-block-upload-progress {
     margin-top: 12px;
     display: flex;
     flex-direction: column;
@@ -68,39 +68,39 @@
     font-size: 12px;
     color: var(--text-secondary);
 }
-.file-block-content {
+.note-block-content {
     margin-top: 12px;
 }
 
-.file-block-upload-row {
+.note-block-upload-row {
     display: flex;
     justify-content: space-between;
     gap: 8px;
 }
 
-.file-block-upload-name {
+.note-block-upload-name {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
 }
 
-.file-block-upload-status {
+.note-block-upload-status {
     color: var(--text-primary);
     flex-shrink: 0;
 }
 
-.file-block-loading,
-.file-block-empty,
-.file-block-error {
+.note-block-loading,
+.note-block-empty,
+.note-block-error {
     font-size: 12px;
     color: var(--text-secondary);
     padding: 8px 0;
 }
 
-.file-block-error {
+.note-block-error {
     color: #d9534f;
 }
-.file-block-empty {
+.note-block-empty {
     font-family: 'ModularHouseplant', Helvetica, Arial, sans-serif;
     text-transform: none;
     font-size: 16px;
@@ -112,39 +112,39 @@
     justify-content: center;
     min-height: calc(100vh - 260px);
 }
-.file-block-empty-icon {
+.note-block-empty-icon {
     width: 45px;
     height: 45px;
 }
 
-.file-block-grid {
+.note-block-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
     gap: 12px;
 }
 
 @media (max-width: 768px) {
-    .file-block-page .new-page-btn {
+    .note-block-page .new-page-btn {
         margin-left: auto;
         margin-right: auto;
     }
-    .file-block-grid {
+    .note-block-grid {
         grid-template-columns: 1fr;
     }
-    .file-card-thumb {
+    .note-card-thumb {
         height: auto !important;
         aspect-ratio: 1;
     }
-    .file-card-image,
-    .file-card-video,
-    .file-card-file-preview,
-    .file-card-generic {
+    .note-card-image,
+    .note-card-video,
+    .note-card-note-preview,
+    .note-card-generic {
         height: auto !important;
         aspect-ratio: 1;
     }
 }
 
-.file-card {
+.note-card {
     border: 1px solid var(--border-color);
     border-radius: 8px;
     background: var(--bg-card);
@@ -154,18 +154,18 @@
     transition: border-color 0s;
 }
 @media (hover: hover) {
-    .file-card:hover {
+    .note-card:hover {
         border-color: var(--dx-blue);
     }
 }
-.file-card-thumb {
+.note-card-thumb {
     position: relative;
     width: 100%;
     height: 130px;
     overflow: hidden;
     background: var(--bg-primary);
 }
-.file-card-thumb::after {
+.note-card-thumb::after {
     content: "";
     position: absolute;
     inset: 0;
@@ -174,26 +174,26 @@
     pointer-events: none;
 }
 @media (hover: hover) {
-    .file-card:hover .file-card-thumb::after {
+    .note-card:hover .note-card-thumb::after {
         background: rgba(59, 130, 246, 0.12);
     }
 }
 
-.file-card-image,
-.file-card-video,
-.file-card-file-preview {
+.note-card-image,
+.note-card-video,
+.note-card-note-preview {
     width: 100%;
     height: 130px;
     object-fit: cover;
     background: var(--bg-primary);
     display: block;
 }
-.file-card-file-preview {
+.note-card-note-preview {
     border: 0;
     pointer-events: none;
 }
 
-.file-card-generic {
+.note-card-generic {
     width: 100%;
     height: 130px;
     display: flex;
@@ -203,7 +203,7 @@
     font-size: 12px;
     background: var(--bg-primary);
 }
-.file-card-comment-indicator {
+.note-card-comment-indicator {
     position: absolute;
     top: 6px;
     right: 6px;
@@ -216,11 +216,11 @@
     background: rgba(255, 255, 255, 0.92);
     z-index: 3;
 }
-.file-card-comment-icon {
+.note-card-comment-icon {
     width: 14px;
     height: 14px;
 }
-.file-card-comment-count {
+.note-card-comment-count {
     position: absolute;
     top: -4px;
     right: -2px;
@@ -237,21 +237,21 @@
     padding: 0 3px;
 }
 
-.file-card-markup-rect {
+.note-card-markup-rect {
     position: absolute;
     border: 1px solid #3b82f6;
     background: rgba(59, 130, 246, 0.15);
     pointer-events: none;
 }
 
-.file-card-footer {
+.note-card-footer {
     padding: 8px;
     display: flex;
     justify-content: space-between;
     gap: 8px;
 }
 
-.file-card-name {
+.note-card-name {
     color: var(--text-primary);
     font-size: 12px;
     overflow: hidden;
@@ -259,13 +259,13 @@
     white-space: nowrap;
 }
 
-.file-card-type {
+.note-card-type {
     color: var(--text-secondary);
     font-size: 11px;
     flex-shrink: 0;
 }
 
-.file-card-dots {
+.note-card-dots {
     color: var(--text-tertiary);
     font-size: 10px;
     cursor: pointer;
@@ -275,15 +275,15 @@
     letter-spacing: 2px;
 }
 
-.file-card:hover .file-card-dots {
+.note-card:hover .note-card-dots {
     color: #fff;
 }
 
-.file-card-dots:hover {
+.note-card-dots:hover {
     color: #fff;
 }
 
-.file-modal-backdrop {
+.note-modal-backdrop {
     position: fixed;
     inset: 0;
     background: rgba(0, 0, 0, 0.65);
@@ -293,7 +293,7 @@
     z-index: 2000;
 }
 
-.file-modal {
+.note-modal {
     width: min(1000px, 92vw);
     max-height: 90vh;
     background: var(--bg-card);
@@ -305,20 +305,20 @@
     gap: 10px;
 }
 
-.file-modal-head {
+.note-modal-head {
     display: flex;
     justify-content: space-between;
     align-items: center;
 }
 
-.file-modal-head h2 {
+.note-modal-head h2 {
     color: var(--text-primary);
     font-size: 14px;
     font-weight: 400;
     margin: 0;
 }
 
-.file-modal-close {
+.note-modal-close {
     border: 1px solid var(--border-color);
     background: transparent;
     color: var(--text-primary);
@@ -328,13 +328,13 @@
     cursor: pointer;
 }
 
-.file-markup-toolbar {
+.note-markup-toolbar {
     display: flex;
     gap: 8px;
 }
 
-.file-markup-save,
-.file-markup-clear {
+.note-markup-save,
+.note-markup-clear {
     height: 30px;
     border-radius: 4px;
     border: 1px solid var(--border-color);
@@ -344,7 +344,7 @@
     cursor: pointer;
 }
 
-.file-markup-canvas {
+.note-markup-canvas {
     position: relative;
     width: 100%;
     max-height: 72vh;
@@ -353,7 +353,7 @@
     background: #000;
 }
 
-.file-markup-image {
+.note-markup-image {
     width: 100%;
     height: auto;
     max-height: 72vh;
@@ -363,17 +363,17 @@
     -webkit-user-drag: none;
 }
 
-.file-markup-rect {
+.note-markup-rect {
     position: absolute;
     border: 2px solid #3b82f6;
     background: rgba(59, 130, 246, 0.15);
 }
 
-.file-markup-rect.draft {
+.note-markup-rect.draft {
     border-style: dashed;
 }
 
-.file-markup-rect-remove {
+.note-markup-rect-remove {
     position: absolute;
     right: -8px;
     top: -8px;
@@ -389,13 +389,13 @@
     padding: 0;
 }
 
-.file-modal-video {
+.note-modal-video {
     width: 100%;
     max-height: 72vh;
     background: #000;
 }
 
-.file-modal-link {
+.note-modal-link {
     color: var(--text-primary);
     font-size: 12px;
     text-decoration: underline;

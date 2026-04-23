@@ -1,0 +1,152 @@
+@import url('https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500&display=swap');
+
+.design-project-page {
+    width: 100%;
+    height: 100vh;
+    position: relative;
+    overflow: hidden;
+}
+
+/* ========== Steps 1 & 2: Full-page centered overlay ========== */
+.design-step-overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10;
+    pointer-events: none;
+}
+
+.design-step-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    max-width: 520px;
+    padding: 48px 40px;
+    pointer-events: auto;
+}
+
+.design-step-logo {
+    width: 54px;
+    height: 54px;
+    margin-bottom: 10px;
+}
+
+.design-step-title {
+    font-family: 'Lexend', sans-serif;
+    font-weight: 100;
+    font-size: 45px;
+    color: var(--text-primary);
+    margin-bottom: 16px;
+    letter-spacing: -0.5px;
+}
+
+.design-step-subtitle {
+    font-family: 'ModularHouseplant', 'HelveticaNeue-Light', 'HelveticaNeue', Helvetica, sans-serif;
+    font-weight: 300;
+    font-size: 14px;
+    line-height: 1.2;
+    color: var(--text-secondary);
+    margin-bottom: 32px;
+}
+
+.design-step-btn {
+    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    font-weight: 200;
+    font-size: 14px;
+    padding: 18px 40px;
+    border: none;
+    border-radius: 3px;
+    background: var(--comment-blue);
+    color: #ffffff;
+    cursor: pointer;
+    transition: opacity 0.15s;
+}
+
+.design-step-btn:hover {
+    opacity: 0.85;
+}
+
+/* ========== Step 3: 70/30 split ========== */
+.design-step3-panel {
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 30%;
+    height: 100%;
+    background: var(--bg-secondary);
+    border-left: 1px solid var(--border-color);
+    z-index: 10;
+    display: flex;
+    flex-direction: column;
+    padding: 32px 24px;
+}
+
+.design-step3-content {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.design-step3-title {
+    font-family: 'Lexend', sans-serif;
+    font-weight: 400;
+    font-size: 18px;
+    color: var(--text-primary);
+    letter-spacing: -0.3px;
+}
+
+.design-step3-subtitle {
+    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    font-weight: 300;
+    font-size: 13px;
+    line-height: 1.5;
+    color: var(--text-secondary);
+}
+
+/* ========== Ruler icon in navbar ========== */
+.building-navbar-ruler-icon {
+    width: 18px;
+    height: 18px;
+}
+
+
+
+@media (max-width: 768px) {
+    .design-step-card {
+        max-width: 100%;
+        padding: 16px 4px;
+    }
+    
+    .design-step-title {
+        font-family: 'Lexend', sans-serif;
+        font-weight: 100;
+        font-size: 47px;
+        color: var(--text-primary);
+        margin-bottom: 21px;
+        letter-spacing: -1.5px;
+    }
+    .design-step-subtitle {
+        font-family: 'ModularHouseplant', 'HelveticaNeue-Light', 'HelveticaNeue', Helvetica, sans-serif;
+        font-weight: 300;
+        font-size: 16px;
+        line-height: 1.0;
+        color: var(--text-secondary);
+        margin-bottom: 32px;
+    }
+
+    .design-step-btn {
+        font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+        font-weight: 200;
+        font-size: 18px;
+        padding: 24px 45px;
+        border: none;
+        border-radius: 3px;
+        background: var(--comment-blue);
+        color: #ffffff;
+        cursor: pointer;
+        transition: opacity 0.15s;
+    }
+}

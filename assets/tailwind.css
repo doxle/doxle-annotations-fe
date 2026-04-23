@@ -6,8 +6,6 @@
     --font-sans: 'Helvetica Neue', Helvetica, Arial, sans-serif;
     --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New',
     monospace;
-    --color-gray-900: oklch(21% 0.034 264.665);
-    --spacing: 0.25rem;
     --ease-out: cubic-bezier(0, 0, 0.2, 1);
     --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
     --default-transition-duration: 150ms;
@@ -216,14 +214,14 @@
   .hidden {
     display: none;
   }
+  .inline {
+    display: inline;
+  }
   .inline-block {
     display: inline-block;
   }
   .table {
     display: table;
-  }
-  .min-h-screen {
-    min-height: 100vh;
   }
   .flex-shrink {
     flex-shrink: 1;
@@ -234,12 +232,6 @@
   .resize {
     resize: both;
   }
-  .items-center {
-    align-items: center;
-  }
-  .justify-center {
-    justify-content: center;
-  }
   .truncate {
     overflow: hidden;
     text-overflow: ellipsis;
@@ -248,12 +240,6 @@
   .border {
     border-style: var(--tw-border-style);
     border-width: 1px;
-  }
-  .bg-gray-900 {
-    background-color: var(--color-gray-900);
-  }
-  .px-4 {
-    padding-inline: calc(var(--spacing) * 4);
   }
   .lowercase {
     text-transform: lowercase;

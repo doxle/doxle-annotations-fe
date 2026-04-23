@@ -1,7 +1,8 @@
 /* Home Page Styles - Dots Effect */
 
-/* Force dark background */
-html, body {
+/* Force dark background on home route only */
+html:has(.home-container),
+html:has(.home-container) body {
     background: #000000 !important;
     background-color: #000000 !important;
     color-scheme: dark !important;

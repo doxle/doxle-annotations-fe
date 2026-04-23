@@ -1,0 +1,213 @@
+ESTIMATE PAGE REBUILD - COMPLETE BRIEF
+=======================================
+
+OVERVIEW
+--------
+The /estimate/:project_id page displays uploaded building plan pages
+(converted from PDF to PNG by FastAPI) in a classified list view.
+Each page needs its own SVG canvas with Figma-style pan/zoom, a red
+crosshair cursor, and a scale calibration tool.
+
+CURRENT STATE (what exists)
+---------------------------
+- EstimatePage in src/public/estimate_page.rs
+- Fetches file list from GET /public/projects/{id}/files (no auth)
+- Uses file_id to fetch result.json from CloudFront
+- result.json contains classified pages with display_key (150dpi PNG URL)
+- Currently renders pages as HTML divs with CSS transforms (broken zoom)
+- Has a step panel on the right (30%) for wizard instructions
+- Mobile: step panel becomes bottom bar
+
+WHAT NEEDS TO CHANGE
+--------------------
+
+1. PROGRESSIVE LOADING INDICATOR
+   - Currently shows static "Processing your plans..." text
+   - Need: animated progress indicator while polling for result.json
+   - Use the existing LiveTimer component or a spinning animation
+   - Show it immediately on page load, update with elapsed time
+   - Polling uses use_future with 3s intervals (already implemented)
+
+2. PER-PAGE SVG CANVAS (PageCanvas component)
+   Each plan page gets its own SVG canvas component. Extract the proven
+   pan/zoom pattern from SvgCanvasV2 (src/core/svg_canvas/svg_canvas_v2.rs).
+
+   What to copy from SvgCanvasV2:
+   - SVG element with width="100%" height="100%"
+   - <g transform="translate(pan_x, pan_y) scale(zoom)"> for world space
+   - <image> element for the plan page PNG
+   - Cursor-based zoom math (lines 610-634 of svg_canvas_v2.rs):
+       let factor = (-dy * 0.009).exp().clamp(0.7, 1.4);
+       let new_zoom = (zoom() * factor).clamp(0.1, 10.0);
+       let p = evt.element_coordinates();
+       let scale_change = new_zoom / zoom();
+       let new_pan_x = p.x - (p.x - pan_x()) * scale_change;
+       let new_pan_y = p.y - (p.y - pan_y()) * scale_change;
+   - Mouse drag panning with click_start travel threshold (>5px = pan)
+   - evt.prevent_default() on wheel events (SVG handles this natively)
+   - Touch panning via pointer events (onpointerdown/move/up)
+   - Red crosshair cursor from CrosshairOverlay component
+     (src/core/svg_canvas/crosshair_overlay.rs)
+   - Custom cursor styles: cursor:none for drawing tools, cursor:grabbing
+     for panning
+
+   What NOT to copy:
+   - Annotation creation/editing (polygon, bbox, comments)
+   - Label system, annotation state, auto-save
+   - Copy/paste, node dragging
+   - Keyboard shortcuts (managed by canvas_page.rs, not svg_canvas_v2)
+
+   PageCanvas props:
+   - image_url: String (CloudFront URL for the 150dpi PNG)
+   - page_num: usize
+   - display_width: u32
+   - display_height: u32
+
+   PageCanvas internal state:
+   - pan_x, pan_y: Signal<f64>
+   - zoom: Signal<f64>
+   - cursor_pos: Signal<(f64, f64)> (screen coords)
+   - cursor_world: Signal<(f64, f64)> (world coords)
+   - cursor_inside: Signal<bool>
+   - is_dragging, is_panning: Signal<bool>
+   - last_mouse, click_start: Signal<(f64, f64)>
+   - scale_points: Signal<Vec<(f64, f64)>> (for scale tool, max 2 points)
+   - scale_distance_m: Signal<Option<f64>> (real-world distance entered)
+
+   Auto-fit on load:
+   - When the image loads, calculate zoom to fit the page within the
+     canvas viewport (same pattern as SvgCanvasV2 lines 688-750)
+   - Center the image in the viewport
+
+3. SCALE TOOL (per-page)
+   - Red crosshair cursor (reuse CrosshairOverlay from core/svg_canvas)
+   - User clicks two points on the plan → draws a line between them
+   - After second click, show an input field asking for real-world distance
+   - Calculate px_per_meter = pixel_distance / entered_distance
+   - Store scale on the page (signal for now, later POST to backend)
+   - Visual: draw the scale line as an SVG line with measurement text
+
+   Scale tool interaction:
+   - Activated by the step panel ("Set your scale" step)
+   - cursor:none + CrosshairOverlay when active
+   - First click: place first point (small red dot)
+   - Second click: place second point, draw line, show distance input
+   - Enter distance → scale is set, line stays visible with dimension text
+   - Can be re-done by clicking again (resets points)
+
+4. PAGE LIST LAYOUT
+   - Outer container: normal HTML scrollable div (overflow-y: auto)
+   - Section headers: "Floor Plan", "Elevations", "Electrical", etc.
+   - Each page: a card containing the PageCanvas SVG
+   - Card has a fixed aspect ratio container matching the page dimensions
+   - Page label below: "Page N"
+   - Normal scroll moves between pages
+   - Cmd/Ctrl+scroll over a page zooms THAT page's canvas (not the list)
+   - This works because the SVG canvas captures wheel events with
+     preventDefault, stopping them from bubbling to the scroll container
+
+5. CSS CHANGES
+   - .estimate-pages: overflow-y: auto (back to scrollable)
+   - .estimate-page-card: position: relative, aspect ratio container
+   - .estimate-page-card svg: position: absolute, inset: 0
+   - Remove .estimate-canvas-content (no longer needed)
+   - Remove the old CSS transform zoom styles
+
+EXISTING CODE REFERENCES
+-------------------------
+Pan/zoom math:        src/core/svg_canvas/svg_canvas_v2.rs (lines 610-634)
+Mouse drag panning:   src/core/svg_canvas/svg_canvas_v2.rs (lines 354-430)
+Touch panning:        src/core/svg_canvas/svg_canvas_v2.rs (lines 288-352)
+Crosshair cursor:     src/core/svg_canvas/crosshair_overlay.rs
+Crosshair CSS:        src/core/svg_canvas/crosshair_overlay.css
+Dot pattern:          src/core/svg_canvas/svg_canvas_v2.rs (lines 642-678)
+Image auto-fit:       src/core/svg_canvas/svg_canvas_v2.rs (lines 688-750)
+SVG canvas CSS:       src/core/svg_canvas/svg_canvas_v2.css
+Dark mode image:      html.dark { --canvas-image-filter: invert(1) hue-rotate(180deg); }
+Dark mode dots:       html.dark { --dot-color: rgba(255, 255, 255, 0.5); }
+
+RESULT.JSON FORMAT (from FastAPI)
+---------------------------------
+{
+  "image_id": "20260417T093847_f30a88dd",
+  "page_count": 13,
+  "pages": [
+    {
+      "page_num": 1,
+      "orientation": "portrait",
+      "classification": "site_plan",
+      "display_key": "upload-plan/20260417T.../output/150dpi/page-1.png",
+      "full_key": "upload-plan/20260417T.../output/300dpi/page-1.png",
+      "display_width": 2482,
+      "display_height": 1755
+    },
+    ...
+  ]
+}
+
+CloudFront URL pattern:
+  https://d1flb4kxeu5kb6.cloudfront.net/cdn/app/{display_key}
+
+CLASSIFICATION ORDER
+---------------------
+1. floor_plan  → "Floor Plan"
+2. elevation   → "Elevations"
+3. electrical  → "Electrical"
+4. site_plan   → "Site Plan"
+5. other       → "Other"
+
+API ENDPOINTS USED
+-------------------
+GET /public/projects/{project_id}/files  (no auth, returns file_id list)
+CloudFront GET for result.json and page PNGs
+
+FILE STRUCTURE
+--------------
+src/public/
+  estimate_page.rs      ← EstimatePage + PageCanvas components
+  estimate_page.css     ← All styles
+
+Reuses from core (do NOT copy, import directly):
+  src/core/svg_canvas/crosshair_overlay.rs  (CrosshairOverlay component)
+  src/core/svg_canvas/crosshair_overlay.css
+  src/core/svg_canvas/dot_overlay.rs        (DotOverlay, optional)
+
+STEP PANEL FLOW (right side / bottom on mobile)
+-------------------------------------------------
+Step 1: "Set your scale"
+  - Instruction: "Click two points on a page to define a known measurement,
+    then enter the real-world distance."
+  - Activates scale tool on all page canvases
+
+Step 2: "Draw footprint"
+  - Auto-scrolls to floor plan section
+  - (Future: polygon drawing tool)
+
+Step 3: "Draw windows"
+  - Auto-scrolls to elevations section
+  - (Future: rectangle drawing tool)
+
+Step 4: "Mark electrical"
+  - Auto-scrolls to electrical section
+  - (Future: point marking tool)
+
+Step 5: "Generate budget"
+  - Shows summary + download button
+  - (Future: calls GET /public/projects/{id}/budget)
+
+For now, only Step 1 (scale tool) needs to be functional.
+Steps 2-5 are UI placeholders with Next button.
+
+MOBILE CONSIDERATIONS
+----------------------
+- Step panel: horizontal bottom bar (flex-direction: row)
+- Page canvases: full width
+- Touch: one-finger drag = pan (via pointer events, same as SvgCanvasV2)
+- Pinch zoom: NOT implemented yet (SvgCanvasV2 doesn't have it either)
+- Section headers: smaller font
+
+COMPILATION
+-----------
+Frontend: cd frontend && cargo check --target wasm32-unknown-unknown
+Backend: cargo check --manifest-path backend/Cargo.toml
+Both must compile with zero errors.

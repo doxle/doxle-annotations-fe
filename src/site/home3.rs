@@ -86,7 +86,7 @@ pub fn Home3Page() -> Element {
                 }
                 button {
                     class: "home3-button",
-onclick: move |_| { navigator().push(Route::SignInPage {}); },
+onclick: move |_| { navigator().push(Route::LegalConsentPage {}); },
                     span {
                         class: "home3-button-text",
                         "Upload Plans"

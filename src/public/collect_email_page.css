@@ -1,0 +1,132 @@
+.collect-email-page {
+    min-height: 100vh;
+    background-color: var(--bg-primary);
+    background-image: radial-gradient(circle, var(--dot-color, rgba(0,0,0,0.3)) 1.5px, transparent 1.5px);
+    background-size: 30px 30px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+}
+
+/* Fix navbar text on light background (light mode only) */
+html:not(.dark):has(.collect-email-page) .home-nav-btn {
+    color: var(--text-primary) !important;
+}
+html:not(.dark):has(.collect-email-page) .home-say-hello-btn {
+    background: var(--text-primary) !important;
+    color: var(--primary-button-text) !important;
+}
+
+.collect-email-card {
+    width: 34vw;
+    min-width: 280px;
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.collect-email-title {
+    font-family: 'HelveticaNeue-Light', 'HelveticaNeue', Helvetica, sans-serif;
+    font-weight: 200;
+    font-size: 36px;
+    color: var(--text-primary);
+    margin: 0;
+    text-align: center;
+}
+
+.collect-email-subtitle {
+    font-family: 'ModularHouseplant', 'HelveticaNeue-Light', 'HelveticaNeue', Helvetica, sans-serif;
+    font-weight: 400;
+    font-size: 13.5px;
+    color: var(--text-primary);
+    text-align: center;
+    margin: 0;
+}
+
+.collect-email-form {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.collect-email-input {
+    font-family: 'HelveticaNeue-Light', 'HelveticaNeue', Helvetica, sans-serif;
+    font-size: 18px;
+    font-weight: 100;
+    width: 90%;
+    height: 65px;
+    padding: 0 12px;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    outline: none;
+    transition: border-color 0.2s;
+}
+
+.collect-email-input:focus {
+    border-color: var(--dx-blue);
+}
+
+.collect-email-input::placeholder {
+    color: var(--text-tertiary);
+
+}
+
+.collect-email-submit-btn {
+    height: 65px;
+    width: 40%;
+    margin-top: 0.75rem;
+    margin-left: 30%;
+    border: 1px solid var(--border-color);
+    border-radius: 0;
+    font-family: 'HelveticaNeue-Light', 'HelveticaNeue', Helvetica, sans-serif;
+    font-weight: 300;
+    font-size: 14px;
+    background: var(--text-primary);
+    color: var(--primary-button-text);
+    cursor: pointer;
+    /*transition: background 0.2s;*/
+}
+
+.collect-email-submit-btn:hover {
+    opacity: 0.85;
+}
+
+.collect-email-submit-btn.has-email {
+    background: var(--dx-blue);
+    border-color: var(--dx-blue);
+    color: #ffffff;
+}
+
+.collect-email-submit-btn.has-email:hover {
+    opacity: 0.85;
+}
+
+.collect-email-submit-btn:disabled {
+    opacity: 0.9;
+    cursor: not-allowed;
+}
+
+@media (max-width: 768px) {
+    .collect-email-card {
+        width: 90vw;
+        min-width: unset;
+    }
+
+    .collect-email-title {
+        font-size: 36px;
+        font-family: 'HelveticaNeue-Light', 'HelveticaNeue', Helvetica, sans-serif;
+        font-weight: 100;
+    }
+
+    .collect-email-input {
+        height: 65px;
+    }
+
+    .collect-email-submit-btn {
+        height: 65px;
+    }
+}
